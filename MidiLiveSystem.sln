@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MidiLiveSystem", "MidiLiveS
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MidiTools", "MidiTools\MidiTools.csproj", "{1890836B-8F63-47C2-863F-66F5F1ECE710}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PresetBrowser", "PresetBrowser\PresetBrowser.csproj", "{57275C66-9FBC-4408-A5B3-FC1AF5FB0906}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PresetBrowser", "PresetBrowser\PresetBrowser.csproj", "{57275C66-9FBC-4408-A5B3-FC1AF5FB0906}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

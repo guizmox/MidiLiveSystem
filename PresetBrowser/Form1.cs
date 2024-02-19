@@ -15,7 +15,7 @@ namespace PresetBrowser
         private readonly int[] blackKeyIndices = { 1, 3, 6, 8, 10 };
         private System.Timers.Timer Clock;
 
-        MidiRouting Routing = null;
+        MidiRouting Routing = new MidiRouting();
         InstrumentData Instrument = null;
         NoteGenerator Note = new NoteGenerator(1, 1, 1, 1);
 
@@ -157,7 +157,7 @@ namespace PresetBrowser
         {
             if (cbMidiIN.SelectedItem != null)
             {
-                Routing = new MidiRouting(cbMidiIN.SelectedItem.ToString(), cbMidiOUT.SelectedItem != null ? cbMidiOUT.SelectedItem.ToString() : "");
+                Routing.AddIN(cbMidiIN.SelectedItem.ToString());
             }
         }
 
@@ -165,7 +165,8 @@ namespace PresetBrowser
         {
             if (cbMidiOUT.SelectedItem != null)
             {
-                Routing = new MidiRouting(cbMidiIN.SelectedItem != null ? cbMidiIN.SelectedItem.ToString() : "", cbMidiOUT.SelectedItem.ToString());
+                Routing.AddOUT(cbMidiOUT.SelectedItem.ToString());
+                ChangeRouting();
             }
         }
 
@@ -217,7 +218,7 @@ namespace PresetBrowser
             if (File.Exists(sFile))
             {
                 Instrument = new InstrumentData(sFile);
-
+                Routing.AddPresetFile(sFile);
                 if (Instrument.Device == "")
                 {
                     MessageBox.Show("Not a valid Cubase Instrument File.");

@@ -47,22 +47,35 @@ namespace MidiTools
         public delegate void LogEventHandler(string sDevice, bool bIn, string sLog);
         public static event LogEventHandler NewLog;
 
-        public MidiRouting(string sMidiIN, string sMidiOUT, string sFilePresetsIN = "", string sFilePresetsOUT = "")
+        public MidiRouting()
+        {
+            MidiDevice.OnLogAdded += MidiDevice_OnLogAdded;
+        }
+
+        public void AddIN(string sMidiIN)
         {
             if (sMidiIN != "")
             {
                 var deviceIN = MidiDeviceManager.Default.InputDevices.FirstOrDefault(p => p.Name.Equals(sMidiIN));
-                DeviceIN = new MidiDevice(sFilePresetsIN, deviceIN);
-                DeviceIN.OnMidiEvent += DeviceIN_OnMidiEvent;
-            }
 
+                if (deviceIN != DeviceIN)
+                {
+                    DeviceIN = new MidiDevice(deviceIN);
+                    DeviceIN.OnMidiEvent += DeviceIN_OnMidiEvent;
+                }
+            }
+        }
+
+        public void AddOUT(string sMidiOUT)
+        {
             if (sMidiOUT != "")
             {
                 var deviceOUT = MidiDeviceManager.Default.OutputDevices.FirstOrDefault(p => p.Name.Equals(sMidiOUT));
-                DeviceOUT = new MidiDevice(sFilePresetsOUT, deviceOUT);
+                if (deviceOUT != DeviceOUT)
+                {
+                    DeviceOUT = new MidiDevice(deviceOUT);
+                }
             }
-
-            MidiDevice.OnLogAdded += MidiDevice_OnLogAdded;
         }
 
         private void MidiDevice_OnLogAdded(string sDevice, bool bIn, string sLog)
@@ -145,6 +158,14 @@ namespace MidiTools
                 DeviceOUT.GenerateNoteEvent(note, bOn);
             }
         }
+
+        public void AddPresetFile(string sFile)
+        {
+            if (DeviceOUT != null)
+            {
+                DeviceOUT.AddPresetFile(sFile);
+            }
+        }
     }
 
     public class MidiDevice
@@ -217,7 +238,7 @@ namespace MidiTools
             }
         }
 
-        public decimal AverageEventsCycle { get { return MIDI_InOrOut == 1 ? MIDI_InputEvents.ProcessingAverage : MIDI_OutputEvents.ProcessingAverage; } }
+        public decimal AverageEventsCycle { get { return MIDI_InOrOut == 1 ? MIDI_InputEvents != null ? MIDI_InputEvents.ProcessingAverage : 0 : MIDI_OutputEvents != null ? MIDI_OutputEvents.ProcessingAverage : 0; } }
 
         int MIDI_InOrOut; //IN = 1, OUT = 2
 
@@ -228,8 +249,6 @@ namespace MidiTools
         MidiInputDeviceEvents MIDI_InputEvents;
         MidiOutputDeviceEvents MIDI_OutputEvents;
 
-        public readonly string DeviceName;
-
         public delegate void LogEventHandler(string sDevice, bool bIn, string sLog);
         public static event LogEventHandler OnLogAdded;
 
@@ -238,28 +257,32 @@ namespace MidiTools
 
         private static StringBuilder _sblog = new StringBuilder();
 
-        public MidiDevice(string sFile, RtMidi.Core.Devices.Infos.IMidiInputDeviceInfo inputDevice)
+        public MidiDevice(RtMidi.Core.Devices.Infos.IMidiInputDeviceInfo inputDevice)
         {
-            DeviceName = inputDevice.Name;
-            MIDI_DeviceContent = new MidiDeviceContent(sFile);
             MIDI_InOrOut = 1;
             MIDI_InputDevice = inputDevice.CreateDevice();
+            OpenDevice(inputDevice.Name);
         }
 
-        public MidiDevice(string sFile, RtMidi.Core.Devices.Infos.IMidiOutputDeviceInfo outputDevice)
-        {
-            MIDI_DeviceContent = new MidiDeviceContent(sFile);
+        public MidiDevice(RtMidi.Core.Devices.Infos.IMidiOutputDeviceInfo outputDevice)
+        { 
             MIDI_InOrOut = 2;
             MIDI_OutputDevice = outputDevice.CreateDevice();
+            OpenDevice(outputDevice.Name);
         }
 
-        public bool OpenDevice()
+        public void AddPresetFile(string sFile)
+        {
+            MIDI_DeviceContent = new MidiDeviceContent(sFile);
+        }
+
+        public bool OpenDevice(string sDevice)
         {
             if (MIDI_InOrOut == 1) //IN
             {
                 try
                 {
-                    MIDI_InputEvents = new MidiInputDeviceEvents(DeviceName);
+                    MIDI_InputEvents = new MidiInputDeviceEvents(sDevice);
                     MIDI_InputEvents.OnMidiEvent += MIDI_InputEvents_OnMidiEvent;
                     return true;
                 }
@@ -269,7 +292,7 @@ namespace MidiTools
             {
                 try
                 {
-                    MIDI_OutputEvents = new MidiOutputDeviceEvents(DeviceName);
+                    MIDI_OutputEvents = new MidiOutputDeviceEvents(sDevice);
                     return true;
                 }
                 catch { return false; }
@@ -279,7 +302,7 @@ namespace MidiTools
         private void MIDI_InputEvents_OnMidiEvent(MidiEvent ev)
         {
             //renvoyer l'évènement plus haut
-            OnMidiEvent(ev);
+            OnMidiEvent?.Invoke(ev);
         }
 
         internal void MIDI_OutputEvents_OnMidiEvent(MidiEvent ev)
@@ -360,7 +383,7 @@ namespace MidiTools
             sValue = Regex.Replace(sValue, @"([A-z]+)(\d+)", "$1 $2");
             sExtraValue = Regex.Replace(sExtraValue, @"([A-z]+)(\d+)", "$1 $2");
 
-            string sMessage = string.Concat(sCh, " : ", sType, " = ", sValue);
+            string sMessage = string.Concat(bIn ? "[IN] " : "[OUT] ", sDevice, " - ", sCh, " : ", sType, " = ", sValue);
             if (sExtra.Length > 0)
             {
                 sMessage = string.Concat(sMessage, " / ", sExtra, " = ", sExtraValue);
@@ -370,7 +393,7 @@ namespace MidiTools
                 _sblog.AppendLine(sMessage);
             }
 
-            OnLogAdded(sDevice, bIn, sMessage);
+            OnLogAdded?.Invoke(sDevice, bIn, sMessage);
         }
 
         internal void ChangeOUTPreset(MidiPreset preset, int iChannel)
