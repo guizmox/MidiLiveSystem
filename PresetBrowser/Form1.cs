@@ -18,6 +18,7 @@ namespace PresetBrowser
         MidiRouting Routing = new MidiRouting();
         InstrumentData Instrument = null;
         NoteGenerator Note = new NoteGenerator(1, 1, 1, 1);
+        private Guid RoutingGuid;
 
         public Form1()
         {
@@ -319,7 +320,10 @@ namespace PresetBrowser
             {
                 try
                 {
-                    Routing.DeleteAllRouting();
+                    if (RoutingGuid != null)
+                    {
+                        Routing.DeleteRouting(RoutingGuid);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -328,15 +332,15 @@ namespace PresetBrowser
 
                 try
                 {
-                    bool bOK = Routing.AddRouting(cbMidiIN.SelectedItem == null ? "" : cbMidiIN.SelectedItem.ToString(), cbMidiOUT.SelectedItem == null ? "" : cbMidiOUT.SelectedItem.ToString(), iChIN, iChOUT, new MidiOptions());
+                    RoutingGuid = Routing.AddRouting(cbMidiIN.SelectedItem == null ? "" : cbMidiIN.SelectedItem.ToString(), cbMidiOUT.SelectedItem == null ? "" : cbMidiOUT.SelectedItem.ToString(), iChIN, iChOUT, new MidiOptions());
 
-                    if (!bOK)
+                    if (RoutingGuid == Guid.Empty)
                     {
                         MessageBox.Show("Wrong Routing ! Expecting 1-16 values.");
                     }
                     else
                     {
-                        Routing.InitDevices();
+                        Routing.InitRouting(RoutingGuid);
                     }
                 }
                 catch (Exception ex)
