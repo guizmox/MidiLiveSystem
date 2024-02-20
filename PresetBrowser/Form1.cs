@@ -25,13 +25,13 @@ namespace PresetBrowser
             InitializeComponent();
             CreateKeyboard();
 
-            foreach (var device in MidiDevice.InputDevices)
+            foreach (var device in MidiRouting.InputDevices)
             {
                 cbMidiIN.Items.Add(device.Name);
             }
 
 
-            foreach (var device in MidiDevice.OutputDevices)
+            foreach (var device in MidiRouting.OutputDevices)
             {
                 cbMidiOUT.Items.Add(device.Name);
             }
@@ -86,7 +86,14 @@ namespace PresetBrowser
 
             if (Routing != null)
             {
-                Routing.Terminate();
+                try
+                {
+                    Routing.DeleteAllRouting();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
             }
         }
 
@@ -106,7 +113,10 @@ namespace PresetBrowser
             else
                 methodInvokerDelegate2();
 
-            PlayNote(false);
+            if (cbMidiOUT.SelectedItem != null)
+            {
+                PlayNote(false, cbMidiOUT.SelectedItem.ToString());
+            }
         }
 
         private void Keyboard_KeyDown(object sender, EventArgs e)
@@ -125,7 +135,10 @@ namespace PresetBrowser
             else
                 methodInvokerDelegate();
 
-            PlayNote(true);
+            if (cbMidiOUT.SelectedItem != null)
+            {
+                PlayNote(true, cbMidiOUT.SelectedItem.ToString());
+            }
         }
 
         private void tbChannelMidiIN_TextChanged(object sender, EventArgs e)
@@ -157,7 +170,7 @@ namespace PresetBrowser
         {
             if (cbMidiIN.SelectedItem != null)
             {
-                Routing.AddIN(cbMidiIN.SelectedItem.ToString());
+                ChangeRouting();
             }
         }
 
@@ -165,7 +178,6 @@ namespace PresetBrowser
         {
             if (cbMidiOUT.SelectedItem != null)
             {
-                Routing.AddOUT(cbMidiOUT.SelectedItem.ToString());
                 ChangeRouting();
             }
         }
@@ -218,7 +230,6 @@ namespace PresetBrowser
             if (File.Exists(sFile))
             {
                 Instrument = new InstrumentData(sFile);
-                Routing.AddPresetFile(sFile);
                 if (Instrument.Device == "")
                 {
                     MessageBox.Show("Not a valid Cubase Instrument File.");
@@ -242,7 +253,11 @@ namespace PresetBrowser
                 int iChannel = 0;
                 if (int.TryParse(tbChannelMidiOUT.Text, out iChannel))
                 {
-                    SendMIDIProgramChange(mp, iChannel);
+                    if (cbMidiOUT.SelectedItem != null)
+                    {
+                        SendMIDIProgramChange(mp, iChannel, cbMidiOUT.SelectedItem.ToString());
+                    }
+                    
                 }
                 else
                 {
@@ -302,26 +317,47 @@ namespace PresetBrowser
             int iChOUT = 0;
             if (int.TryParse(tbChannelMidiIN.Text.Trim(), out iChIN) && int.TryParse(tbChannelMidiOUT.Text.Trim(), out iChOUT))
             {
-                Routing.DeleteAllRouting();
-                bool bOK = Routing.AddOrModifyRouting(1, iChIN, iChOUT, new MidiOptions());
-                if (!bOK)
+                try
                 {
-                    MessageBox.Show("Wrong Routing ! Expecting 1-16 values.");
+                    Routing.DeleteAllRouting();
                 }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error while removing Routing Data : " + ex.Message);
+                }
+
+                try
+                {
+                    bool bOK = Routing.AddRouting(cbMidiIN.SelectedItem == null ? "" : cbMidiIN.SelectedItem.ToString(), cbMidiOUT.SelectedItem == null ? "" : cbMidiOUT.SelectedItem.ToString(), iChIN, iChOUT, new MidiOptions());
+
+                    if (!bOK)
+                    {
+                        MessageBox.Show("Wrong Routing ! Expecting 1-16 values.");
+                    }
+                    else
+                    {
+                        Routing.InitDevices();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error while changing Routing Configuration : " + ex.Message);
+                }
+
             }
         }
 
-        private void PlayNote(bool bOn)
+        private void PlayNote(bool bOn, string sDevice)
         {
             try
             {
                 if (bOn)
                 {
-                    Routing.GenerateNoteEvent(Note, true);
+                    Routing.GenerateNoteEvent(Note, true, sDevice);
                 }
                 else
                 {
-                    Routing.GenerateNoteEvent(Note, false);
+                    Routing.GenerateNoteEvent(Note, false, sDevice);
                 }
             }
             catch (Exception ex)
@@ -330,11 +366,11 @@ namespace PresetBrowser
             }
         }
 
-        private void SendMIDIProgramChange(MidiPreset mp, int iMidiOutChannel)
+        private void SendMIDIProgramChange(MidiPreset mp, int iMidiOutChannel, string sDevice)
         {
             try
             {
-                Routing.SetMidiOUTPreset(mp, iMidiOutChannel);
+                Routing.ChangeOUTPreset(mp, iMidiOutChannel, sDevice);
             }
             catch (Exception ex) { MessageBox.Show("Unable to open MIDI port : " + ex.Message); }
         }
