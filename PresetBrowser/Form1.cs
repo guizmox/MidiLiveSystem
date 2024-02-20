@@ -353,11 +353,11 @@ namespace PresetBrowser
             {
                 if (bOn)
                 {
-                    Routing.GenerateNoteEvent(Note, true, sDevice);
+                    Routing.SendNote(Note, true, sDevice);
                 }
                 else
                 {
-                    Routing.GenerateNoteEvent(Note, false, sDevice);
+                    Routing.SendNote(Note, false, sDevice);
                 }
             }
             catch (Exception ex)
@@ -370,7 +370,7 @@ namespace PresetBrowser
         {
             try
             {
-                Routing.ChangeOUTPreset(mp, iMidiOutChannel, sDevice);
+                Routing.SendPresetChange(mp, iMidiOutChannel, sDevice);
             }
             catch (Exception ex) { MessageBox.Show("Unable to open MIDI port : " + ex.Message); }
         }
