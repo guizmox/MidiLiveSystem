@@ -22,9 +22,10 @@ namespace MidiTools
         internal MidiOptions Options = new MidiOptions();
         internal MidiDevice DeviceIn;
         internal MidiDevice DeviceOut;
+        internal MidiPreset Preset;
         internal Guid RoutingGuid { get; private set; }
 
-        public MatrixItem(MidiDevice deviceIN, MidiDevice deviceOUT, int iChIN, int iChOUT, MidiOptions options)
+        public MatrixItem(MidiDevice deviceIN, MidiDevice deviceOUT, int iChIN, int iChOUT, MidiOptions options, MidiPreset preset)
         {
             DeviceIn = deviceIN;
             DeviceOut = deviceOUT;
@@ -32,22 +33,87 @@ namespace MidiTools
             ChannelOut = iChOUT;
             Options = options;
             RoutingGuid = Guid.NewGuid();
+            Preset = preset;
         }
     }
 
     public class MidiOptions
     {
-        public int VelocityFilterLow = 0;
-        public int VelocityFilterHigh = 127;
-        public int NoteFilterLow = 0;
-        public int NoteFilterHigh = 127;
+        private int _TranspositionOffset = 0;
+
+        private int _VelocityFilterLow = 0;
+        private int _VelocityFilterHigh = 127;
+        private int _NoteFilterLow = 0;
+        private int _NoteFilterHigh = 127;
+
+        private int _CC_Pan_Value = 64;
+        private int _CC_Volume_Value = 100;
+        private int _CC_Reverb_Value = -1;
+        private int _CC_Chorus_Value = -1;
+        private int _CC_Release_Value = -1;
+        private int _CC_Attack_Value = -1;
+        private int _CC_Decay_Value = -1;
+        private int _CC_Brightness_Value = -1;
+
+        public int VelocityFilterLow
+        {
+            get { return _VelocityFilterLow; }
+            set
+            {
+                if (value < 0) { _VelocityFilterLow = 0; }
+                else if (value > 127) { _VelocityFilterLow = 127; }
+                else { _VelocityFilterLow = value; }
+                if (_VelocityFilterLow > _VelocityFilterHigh) { _VelocityFilterLow = 0; }
+            }
+        }
+        public int VelocityFilterHigh
+        {
+            get { return _VelocityFilterHigh; }
+            set
+            {
+                if (value < 0) { _VelocityFilterHigh = 0; }
+                else if (value > 127) { _VelocityFilterHigh = 127; }
+                else { _VelocityFilterHigh = value; }
+                if (_VelocityFilterHigh < _VelocityFilterLow) { _VelocityFilterHigh = 127; }
+            }
+        }
+        public int NoteFilterLow
+        {
+            get { return _NoteFilterLow; }
+            set
+            {
+                if (value < 0) { _NoteFilterLow = 0; }
+                else if (value > 127) { _NoteFilterLow = 127; }
+                else { _NoteFilterLow = value; }
+                if (_NoteFilterLow > _NoteFilterHigh) { _NoteFilterLow = 0; }
+            }
+        }
+        public int NoteFilterHigh
+        {
+            get { return _NoteFilterHigh; }
+            set
+            {
+                if (value < 0)
+                { _NoteFilterHigh = 0; }
+                else if (value > 127) { _NoteFilterHigh = 127; }
+                else { _NoteFilterHigh = value; }
+                if (_NoteFilterHigh < _NoteFilterLow) { _NoteFilterHigh = 127; }
+            }
+        }
+
+
+        public int TranspositionOffset
+        {
+            get { return _TranspositionOffset; }
+            set
+            {
+                if (value < -127) { _TranspositionOffset = -127; }
+                else if (value > 127) { _TranspositionOffset = 127; }
+                else { _TranspositionOffset = value; }
+            }
+        }
 
         public bool AftertouchVolume = false;
-
-        public int CC_ToVolume = -1; //convertisseur de CC pour le volume (ex : CC 102 -> CC 7)
-
-        public List<int[]> CC_Converters = new List<int[]>();
-        public List<int[]> Note_Converters = new List<int[]>();
 
         public bool AllowModulation = true;
         public bool AllowNotes = true;
@@ -58,16 +124,39 @@ namespace MidiTools
         public bool AllowPitchBend = true;
         public bool AllowProgramChange = true;
 
-        public int TranspositionOffset = 0;
+        public int CC_ToVolume { get; set; } = -1; //convertisseur de CC pour le volume (ex : CC 102 -> CC 7)
 
-        public int CC_Pan_Value = 64;
-        public int CC_Volume_Value = 100;
-        public int CC_Reverb_Value = -1;
-        public int CC_Chorus_Value = -1;
-        public int CC_Release_Value = -1;
-        public int CC_Attack_Value = -1;
-        public int CC_Decay_Value = -1;
-        public int CC_Brightness_Value = -1;
+        public int CC_Pan_Value { get { return _CC_Pan_Value; } set { if (value < -1) { _CC_Pan_Value = -1; } else if (value > 127) { _CC_Pan_Value = 127; } } }
+        public int CC_Volume_Value { get { return _CC_Volume_Value; } set { if (value < -1) { _CC_Volume_Value = -1; } else if (value > 127) { _CC_Volume_Value = 127; } } }
+        public int CC_Reverb_Value { get { return _CC_Reverb_Value; } set { if (value < -1) { _CC_Reverb_Value = -1; } else if (value > 127) { _CC_Reverb_Value = 127; } } }
+        public int CC_Chorus_Value { get { return _CC_Chorus_Value; } set { if (value < -1) { _CC_Chorus_Value = -1; } else if (value > 127) { _CC_Chorus_Value = 127; } } }
+        public int CC_Release_Value { get { return _CC_Release_Value; } set { if (value < -1) { _CC_Release_Value = -1; } else if (value > 127) { _CC_Release_Value = 127; } } }
+        public int CC_Attack_Value { get { return _CC_Attack_Value; } set { if (value < -1) { _CC_Attack_Value = -1; } else if (value > 127) { _CC_Attack_Value = 127; } } }
+        public int CC_Decay_Value { get { return _CC_Decay_Value; } set { if (value < -1) { _CC_Decay_Value = -1; } else if (value > 127) { _CC_Decay_Value = 127; } } }
+        public int CC_Brightness_Value { get { return _CC_Brightness_Value; } set { if (value < -1) { _CC_Brightness_Value = -1; } else if (value > 127) { _CC_Brightness_Value = 127; } } }
+
+        public List<int[]> CC_Converters { get; private set; } = new List<int[]>();
+        public List<int[]> Note_Converters { get; private set; } = new List<int[]>();
+
+        public bool AddCCConverter(int iFrom, int iTo)
+        {
+            if (iFrom != iTo && (iFrom >= 0 && iFrom <= 127) && (iTo >= 0 && iTo <= 127))
+            {
+                CC_Converters.Add(new int[] { iFrom, iTo });
+                return true;
+            }
+            else { return false; }
+        }
+
+        public bool AddNoteConverter(int iFrom, int iTo)
+        {
+            if (iFrom != iTo && (iFrom >= 0 && iFrom <= 127) && (iTo >= 0 && iTo <= 127))
+            {
+                Note_Converters.Add(new int[] { iFrom, iTo });
+                return true;
+            }
+            else { return false; }
+        }
     }
 
     public class MidiRouting
@@ -450,7 +539,8 @@ namespace MidiTools
 
             if (options != null)
             {
-                if (iKey >= options.NoteFilterLow && iKey <= options.NoteFilterHigh && vel >= options.VelocityFilterLow && vel <= options.VelocityFilterHigh)
+                if (iKey >= options.NoteFilterLow && iKey <= options.NoteFilterHigh 
+                    && (vel == 0 || (vel >= options.VelocityFilterLow && vel <= options.VelocityFilterHigh))) //attention, la vélocité d'un noteoff est souvent à 0 (dépend des devices mais généralement)
                 {
                     iNote = iKey + options.TranspositionOffset;
                 }
@@ -463,11 +553,11 @@ namespace MidiTools
 
         #region PUBLIC
 
-        public Guid AddRouting(string sDeviceIn, string sDeviceOut, int iChIn, int iChOut, MidiOptions options)
+        public Guid AddRouting(string sDeviceIn, string sDeviceOut, int iChIn, int iChOut, MidiOptions options, MidiPreset preset = null)
         {
             var devIN = DevicesIN.FirstOrDefault(d => d.Name.Equals(sDeviceIn));
             var devOUT = DevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut));
-            //iAction : 0 = delete, 1 = add
+            //iAction : 0 = delete, 1 = adds
 
             //devIN != null && devOUT != null && 
             if (iChIn >= 0 && iChIn <= 16 && iChOut >= 0 && iChOut <= 16)
@@ -475,7 +565,7 @@ namespace MidiTools
                 var exists = MidiMatrix.FirstOrDefault(m => m.DeviceIn.Name == sDeviceIn && m.DeviceOut.Name == sDeviceOut && m.ChannelIn == iChIn && m.ChannelOut == iChOut);
                 if (exists == null)
                 {
-                    MidiMatrix.Add(new MatrixItem(devIN, devOUT, iChIn, iChOut, options));
+                    MidiMatrix.Add(new MatrixItem(devIN, devOUT, iChIn, iChOut, options, preset));
                     CheckAndOpenPorts(devIN, devOUT);
                     var guid = MidiMatrix.Last().RoutingGuid;
                     return guid;
@@ -483,17 +573,30 @@ namespace MidiTools
                 else
                 {
                     return exists.RoutingGuid;
-                }              
+                }
             }
             else { return Guid.Empty; }
         }
 
-        public bool ModifyRouting(Guid routingGuid, MidiOptions options)
+        public bool ModifyRoutingOptions(Guid routingGuid, MidiOptions options)
         {
             var routing = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
             if (routing != null)
             {
                 routing.Options = options;
+                return true;
+            }
+            else { return false; }
+        }
+
+        public bool ModifyRoutingPreset(Guid routingGuid, MidiPreset preset)
+        {
+            var routing = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
+            if (routing != null)
+            {
+                routing.Preset = preset;
+
+                SendPresetChange(routingGuid, preset);
                 return true;
             }
             else { return false; }
@@ -512,7 +615,7 @@ namespace MidiTools
             foreach (var r in routingOff)
             {
                 r.Active = false;
-            }            
+            }
         }
 
         public void MuteRouting(Guid routingGuid)
@@ -521,6 +624,15 @@ namespace MidiTools
             if (routingOn != null)
             {
                 routingOn.Active = false;
+            }
+        }
+
+        public void UnmuteRouting(Guid routingGuid)
+        {
+            var routingOff = MidiMatrix.FirstOrDefault(m => m.RoutingGuid != routingGuid);
+            if (routingOff != null)
+            {
+                routingOff.Active = true;
             }
         }
 
@@ -627,18 +739,23 @@ namespace MidiTools
             MidiMatrix.Clear();
         }
 
-        public void SendPresetChange(MidiPreset preset, int iChannel, string sDevice)
+        public void SendPresetChange(Guid routingGuid, MidiPreset preset)
         {
-            ControlChangeMessage pc00 = new ControlChangeMessage(MidiDevice.GetChannel(iChannel), 0, preset.Msb);
-            ControlChangeMessage pc32 = new ControlChangeMessage(MidiDevice.GetChannel(iChannel), 32, preset.Lsb);
-            ProgramChangeMessage prg = new ProgramChangeMessage(MidiDevice.GetChannel(iChannel), preset.Prg);
+            var routing = MidiMatrix.FirstOrDefault(r => r.RoutingGuid == routingGuid);
 
-            var dev = DevicesOUT.FirstOrDefault(d => d.Name.Equals(sDevice));
-            if (dev != null)
+            if (routing != null)
             {
-                CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, pc00, pc00.Channel, sDevice), true);
-                CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, pc32, pc32.Channel, sDevice), true);
-                CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.PC, prg, prg.Channel, sDevice), true);
+                ControlChangeMessage pc00 = new ControlChangeMessage(MidiDevice.GetChannel(preset.Channel), 0, preset.Msb);
+                ControlChangeMessage pc32 = new ControlChangeMessage(MidiDevice.GetChannel(preset.Channel), 32, preset.Lsb);
+                ProgramChangeMessage prg = new ProgramChangeMessage(MidiDevice.GetChannel(preset.Channel), preset.Prg);
+
+                var dev = DevicesOUT.FirstOrDefault(d => d.Name.Equals(routing.DeviceOut.Name));
+                if (dev != null)
+                {
+                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, pc00, pc00.Channel, routing.DeviceOut.Name), true);
+                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, pc32, pc32.Channel, routing.DeviceOut.Name), true);
+                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.PC, prg, prg.Channel, routing.DeviceOut.Name), true);
+                }
             }
         }
 
@@ -1312,7 +1429,7 @@ namespace MidiTools
                     int iMsb = Convert.ToInt32(sPG[2].Trim());
                     int iLsb = Convert.ToInt32(sPG[3].Substring(0, sPG[3].IndexOf("]")).Trim());
                     string sPName = sData[i].Substring(sData[i].IndexOf("]") + 1).Trim();
-                    sFileData.Add(new MidiPreset(group.Category, iPrg, iMsb, iLsb, sPName));
+                    sFileData.Add(new MidiPreset(group.Category, 1, iPrg, iMsb, iLsb, sPName));
                 }
             }
             return sFileData;
@@ -1349,17 +1466,20 @@ namespace MidiTools
         public readonly int Msb;
         public readonly int Lsb;
         public readonly string PresetName;
+        public int Channel;
+
         public string Id { get { return string.Concat(Prg, "-", Msb, "-", Lsb); } }
 
         public string TechName { get { return string.Concat("PRG : ", Prg, " / MSB : ", Msb, " / LSB : ", Lsb); } }
 
-        public MidiPreset(string sSection, int iPrg, int iMsb, int iLsb, string sPName)
+        public MidiPreset(string sSection, int iChannel, int iPrg, int iMsb, int iLsb, string sPName)
         {
             this.InstrumentGroup = sSection;
             this.Prg = iPrg;
             this.Msb = iMsb;
             this.Lsb = iLsb;
             this.PresetName = sPName;
+            this.Channel = iChannel;
         }
     }
 

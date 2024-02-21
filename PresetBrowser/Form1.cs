@@ -256,7 +256,8 @@ namespace PresetBrowser
                 {
                     if (cbMidiOUT.SelectedItem != null)
                     {
-                        SendMIDIProgramChange(mp, iChannel, cbMidiOUT.SelectedItem.ToString());
+                        mp.Channel = iChannel;
+                        SendMIDIProgramChange(mp, cbMidiOUT.SelectedItem.ToString());
                     }
                     
                 }
@@ -370,11 +371,11 @@ namespace PresetBrowser
             }
         }
 
-        private void SendMIDIProgramChange(MidiPreset mp, int iMidiOutChannel, string sDevice)
+        private void SendMIDIProgramChange(MidiPreset mp, string sDevice)
         {
             try
             {
-                Routing.SendPresetChange(mp, iMidiOutChannel, sDevice);
+                Routing.SendPresetChange(RoutingGuid, mp);
             }
             catch (Exception ex) { MessageBox.Show("Unable to open MIDI port : " + ex.Message); }
         }

@@ -25,10 +25,11 @@ namespace MidiLiveSystem
     {
         private System.Timers.Timer Clock;
 
-        MidiLog Log = new MidiLog();
-        MidiRouting Routing = new MidiRouting();
-        List<RoutingBox> Boxes = new List<RoutingBox>();
-        List<Frame> GridFrames = new List<Frame>();
+        private MidiLog Log = new MidiLog();
+        private MidiRouting Routing = new MidiRouting();
+        private List<RoutingBox> Boxes = new List<RoutingBox>();
+        private List<Frame> GridFrames = new List<Frame>();
+        public static BoxPreset CopiedPreset = new BoxPreset();
 
         public MainWindow()
         {
@@ -85,6 +86,58 @@ namespace MidiLiveSystem
             Log.AddLog(sLog);
         }
 
+        private void RoutingBox_UIEvent(Guid gBox, string sControl, object sValue)
+        {
+            var box = Boxes.FirstOrDefault(b => b.BoxGuid == gBox);
+            if (box != null)
+            {
+                switch (sControl)
+                {
+                    case "SOLO":
+                        if (box.RoutingGuid != Guid.Empty)
+                        {
+                            if ((bool)sValue)
+                            {
+                                Routing.SetSolo(box.RoutingGuid);
+                            }
+                            else
+                            {
+                                Routing.UnmuteAllRouting();
+                            }
+                        }
+                        break;
+                    case "MUTE:":
+                        if (box.RoutingGuid != Guid.Empty)
+                        {
+                            if ((bool)sValue)
+                            {
+                                Routing.MuteRouting(box.RoutingGuid);
+                            }
+                            else
+                            {
+                                Routing.UnmuteRouting(box.RoutingGuid);
+                            }
+                        }
+                        break;
+                    case "PROGRAM_CHANGE":
+                        if (box.RoutingGuid != Guid.Empty)
+                        {
+                            Routing.SendPresetChange(box.RoutingGuid, (MidiPreset)sValue);
+                        }
+                        break;
+                    case "PRESET_CHANGE":
+                        if (box.RoutingGuid != Guid.Empty)
+                        {
+                            Routing.ModifyRoutingOptions(box.RoutingGuid, (MidiOptions)sValue);
+                        }
+                        break;
+                    case "COPY_PRESET":
+                        CopiedPreset = (BoxPreset)sValue;
+                        break;
+                }
+            }
+        }
+
         private void AddRoutingBoxToFrame(RoutingBox rtb)
         {
             var frame = GridFrames.FirstOrDefault(g => g.Tag.ToString().Equals(""));
@@ -97,6 +150,8 @@ namespace MidiLiveSystem
             {
                 frame.Tag = rtb.BoxGuid.ToString();
                 frame.Navigate(rtb);
+
+                rtb.OnUIEvent += RoutingBox_UIEvent;
             }
         }
 
@@ -107,25 +162,39 @@ namespace MidiLiveSystem
             AddRoutingBoxToFrame(rtb);
         }
 
-        private void btnSaveRouting_Click(object sender, RoutedEventArgs e)
+        private void btnSaveProject_Click(object sender, RoutedEventArgs e)
         {
             foreach (RoutingBox box in Boxes)
             {
                 if (box.RoutingGuid == Guid.Empty)
                 {
-                    MidiOptions mo = box.GetOptions();
-                    box.RoutingGuid = Routing.AddRouting(((ComboBoxItem)box.cbMidiIn.SelectedItem).Tag.ToString(),
-                                       ((ComboBoxItem)box.cbMidiOut.SelectedItem).Tag.ToString(),
-                                       Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
-                                       Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
-                                       mo);
+                    MidiOptions mo = box.LoadOptions();
+
+                    if (box.cbMidiIn.SelectedItem != null && box.cbMidiOut.SelectedItem != null)
+                    {
+                        box.RoutingGuid = Routing.AddRouting(((ComboBoxItem)box.cbMidiIn.SelectedItem).Tag.ToString(),
+                                           ((ComboBoxItem)box.cbMidiOut.SelectedItem).Tag.ToString(),
+                                           Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
+                                           Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
+                                           mo, box.GetPreset());
+                    }
                 }
                 else
                 {
-                    MidiOptions mo = box.GetOptions();
-                    Routing.ModifyRouting(box.RoutingGuid, mo);
+                    MidiOptions mo = box.LoadOptions();
+                    Routing.ModifyRoutingOptions(box.RoutingGuid, mo);
                 }
             }
+        }
+
+        private void btnOpenProject_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void btnSettings_Click(object sender, RoutedEventArgs e)
+        {
+
         }
     }
 }

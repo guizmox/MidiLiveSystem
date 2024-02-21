@@ -36,9 +36,11 @@
                     <ColumnDefinition Width="11*" />
                     <ColumnDefinition Width="11*" />
                     <ColumnDefinition Width="11*" />
-                    <ColumnDefinition Width="63*" />
+                    <ColumnDefinition Width="11*" />
+                    <ColumnDefinition Width="53*" />
                     <ColumnDefinition Width="2*" />
                 </Grid.ColumnDefinitions>
+                
                 <Button Name="btnAddBox" Width="140" Height="60" Grid.Column="1" Click="btnAddBox_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
@@ -50,7 +52,8 @@
                         <TextBlock Text="Add Routing Box" />
                     </StackPanel>
                 </Button>
-                <Button Name="btnSaveRouting" Width="140" Height="60" Grid.Column="2" Click="btnSaveRouting_Click" >
+                
+                <Button Name="btnSaveProject" Width="140" Height="60" Grid.Column="2" Click="btnSaveProject_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -61,7 +64,32 @@
                         <TextBlock Text="Save Project" />
                     </StackPanel>
                 </Button>
-                <Label Name="lblCharge" Grid.Column="4" Content="Charge" >
+                
+                <Button Name="btnOpenProject" Width="140" Height="60" Grid.Column="3" Click="btnOpenProject_Click" >
+                    <StackPanel>
+                        <TextBlock HorizontalAlignment="Center">
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="OpenInBrowser" />
+                        </TextBlock>
+                        <TextBlock Text="Open Project" />
+                    </StackPanel>
+                </Button>
+
+                <Button Name="btnSettings" Width="140" Height="60" Grid.Column="4" Click="btnSettings_Click" >
+                    <StackPanel>
+                        <TextBlock HorizontalAlignment="Center">
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="Tools" />
+                        </TextBlock>
+                        <TextBlock Text="Configuration" />
+                    </StackPanel>
+                </Button>
+                
+                <Label Name="lblCharge" Grid.Column="5" Content="Charge" >
 
                 </Label>
             </Grid>
