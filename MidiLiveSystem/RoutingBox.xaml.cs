@@ -2,6 +2,7 @@
 using RtMidi.Core.Devices.Infos;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -22,16 +23,6 @@ namespace MidiLiveSystem
     {
         public Guid RoutingGuid { get; set; }
         public Guid BoxGuid { get; internal set; }
-
-        public enum RoutingBoxEvent
-        {
-            ADD_ROUTING = 1,
-            MODIFY_ROUTING = 2,
-            CHANGE_PRESET = 3
-        }
-
-        public delegate void RoutingBoxEventHandler(Guid boxId, RoutingBoxEvent ev, MidiOptions options, string DeviceIn, string DeviceOut, int ChannelIn, int ChannelOut, string Preset);
-        public event RoutingBoxEventHandler OnRoutingBoxChange;
 
         public RoutingBox(List<IMidiInputDeviceInfo> inputDevices, List<IMidiOutputDeviceInfo> outputDevices)
         {
@@ -60,31 +51,20 @@ namespace MidiLiveSystem
             cbChannelMidiOut.SelectedIndex = 1;
         }
 
-        private void btnMem_Click(object sender, RoutedEventArgs e)
-        {
-            if (RoutingGuid != Guid.Empty)
-            {
-                MidiOptions mo = GetOptions();
-                OnRoutingBoxChange?.Invoke(BoxGuid, RoutingBoxEvent.MODIFY_ROUTING, mo, ((ComboBoxItem)cbMidiIn.SelectedItem).Tag.ToString(),
-                                                                            ((ComboBoxItem)cbMidiOut.SelectedItem).Tag.ToString(),
-                                                                            Convert.ToInt32(((ComboBoxItem)cbChannelMidiIn.SelectedItem).Tag.ToString()),
-                                                                            Convert.ToInt32(((ComboBoxItem)cbChannelMidiOut.SelectedItem).Tag.ToString()),
-                                                                            "");
-            }
-            else
-            {
-                MidiOptions mo = GetOptions();
-                OnRoutingBoxChange?.Invoke(BoxGuid, RoutingBoxEvent.ADD_ROUTING, mo, ((ComboBoxItem)cbMidiIn.SelectedItem).Tag.ToString(),
-                                                                            ((ComboBoxItem)cbMidiOut.SelectedItem).Tag.ToString(),
-                                                                            Convert.ToInt32(((ComboBoxItem)cbChannelMidiIn.SelectedItem).Tag.ToString()),
-                                                                            Convert.ToInt32(((ComboBoxItem)cbChannelMidiOut.SelectedItem).Tag.ToString()),
-                                                                            "");
-            }
-        }
-
-        private MidiOptions GetOptions()
+        public MidiOptions GetOptions()
         {
             return new MidiOptions();
+        }
+
+        private void tbChoosePreset_Click(object sender, RoutedEventArgs e)
+        {
+            string sInstrTemp = Directory.GetCurrentDirectory() + "\\SYNTH\\E-MU_UltraProteus.txt";
+            //charger la liste des presets de l'instrument
+            MidiTools.InstrumentData Instrument = new InstrumentData(sInstrTemp);
+            PresetBrowser pB = new PresetBrowser(Instrument);
+            pB.ShowDialog();
+            lbPreset.Content = pB.SelectedPreset[0];
+            lbPreset.Tag = pB.SelectedPreset[1];
         }
     }
 }

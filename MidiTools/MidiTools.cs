@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -15,6 +16,7 @@ namespace MidiTools
 {
     internal class MatrixItem
     {
+        internal bool Active { get; set; } = true;
         internal int ChannelIn = 1;
         internal int ChannelOut = 1;
         internal MidiOptions Options = new MidiOptions();
@@ -123,7 +125,7 @@ namespace MidiTools
         private Int64 _eventsProcessedIN = 0;
         private Int64 _iCyclesIN = 1;
 
-        private List<NoteOnMessage> _pendingATNoteMessages = new List<NoteOnMessage>();
+        private List<Tuple<string, NoteOnMessage>> _pendingATNoteMessages = new List<Tuple<string, NoteOnMessage>>();
         private List<MidiDevice.MidiEvent> _eventsOUT = new List<MidiDevice.MidiEvent>();
         private Int64 _eventsProcessedOUT = 0;
         private Int64 _iCyclesOUT = 1;
@@ -159,6 +161,9 @@ namespace MidiTools
                 _eventsIN.CopyTo(evTmp);
                 _eventsIN.Clear();
             }
+
+            StoreNoteOnMessage(_eventsIN.Where(ev => ev.Type == MidiDevice.TypeEvent.NOTE_ON).ToList());
+            ReleaseNoteOffMessage(_eventsIN.Where(ev => ev.Type == MidiDevice.TypeEvent.NOTE_OFF).ToList());
 
             if (evTmp != null)
             {
@@ -197,6 +202,24 @@ namespace MidiTools
                     _iCyclesOUT++;
                     _eventsProcessedOUT += evTmp.Length;
                 }
+            }
+        }
+
+        private void ReleaseNoteOffMessage(List<MidiDevice.MidiEvent> events)
+        {
+            foreach (var ev in events)
+            {
+                var noteoff = (NoteOffMessage)ev.Event; //TODO : contrôle avec vélocité aussi ?
+                var noteon = _pendingATNoteMessages.FirstOrDefault(n => n.Item2.Key == noteoff.Key && n.Item2.Channel == noteoff.Channel && ev.Device == n.Item1);
+                lock (_pendingATNoteMessages) { _pendingATNoteMessages.Remove(noteon); }
+            }
+        }
+
+        private void StoreNoteOnMessage(List<MidiDevice.MidiEvent> events)
+        {
+            foreach (var ev in events)
+            {
+                lock (_pendingATNoteMessages) { _pendingATNoteMessages.Add(new Tuple<string, NoteOnMessage>(ev.Device, (NoteOnMessage)ev.Event)); }
             }
         }
 
@@ -273,10 +296,10 @@ namespace MidiTools
 
         private void CreateOUTEvent(MidiDevice.MidiEvent ev, bool bForce)
         {
-            var matrix = MidiMatrix.Where(i => i.DeviceIn != null && i.DeviceIn.Name == ev.Device && (i.ChannelIn == 0 || MidiDevice.GetChannel(i.ChannelIn) == ev.MidiChannel)).ToList();
+            var matrix = MidiMatrix.Where(i => i.Active && i.DeviceIn != null && i.DeviceIn.Name == ev.Device && (i.ChannelIn == 0 || MidiDevice.GetChannel(i.ChannelIn) == ev.MidiChannel)).ToList();
 
             //gestion des évènements du synthé externe : pas un vrai device
-            if (matrix.Count == 0 && MidiMatrix.Count > 0)
+            if (matrix.Count == 0 && MidiMatrix.Count == 1)
             {
                 matrix.Add(MidiMatrix[0]);
             }
@@ -317,22 +340,19 @@ namespace MidiTools
                             if (item.Options.AftertouchVolume)
                             {
                                 var msg = (ChannelPressureMessage)ev.Event;
-                                var noteonmsg = IdentifyNoteOnEvents(ev.Device, ev.MidiChannel);
-                                if (noteonmsg.Count > 0) { _pendingATNoteMessages.AddRange(noteonmsg); }
                                 if (msg.Pressure == 0) //on balance un note off à tous les évènements en attente
                                 {
                                     foreach (var noteon in _pendingATNoteMessages)
                                     {
-                                        var msgout = new NoteOffMessage(MidiDevice.GetChannel(i), noteon.Key, msg.Pressure);
+                                        var msgout = new NoteOffMessage(MidiDevice.GetChannel(i), noteon.Item2.Key, msg.Pressure);
                                         lock (_eventsOUT) { _eventsOUT.Add(new MidiDevice.MidiEvent(ev.Type, msgout, msgout.Channel, item.DeviceOut.Name)); }
                                     }
-                                    lock (_pendingATNoteMessages) { _pendingATNoteMessages.Clear(); }
                                 }
                                 else
                                 {
-                                    foreach (var noteon in noteonmsg)
+                                    foreach (var noteon in _pendingATNoteMessages)
                                     {
-                                        var msgout = new NoteOnMessage(MidiDevice.GetChannel(i), noteon.Key, msg.Pressure);
+                                        var msgout = new NoteOnMessage(MidiDevice.GetChannel(i), noteon.Item2.Key, msg.Pressure);
                                         lock (_eventsOUT) { _eventsOUT.Add(new MidiDevice.MidiEvent(ev.Type, msgout, msgout.Channel, item.DeviceOut.Name)); }
                                     }
                                 }
@@ -423,24 +443,6 @@ namespace MidiTools
             return data;
         }
 
-        private List<NoteOnMessage> IdentifyNoteOnEvents(string sDevice, Channel ch)
-        {
-            List<NoteOnMessage> msgON = new List<NoteOnMessage>();
-            List<MidiDevice.MidiEvent> evTmp = new List<MidiDevice.MidiEvent>();
-            lock (_eventsIN)
-            {
-                var ev = evTmp.Where(ev => ev.Type == MidiDevice.TypeEvent.NOTE_ON && ev.Device == sDevice && ev.MidiChannel == ch);
-                if (ev.Count() > 0) { evTmp = ev.ToList(); }
-            }
-
-            foreach (var v in evTmp)
-            {
-                msgON.Add((NoteOnMessage)v.Event);
-            }
-
-            return msgON;
-        }
-
         private int GetNoteIndex(Key key, int vel, MidiOptions options)
         {
             int iNote = -1;
@@ -488,13 +490,46 @@ namespace MidiTools
 
         public bool ModifyRouting(Guid routingGuid, MidiOptions options)
         {
-            var midi = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
-            if (midi != null)
+            var routing = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
+            if (routing != null)
             {
-                midi.Options = options;
+                routing.Options = options;
                 return true;
             }
             else { return false; }
+        }
+
+        public void SetSolo(Guid routingGuid)
+        {
+            var routingOn = MidiMatrix.FirstOrDefault(m => m.RoutingGuid != routingGuid);
+
+            if (routingOn != null)
+            {
+                routingOn.Active = true;
+            }
+
+            var routingOff = MidiMatrix.Where(m => m.RoutingGuid != routingGuid);
+            foreach (var r in routingOff)
+            {
+                r.Active = false;
+            }            
+        }
+
+        public void MuteRouting(Guid routingGuid)
+        {
+            var routingOn = MidiMatrix.FirstOrDefault(m => m.RoutingGuid != routingGuid);
+            if (routingOn != null)
+            {
+                routingOn.Active = false;
+            }
+        }
+
+        public void UnmuteAllRouting()
+        {
+            foreach (var r in MidiMatrix)
+            {
+                r.Active = true;
+            }
         }
 
         public void InitRouting(Guid routingGuid)

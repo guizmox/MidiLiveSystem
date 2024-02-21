@@ -3,32 +3,279 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-      xmlns:local="clr-namespace:MidiLiveSystem"
+      xmlns:local="clr-namespace:MidiLiveSystem" xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
       mc:Ignorable="d" 
-      d:DesignHeight="450" d:DesignWidth="800"
+      d:DesignHeight="250" d:DesignWidth="400"
       Title="RoutingBox">
 
+    <Page.Resources>
+        <Style x:Key="TabControlHeaderStyle" TargetType="{x:Type TabItem}">
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style TargetType="Label">
+                <Setter Property="Foreground" Value="Red"/>
+                <!-- Couleur du texte rouge -->
+                <Setter Property="FontSize" Value="10"/>
+                <!-- Taille de la police 10 -->
+                <!-- Autres setters pour le style des labels peuvent être ajoutés ici -->
+            </Style>
+    </Page.Resources>
+    
     <Grid>
-        <TabControl>
-            <TabItem Header="Presets">
-                <Grid Background="#FFE5E5E5">
-                    <Button x:Name="btnPreset1" Content="Button1" HorizontalAlignment="Left" Margin="0,183,0,0" VerticalAlignment="Top" Height="42" Width="61"/>
-                    <Button x:Name="btnPreset2" Content="Button2" HorizontalAlignment="Left" Margin="80,183,0,0" VerticalAlignment="Top" Height="42" Width="61"/>
-                    <Button x:Name="btnPreset3" Content="Button3" HorizontalAlignment="Left" Margin="160,183,0,0" VerticalAlignment="Top" Height="42" Width="61"/>
-                    <Button x:Name="btnPreset4" Content="Button4" HorizontalAlignment="Left" Margin="240,183,0,0" VerticalAlignment="Top" Height="42" Width="61"/>
-                    <Button x:Name="btnPreset5" Content="Button5" HorizontalAlignment="Left" Margin="320,183,0,0" VerticalAlignment="Top" Height="42" Width="61"/>
-                    <Button x:Name="btnPreset6" Content="Button6" HorizontalAlignment="Left" Margin="400,183,0,0" VerticalAlignment="Top" Height="42" Width="61"/>
-                    <Button x:Name="btnPreset7" Content="Button7" HorizontalAlignment="Left" Margin="480,183,0,0" VerticalAlignment="Top" Height="42" Width="61"/>
-                    <Button x:Name="btnPreset8" Content="Button8" HorizontalAlignment="Left" Margin="560,183,0,0" VerticalAlignment="Top" Height="42" Width="61"/>
+        <TabControl ItemContainerStyle="{StaticResource TabControlHeaderStyle}">
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Width="Auto">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="50*" />
+                            <ColumnDefinition Width="50*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Box Name" VerticalAlignment="Center" HorizontalAlignment="Left" Foreground="IndianRed" FontSize="10" />
+                        <TextBlock Grid.Column="1" HorizontalAlignment="Center">  
+                                <materialDesign:PackIcon
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Kind="Play" />
+                        </TextBlock>
+                        </Grid>
+                    </StackPanel>
+                </TabItem.Header>
+                <Grid x:Name="gridBoxes">
+                    <!-- Définir une grille de 4x4 cellules -->
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="50*" />
+                        <RowDefinition Height="50*" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="25*" />
+                        <ColumnDefinition Width="25*" />
+                        <ColumnDefinition Width="25*" />
+                        <ColumnDefinition Width="25*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Button x:Name="btnPreset1" Grid.Row="0" Grid.Column="0" Height="90" Width="90">
+                        <StackPanel Width="Auto">
+                            <TextBlock HorizontalAlignment="Center">
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="RouterNetwork" />
+                            </TextBlock>
+                            <TextBlock Text="Preset 1" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="btnPreset2" Grid.Row="0" Grid.Column="1" Height="90" Width="90">
+                        <StackPanel Width="Auto">
+                            <TextBlock HorizontalAlignment="Center">
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="RouterNetwork" />
+                            </TextBlock>
+                            <TextBlock Text="Preset 2" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="btnPreset3" Grid.Row="0" Grid.Column="2" Height="90" Width="90">
+                        <StackPanel Width="Auto">
+                            <TextBlock HorizontalAlignment="Center">
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="RouterNetwork" />
+                            </TextBlock>
+                            <TextBlock Text="Preset 3" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="btnPreset4" Grid.Row="0" Grid.Column="3" Height="90" Width="90">
+                        <StackPanel Width="Auto">
+                            <TextBlock HorizontalAlignment="Center">
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="RouterNetwork" />
+                            </TextBlock>
+                            <TextBlock Text="Preset 4" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="btnPreset5" Grid.Row="1" Grid.Column="0" Height="90" Width="90">
+                        <StackPanel Width="Auto">
+                            <TextBlock HorizontalAlignment="Center">
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="RouterNetwork" />
+                            </TextBlock>
+                            <TextBlock Text="Preset 5" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="btnPreset6" Grid.Row="1" Grid.Column="1" Height="90" Width="90">
+                        <StackPanel Width="Auto">
+                            <TextBlock HorizontalAlignment="Center">
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="RouterNetwork" />
+                            </TextBlock>
+                            <TextBlock Text="Preset 6" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="btnPreset7" Grid.Row="1" Grid.Column="2" Height="90" Width="90">
+                        <StackPanel Width="Auto">
+                            <TextBlock HorizontalAlignment="Center">
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="RouterNetwork" />
+                            </TextBlock>
+                            <TextBlock Text="Preset 7" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="btnPreset8" Grid.Row="1" Grid.Column="3" Height="90" Width="90">
+                        <StackPanel Width="Auto">
+                            <TextBlock HorizontalAlignment="Center">
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="RouterNetwork" />
+                            </TextBlock>
+                            <TextBlock Text="Preset 8" />
+                        </StackPanel>
+                    </Button>
                 </Grid>
+                   
             </TabItem>
-            <TabItem Header="Settings">
-                <Grid Background="#FFE5E5E5">
-                    <ComboBox Name="cbMidiIn" HorizontalAlignment="Left" Margin="100,40,0,0" VerticalAlignment="Top" Width="120"/>
-                    <ComboBox Name="cbMidiOut" HorizontalAlignment="Left" Margin="100,80,0,0" VerticalAlignment="Top" Width="120"/>
-                    <ComboBox Name="cbChannelMidiIn" HorizontalAlignment="Left" Margin="240,40,0,0" VerticalAlignment="Top" Width="60"/>
-                    <ComboBox Name="cbChannelMidiOut" HorizontalAlignment="Left" Margin="240,80,0,0" VerticalAlignment="Top" Width="60"/>
-                    <Button Name="btnMem" Content="MEM" HorizontalAlignment="Left" Margin="730,15,0,0" VerticalAlignment="Top" Click="btnMem_Click" Height="50" Width="50"/>
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Width="Auto">
+                        <TextBlock HorizontalAlignment="Center">
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="Settings" />
+                        </TextBlock>
+                    </StackPanel>
+                </TabItem.Header>
+                <Grid x:Name="gridSettings">
+                    <!-- Définir une grille de 4x4 cellules -->
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="15*" />
+                        <RowDefinition Height="15*" />
+                        <RowDefinition Height="15*" />
+                        <RowDefinition Height="15*" />
+                        <RowDefinition Height="15*" />
+                        <RowDefinition Height="15*" />
+                        <RowDefinition Height="15*" />
+                        <RowDefinition Height="15*" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="25*" />
+                        <ColumnDefinition Width="50*" />
+                        <ColumnDefinition Width="15*" />
+                        <ColumnDefinition Width="10*" />
+                    </Grid.ColumnDefinitions>
+                    <Label Grid.Column="0" Grid.Row="0" Content="INPUT PORT + CH"/>
+                    <Label Grid.Column="0" Grid.Row="1" Content="OUTPUT PORT + CH"/>
+                    <ComboBox Name="cbMidiIn" Grid.Column="1" Grid.Row="0"/>
+                    <ComboBox Name="cbMidiOut" Grid.Column="1" Grid.Row="1"/>
+                    <ComboBox Name="cbChannelMidiIn" Grid.Column="2" Grid.Row="0"/>
+                    <ComboBox Name="cbChannelMidiOut" Grid.Column="2" Grid.Row="1"/>
+                    <Label Grid.Column="0" Grid.Row="2" Content="SOUND PRESET"/>
+                    <StackPanel Grid.Column="1" Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" >
+                        <Button Name="tbChoosePreset" Click="tbChoosePreset_Click" Content="Choose Preset" FontSize="8" Width="90" Height="20"/>
+                        <Label Name="lbPreset" Content="" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Label Grid.Column="0" Grid.Row="3" Content="FILTRES"/>
+                    <ComboBox Grid.Column="1" Grid.Row="3">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <CheckBox Content="{Binding Content}" IsChecked="{Binding IsChecked}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                        <CheckBox Name="ckAllowModulation" IsChecked="True" Content="Modulation"/>
+                        <CheckBox Name="ckAllowNotes" IsChecked="True" Content="Notes"/>
+                        <CheckBox Name="ckAllowAllCC"  IsChecked="True" Content="CC"/>
+                        <CheckBox Name="ckAllowSysex" IsChecked="True" Content="SysEx"/>
+                        <CheckBox Name="ckAllowNrpn" IsChecked="True" Content="Nrpn"/>
+                        <CheckBox Name="ckAllowAftertouch" IsChecked="True" Content="Aftertouch"/>
+                        <CheckBox Name="ckAllowPitchBend" IsChecked="True" Content="Pitch"/>
+                        <CheckBox Name="ckAllowProgramChange" IsChecked="True" Content="Prog. Change"/>
+                    </ComboBox>
+                    <Label Grid.Column="0" Grid.Row="4" Content="NOTE RANGE"/>
+                    <StackPanel Grid.Column="1" Grid.Row="4" >
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="30*" />
+                                <ColumnDefinition Width="20*" />
+                                <ColumnDefinition Width="30*" />
+                                <ColumnDefinition Width="20*" />
+                            </Grid.ColumnDefinitions>
+                            <Label Grid.Column="0" Content="Low"/>
+                            <TextBox Name="tbFilterLowNote" Grid.Column="1" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                            <Label Grid.Column="2" Content="High"/>
+                            <TextBox Name="tbFilterHighNote" Grid.Column="3" MaxLength="3" Text="127" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                        </Grid>
+                    </StackPanel>
+                    <Label Grid.Column="0" Grid.Row="5" Content="VELOCITY RANGE"/>
+                    <StackPanel Grid.Column="1" Grid.Row="5" >
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="30*" />
+                                <ColumnDefinition Width="20*" />
+                                <ColumnDefinition Width="30*" />
+                                <ColumnDefinition Width="20*" />
+                            </Grid.ColumnDefinitions>
+                            <Label Grid.Column="0" Content="Low"/>
+                            <TextBox Name="tbFilterLowVelo" Grid.Column="1" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                            <Label Grid.Column="2" Content="High"/>
+                            <TextBox Name="tbFilterHighVelo" Grid.Column="3" MaxLength="3" Text="127" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                        </Grid>
+                    </StackPanel>
+                    <Label Grid.Column="0" Grid.Row="6" Content="INIT CC VALUES"/>
+                    <ComboBox Grid.Column="1" Grid.Row="6">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Description}" Margin="0,0,5,0"/>
+                                    <TextBlock Text="{Binding Value}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Pan :" Margin="0,0,5,0"/>
+                            <TextBox Name="tbCC_Pan_Value" MaxLength="3" Text="64" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Volume :" Margin="0,0,5,0"/>
+                            <TextBox Name="tbCC_Volume_Value" MaxLength="3" Text="100" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Reverb :" Margin="0,0,5,0"/>
+                            <TextBox Name="tbCC_Reverb_Value" MaxLength="3" Text="-1" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Chorus :" Margin="0,0,5,0"/>
+                            <TextBox Name="tbCC_Chorus_Value" MaxLength="3" Text="-1" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Release :" Margin="0,0,5,0"/>
+                            <TextBox Name="tbCC_Release_Value" MaxLength="3" Text="-1" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Attack :" Margin="0,0,5,0"/>
+                            <TextBox Name="tbCC_Attack_Value" MaxLength="3" Text="-1" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Decay :" Margin="0,0,5,0"/>
+                            <TextBox Name="tbCC_Decay_Value" MaxLength="3" Text="-1" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Bright :" Margin="0,0,5,0"/>
+                            <TextBox Name="tbCC_Brightness_Value" MaxLength="3" Text="-1" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ComboBox>
+                    <Label Grid.Column="0" Grid.Row="7" Content="TRANSPOSITION"/>
                 </Grid>
             </TabItem>
         </TabControl>
