@@ -3,13 +3,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:MidiLiveSystem"
         mc:Ignorable="d"
         Title="MidiLog" Height="400" Width="600">
     <Grid>
         <RichTextBox x:Name="rtbMidiLog" Background="Black" Foreground="White" FontSize="9" FontFamily="Consolas">
             <FlowDocument>
-                <Paragraph LineHeight="5">
+                <Paragraph LineHeight="1">
                 </Paragraph>
             </FlowDocument>
         </RichTextBox>

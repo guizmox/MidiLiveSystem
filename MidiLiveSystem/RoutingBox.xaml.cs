@@ -3,6 +3,7 @@ using RtMidi.Core.Devices.Infos;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
@@ -25,9 +26,6 @@ namespace MidiLiveSystem
         public string Id { get; set; }
     }
 
-    /// <summary>
-    /// Logique d'interaction pour RoutingBox.xaml
-    /// </summary>
     public partial class RoutingBox : Page
     {
         public Guid RoutingGuid { get; set; }
@@ -36,7 +34,7 @@ namespace MidiLiveSystem
         public delegate void RoutingBoxEventHandler(Guid gBox, string sControl, object sValue);
         public event RoutingBoxEventHandler OnUIEvent;
 
-        BoxPreset[] TempMemory = new BoxPreset[8] { new BoxPreset(), new BoxPreset(), new BoxPreset(), new BoxPreset(), new BoxPreset(), new BoxPreset(), new BoxPreset(), new BoxPreset() };
+        private BoxPreset[] TempMemory = new BoxPreset[8] { new BoxPreset(), new BoxPreset(), new BoxPreset(), new BoxPreset(), new BoxPreset(), new BoxPreset(), new BoxPreset(), new BoxPreset() };
 
 
         public RoutingBox(List<IMidiInputDeviceInfo> inputDevices, List<IMidiOutputDeviceInfo> outputDevices)
@@ -83,7 +81,7 @@ namespace MidiLiveSystem
             string sInstrTemp = Directory.GetCurrentDirectory() + "\\SYNTH\\E-MU_UltraProteus.txt";
             //charger la liste des presets de l'instrument
             MidiTools.InstrumentData Instrument = new InstrumentData(sInstrTemp);
-            PresetBrowser pB = new PresetBrowser(Instrument);
+            PresetBrowser pB = new PresetBrowser(Instrument, false);
             pB.ShowDialog();
             lbPreset.Content = pB.SelectedPreset[0];
             lbPreset.Tag = pB.SelectedPreset[1];
@@ -484,6 +482,11 @@ namespace MidiLiveSystem
             return options;
         }
 
+        public RoutingBoxes GetRoutingBoxMemory()
+        {
+            return new RoutingBoxes { AllPresets = TempMemory };
+        }
+
         private int TextParser(string sText)
         {
             int i = 0;
@@ -496,6 +499,7 @@ namespace MidiLiveSystem
 
     }
 
+    [Serializable]
     public class BoxPreset
     {
         public Guid RoutingGuid { get; set; } = Guid.Empty;
@@ -514,7 +518,7 @@ namespace MidiLiveSystem
 
         }
 
-        public BoxPreset(Guid routingGuid, Guid boxGuid, string boxName, string presetName, MidiOptions midiOptions, MidiPreset midiPreset, string deviceIn, string deviceOut, int channelIn, int channelOut)
+        internal BoxPreset(Guid routingGuid, Guid boxGuid, string boxName, string presetName, MidiOptions midiOptions, MidiPreset midiPreset, string deviceIn, string deviceOut, int channelIn, int channelOut)
         {
             RoutingGuid = routingGuid;
             BoxGuid = boxGuid;
@@ -527,7 +531,6 @@ namespace MidiLiveSystem
             ChannelIn = channelIn;
             ChannelOut = channelOut;
         }
-
 
     }
 }

@@ -1,0 +1,90 @@
+﻿<Window x:Class="MidiLiveSystem.MidiConfiguration"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:local="clr-namespace:MidiLiveSystem"
+        mc:Ignorable="d"
+        Title="Project Configuration" Height="450" Width="600"
+        Closed="Window_Closed">
+
+
+    <Window.Resources>
+        <Style TargetType="Label">
+            <Setter Property="Foreground" Value="Red"/>
+            <!-- Couleur du texte rouge -->
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <!-- Taille de la police 10 -->
+            <!-- Autres setters pour le style des labels peuvent être ajoutés ici -->
+        </Style>
+    </Window.Resources>
+    
+    <Grid Grid.Column="1" Margin="5,5,5,5">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="92*" />
+            <RowDefinition Height="8*" />
+        </Grid.RowDefinitions>
+        <DockPanel Grid.Row="0">
+            <Grid x:Name="gridConfig">
+                <!-- Définir une grille de 4x4 cellules -->
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="15*" />
+                    <ColumnDefinition Width="25*" />
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="20*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Label Grid.Column="0" Grid.Row="0" Content="PROJECT NAME"/>
+                <TextBox Name="tbProjectName" Text="My Project" Grid.Column="1" Grid.Row="0" VerticalAlignment="Center"/>
+                
+                <Label Grid.Column="0" Grid.Row="2" Content="INPUT PORTS"/>
+                <ComboBox Name="cbMidiIn" Grid.Column="1" Grid.Row="2"/>
+
+                <Label Grid.Column="0" Grid.Row="3" Content="OUTPUT PORTS"/>
+                <ComboBox Name="cbMidiOut" Grid.Column="1" Grid.Row="3"/>
+
+                <Button Name="btnPastePreset" Grid.Column="3" Grid.Row="3" Click="btnLoadPresetFile_Click" >
+                    <StackPanel Width="Auto">
+                        <TextBlock Text="Load Cubase Preset File"/>
+                    </StackPanel>
+                </Button>
+                <Button Name="btnShowPresets" Grid.Column="3" Grid.Row="4" Click="btnShowPresets_Click" >
+                    <StackPanel Width="Auto">
+                        <TextBlock Text="Show Presets"/>
+                    </StackPanel>
+                </Button>
+
+                <Label Grid.Column="0" Grid.Row="5" Content="GRID"/>
+                <StackPanel Grid.Column="1" Grid.Row="5" VerticalAlignment="Center">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="40*"/>
+                            <ColumnDefinition Width="10*"/>
+                            <ColumnDefinition Width="40*"/>
+                            <ColumnDefinition Width="10*"/>
+                        </Grid.ColumnDefinitions>
+                        <Label Grid.Column="0" Content="HORIZONTAL"/>
+                        <TextBox Name="tbHorizontalItems" Grid.Column="1" Text="4" MaxLength="1" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                        <Label Grid.Column="2" Content="VERTICAL"/>
+                        <TextBox Name="tbVerticalItems" Grid.Column="3" Text="3" MaxLength="1" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                    </Grid>
+                </StackPanel>
+            </Grid>
+        </DockPanel>
+    </Grid>
+    
+</Window>

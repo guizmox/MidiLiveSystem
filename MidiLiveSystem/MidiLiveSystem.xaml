@@ -7,7 +7,7 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
         Title="MainWindow" Height="1000" Width="1600">
-    <Grid Grid.Column="1" Margin="0,0,5,0">
+    <Grid Grid.Column="1" Margin="5,5,5,5">
         <Grid.RowDefinitions>
             <RowDefinition Height="92*" />
             <RowDefinition Height="8*" />

@@ -2,7 +2,9 @@
 using RtMidi.Core.Enums;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -14,6 +16,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Xml.Linq;
+using System.Xml.Serialization;
 using static MidiLiveSystem.RoutingBox;
 
 namespace MidiLiveSystem
@@ -30,6 +34,8 @@ namespace MidiLiveSystem
         private List<RoutingBox> Boxes = new List<RoutingBox>();
         private List<Frame> GridFrames = new List<Frame>();
         public static BoxPreset CopiedPreset = new BoxPreset();
+        public ProjectConfiguration Project;
+        public SQLiteDatabaseManager Database = new SQLiteDatabaseManager();
 
         public MainWindow()
         {
@@ -168,31 +174,126 @@ namespace MidiLiveSystem
             {
                 if (box.RoutingGuid == Guid.Empty)
                 {
-                    MidiOptions mo = box.LoadOptions();
-
                     if (box.cbMidiIn.SelectedItem != null && box.cbMidiOut.SelectedItem != null)
                     {
                         box.RoutingGuid = Routing.AddRouting(((ComboBoxItem)box.cbMidiIn.SelectedItem).Tag.ToString(),
                                            ((ComboBoxItem)box.cbMidiOut.SelectedItem).Tag.ToString(),
                                            Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
                                            Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
-                                           mo, box.GetPreset());
+                                           box.LoadOptions(), box.GetPreset());
                     }
                 }
                 else
                 {
-                    MidiOptions mo = box.LoadOptions();
-                    Routing.ModifyRoutingOptions(box.RoutingGuid, mo);
+                    Routing.ModifyRoutingOptions(box.RoutingGuid, box.LoadOptions());
                 }
+            }
+
+            //sauvegarde de la config
+            if (Project == null)
+            {
+                Project = new ProjectConfiguration(); //config par défaut
+            }
+
+            string sId = Project.ProjectId.ToString();
+            string sProjectConfig = "";
+            string sRoutingConfig = "";
+            string sProjectName = Project.ProjectName;
+
+            XmlSerializer serializerConfig = new XmlSerializer(typeof(ProjectConfiguration));
+            using (StringWriter textWriter = new StringWriter())
+            {
+                serializerConfig.Serialize(textWriter, Project);
+                sProjectConfig = textWriter.ToString();
+            }
+
+            //sauvegarde des box
+            foreach (RoutingBox box in Boxes)
+            {
+                var memory = box.GetRoutingBoxMemory();
+                XmlSerializer serializerRouting = new XmlSerializer(typeof(RoutingBoxes));
+                using (StringWriter textWriter = new StringWriter())
+                {
+                    serializerRouting.Serialize(textWriter, memory);
+                    sRoutingConfig = textWriter.ToString();
+                }
+            }
+
+            try
+            {
+                Database.SaveProject(sId, sProjectName, sProjectConfig, sRoutingConfig, Environment.UserName);
+            }
+            catch (Exception ex) 
+            {
+                MessageBox.Show("Unable to Save Project : " + ex.Message);
             }
         }
 
         private void btnOpenProject_Click(object sender, RoutedEventArgs e)
         {
-
+            try
+            {
+                //Id, ProjectGuid, Name, DateProject, Author, Active
+                List<string[]> projects = Database.GetProjects();
+                if (projects.Count > 0) 
+                {
+                    Projects prj = new Projects(Database, projects);
+                    prj.ShowDialog();
+                    var project = prj.Project;
+                    if (project != null)
+                    {
+                        //Configurer l'UI
+                        //TODO
+                    }
+                    else
+                    {
+                        MessageBox.Show("Project not Loaded");
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("No project found.");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Unable to Get Project List : " + ex.Message);
+            }
         }
 
         private void btnSettings_Click(object sender, RoutedEventArgs e)
+        {
+
+            MidiConfiguration mc;
+
+            if (Project != null)
+            {
+                mc = new MidiConfiguration(Project);
+            }
+            else
+            {
+                mc = new MidiConfiguration();
+            }
+
+            mc.ShowDialog();
+            var config = mc.Configuration;
+            if (config != null ) 
+            {
+                Project = config;
+            }
+            else
+            {
+                MessageBox.Show("Unable to get Project Configuration");
+            }
+        }
+    }
+
+    [Serializable]
+    public class RoutingBoxes
+    {
+        public BoxPreset[] AllPresets;
+
+        public RoutingBoxes()
         {
 
         }

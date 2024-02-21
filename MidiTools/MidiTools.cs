@@ -214,7 +214,7 @@ namespace MidiTools
         private Int64 _eventsProcessedIN = 0;
         private Int64 _iCyclesIN = 1;
 
-        private List<Tuple<string, NoteOnMessage>> _pendingATNoteMessages = new List<Tuple<string, NoteOnMessage>>();
+        private List<Tuple<string, NoteOnMessage, bool>> _pendingATNoteMessages = new List<Tuple<string, NoteOnMessage, bool>>();
         private List<MidiDevice.MidiEvent> _eventsOUT = new List<MidiDevice.MidiEvent>();
         private Int64 _eventsProcessedOUT = 0;
         private Int64 _iCyclesOUT = 1;
@@ -299,7 +299,7 @@ namespace MidiTools
             foreach (var ev in events)
             {
                 var noteoff = (NoteOffMessage)ev.Event; //TODO : contrôle avec vélocité aussi ?
-                var noteon = _pendingATNoteMessages.FirstOrDefault(n => n.Item2.Key == noteoff.Key && n.Item2.Channel == noteoff.Channel && ev.Device == n.Item1);
+                var noteon = _pendingATNoteMessages.FirstOrDefault(n => n.Item2.Key == noteoff.Key && n.Item2.Channel == noteoff.Channel && ev.Device == n.Item1 && n.Item3);
                 lock (_pendingATNoteMessages) { _pendingATNoteMessages.Remove(noteon); }
             }
         }
@@ -308,7 +308,7 @@ namespace MidiTools
         {
             foreach (var ev in events)
             {
-                lock (_pendingATNoteMessages) { _pendingATNoteMessages.Add(new Tuple<string, NoteOnMessage>(ev.Device, (NoteOnMessage)ev.Event)); }
+                lock (_pendingATNoteMessages) { _pendingATNoteMessages.Add(new Tuple<string, NoteOnMessage, bool>(ev.Device, (NoteOnMessage)ev.Event, false)); }
             }
         }
 
@@ -433,16 +433,25 @@ namespace MidiTools
                                 {
                                     foreach (var noteon in _pendingATNoteMessages)
                                     {
-                                        var msgout = new NoteOffMessage(MidiDevice.GetChannel(i), noteon.Item2.Key, msg.Pressure);
-                                        lock (_eventsOUT) { _eventsOUT.Add(new MidiDevice.MidiEvent(ev.Type, msgout, msgout.Channel, item.DeviceOut.Name)); }
+                                        if (noteon.Item3) //a déjà été déclenché
+                                        {
+                                            var msgout = new NoteOffMessage(MidiDevice.GetChannel(i), noteon.Item2.Key, msg.Pressure);
+                                            lock (_eventsOUT) { _eventsOUT.Add(new MidiDevice.MidiEvent(ev.Type, msgout, msgout.Channel, item.DeviceOut.Name)); }
+                                        }
                                     }
                                 }
-                                else
+                                else //il y a de la pression sur l'AT
                                 {
-                                    foreach (var noteon in _pendingATNoteMessages)
+                                    for (int ipd = 0; ipd <= _pendingATNoteMessages.Count(); ipd++)
                                     {
-                                        var msgout = new NoteOnMessage(MidiDevice.GetChannel(i), noteon.Item2.Key, msg.Pressure);
-                                        lock (_eventsOUT) { _eventsOUT.Add(new MidiDevice.MidiEvent(ev.Type, msgout, msgout.Channel, item.DeviceOut.Name)); }
+                                        if (!_pendingATNoteMessages[ipd].Item3) //n'a pas encore été déclenché
+                                        {
+                                            //réécriture de la valeur pour signifier que la note a déjà été appuyée (pour éviter qu'à chaque modulation de l'AT, ça retrigger une note)
+                                            _pendingATNoteMessages[ipd] = new Tuple<string, NoteOnMessage, bool>(_pendingATNoteMessages[ipd].Item1, _pendingATNoteMessages[ipd].Item2, true);
+
+                                            var msgout = new NoteOnMessage(MidiDevice.GetChannel(i), _pendingATNoteMessages[ipd].Item2.Key, msg.Pressure);
+                                            lock (_eventsOUT) { _eventsOUT.Add(new MidiDevice.MidiEvent(ev.Type, msgout, msgout.Channel, item.DeviceOut.Name)); }
+                                        }
                                     }
                                 }
                                 var msgoutCC = new ControlChangeMessage(MidiDevice.GetChannel(i), 7, msg.Pressure); //envoi du CC pour moduler le volume
@@ -1459,14 +1468,15 @@ namespace MidiTools
         }
     }
 
+    [Serializable]
     public class MidiPreset
     {
-        public readonly string InstrumentGroup;
-        public readonly int Prg;
-        public readonly int Msb;
-        public readonly int Lsb;
-        public readonly string PresetName;
-        public int Channel;
+        public readonly string InstrumentGroup = "";
+        public readonly int Prg = 0;
+        public readonly int Msb = 0;
+        public readonly int Lsb = 0;
+        public readonly string PresetName = "";
+        public int Channel = 1;
 
         public string Id { get { return string.Concat(Prg, "-", Msb, "-", Lsb); } }
 
@@ -1481,15 +1491,21 @@ namespace MidiTools
             this.PresetName = sPName;
             this.Channel = iChannel;
         }
+        public MidiPreset()
+        {
+
+        }
     }
 
+    [Serializable]
     public class PresetHierarchy
     {
-        public string Category;
-        public readonly int Level;
-        public readonly int IndexInFile;
-        public readonly string Raw;
+        public string Category = "";
+        public readonly int Level = 0;
+        public readonly int IndexInFile = 0;
+        public readonly string Raw = "";
         public List<MidiPreset> Presets { get; set; } = new List<MidiPreset>();
+
         internal PresetHierarchy(int iIndex, string sRaw, string sCategory, int iLevel)
         {
             this.Category = sCategory;
@@ -1497,14 +1513,25 @@ namespace MidiTools
             this.Raw = sRaw;
             this.IndexInFile = iIndex;
         }
+
+        internal PresetHierarchy()
+        {
+
+        }
     }
 
+    [Serializable]
     public class InstrumentData
     {
         public List<PresetHierarchy> Categories { get; } = new List<PresetHierarchy>();
-        public string Device { get; } = "";
+        public string Device { get; set; } = "";
         public string CubaseFile { get; } = "";
         public bool SortedByBank = false;
+
+        public InstrumentData()
+        {
+            Categories = new List<PresetHierarchy>();
+        }
 
         internal InstrumentData(List<PresetHierarchy> sCats, string sDevice, string sCubaseFile, bool bSortedByBank)
         {
@@ -1636,6 +1663,14 @@ namespace MidiTools
                 {
                     return this;
                 }
+            }
+        }
+
+        public void ChangeDevice(string sNewName)
+        {
+            if (sNewName.Length > 0)
+            {
+                Device = sNewName;
             }
         }
     }

@@ -20,11 +20,13 @@ namespace MidiLiveSystem
     {
         private InstrumentData Instrument;
         public string[] SelectedPreset = new string[2] { "", "" };
+        private bool FromConfigScreen = false;
 
-        public PresetBrowser(InstrumentData instr)
+        public PresetBrowser(InstrumentData instr, bool bFromConfig)
         {
             InitializeComponent();
 
+            FromConfigScreen = bFromConfig;
             Instrument = instr;
             PopulateHierarchyTree();
         }
@@ -51,7 +53,7 @@ namespace MidiLiveSystem
                     {
                         TreeViewItem presetItem = new TreeViewItem();
                         presetItem.Header = p.PresetName;
-                        presetItem.Tag = p.Id; // Stockez des données supplémentaires dans la propriété Tag si nécessaire
+                        presetItem.Tag = p.Id;
                         categoryItem.Items.Add(presetItem);
                     }
                 }
@@ -108,7 +110,6 @@ namespace MidiLiveSystem
             return null;
         }
 
-
         private void tvPresets_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
             TreeViewItem tvi = (TreeViewItem)e.NewValue;
@@ -125,7 +126,12 @@ namespace MidiLiveSystem
             {
                 MidiPreset mp = Instrument.GetPreset(idx);
                 SelectedPreset = new string[2] { mp.PresetName, mp.TechName };
-                Close();
+                lblPresetInfo.Content = mp.TechName;
+
+                if (!FromConfigScreen)
+                {
+                    Close();
+                }
             }
         }
     }

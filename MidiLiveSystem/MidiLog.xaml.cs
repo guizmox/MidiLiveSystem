@@ -29,7 +29,7 @@ namespace MidiLiveSystem
                 Dispatcher.Invoke(() =>
             {
                 Paragraph paragraph = new Paragraph(new Run(sLog));
-                paragraph.LineHeight = 5;
+                paragraph.LineHeight = 1;
                 rtbMidiLog.Document.Blocks.Add(paragraph);
                 if (rtbMidiLog.Document.Blocks.Count > 100)
                 {
@@ -41,7 +41,7 @@ namespace MidiLiveSystem
             else
             {
                 Paragraph paragraph = new Paragraph(new Run(sLog));
-                paragraph.LineHeight = 5;
+                paragraph.LineHeight = 1;
                 rtbMidiLog.Document.Blocks.Add(paragraph);
                 if (rtbMidiLog.Document.Blocks.Count > 100)
                 {

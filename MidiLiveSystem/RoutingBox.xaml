@@ -3,10 +3,11 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-      xmlns:local="clr-namespace:MidiLiveSystem" xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+      xmlns:local="clr-namespace:MidiLiveSystem" 
+      xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
       mc:Ignorable="d" 
       d:DesignHeight="250" d:DesignWidth="400"
-      Title="RoutingBox">
+      Title="RoutingBox" Background="DimGray">
 
     <Page.Resources>
         <Style x:Key="TabControlHeaderStyle" TargetType="{x:Type TabItem}">
@@ -14,7 +15,7 @@
             <Setter Property="Background" Value="Transparent"/>
         </Style>
         <Style TargetType="Label">
-            <Setter Property="Foreground" Value="Red"/>
+            <Setter Property="Foreground" Value="LightYellow"/>
             <!-- Couleur du texte rouge -->
             <Setter Property="FontSize" Value="10"/>
             <!-- Taille de la police 10 -->
@@ -23,7 +24,7 @@
     </Page.Resources>
 
     <Grid>
-        <TabControl ItemContainerStyle="{StaticResource TabControlHeaderStyle}">
+        <TabControl ItemContainerStyle="{StaticResource TabControlHeaderStyle}" Padding="2">
             <TabItem>
                 <TabItem.Header>
                     <StackPanel>

@@ -3,15 +3,18 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:MidiLiveSystem"
         mc:Ignorable="d"
         Title="Preset Browser" Height="500" Width="500" ResizeMode="NoResize" ShowInTaskbar="False" WindowStyle="ToolWindow">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="5*" />
-            <RowDefinition Height="95*" />
+            <RowDefinition Height="85*" />
+            <RowDefinition Height="10*" />
         </Grid.RowDefinitions>
         <TreeView x:Name="tvPresets" Grid.Row="1" SelectedItemChanged="tvPresets_SelectedItemChanged"/>
         <Label Grid.Row="0" Content="Choose a Preset" FontWeight="Bold" Foreground="Red"/>
+        <Label Name="lblPresetInfo" Grid.Row="2" Content="Data :" FontWeight="Bold" Foreground="BlueViolet"/>
     </Grid>
 </Window>
