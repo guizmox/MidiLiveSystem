@@ -11,6 +11,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -119,6 +120,7 @@ namespace MidiLiveSystem
                         InstrumentData data = new InstrumentData(sFile);
                         if (data != null && data.Device.Length > 0)
                         {
+                            MessageBox.Show("Instrument successfully loaded (" + data.Device + ")");
                             data.ChangeDevice(sPort);
 
                             if (instr != null)
@@ -148,20 +150,23 @@ namespace MidiLiveSystem
         private void btnShowPresets_Click(object sender, RoutedEventArgs e)
         {
             var device = cbMidiOut.SelectedItem;
-            if (device != null) 
+            if (device != null)
             {
                 var instr = Instruments.FirstOrDefault(i => i.Device.Equals(((ComboBoxItem)device).Tag.ToString()));
 
-                if (instr != null) 
-                {
-                    PresetBrowser pb = new PresetBrowser(instr, true);
-                    pb.ShowDialog();
-                }
-                else
+                if (instr == null)
                 {
                     MessageBox.Show("No Instrument Data associated. Please load a valid Cubase file first.");
                 }
-            }   
+                else
+                {
+                    System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() =>
+                    {
+                        PresetBrowser pb = new PresetBrowser(instr, true);
+                        pb.ShowDialog();
+                    }));
+                }
+            }
         }
 
         private ProjectConfiguration GetConfiguration()
@@ -206,7 +211,7 @@ namespace MidiLiveSystem
             List<string> sDevicesIn = new List<string>();
             List<string> sDevicesOut = new List<string>();
 
-            foreach (ComboBoxItem cb in cbMidiIn.Items) 
+            foreach (ComboBoxItem cb in cbMidiIn.Items)
             {
                 sDevicesIn.Add(cb.Tag.ToString());
             }
@@ -256,7 +261,7 @@ namespace MidiLiveSystem
         }
 
         public List<string> DevicesIN
-        { 
+        {
             get
             {
                 if (_listDevicesIn == null)

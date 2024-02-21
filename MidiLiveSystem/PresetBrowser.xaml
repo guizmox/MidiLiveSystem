@@ -6,7 +6,18 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:MidiLiveSystem"
         mc:Ignorable="d"
-        Title="Preset Browser" Height="500" Width="500" ResizeMode="NoResize" ShowInTaskbar="False" WindowStyle="ToolWindow">
+        Title="Preset Browser" Height="500" Width="600" ResizeMode="NoResize" ShowInTaskbar="False" WindowStyle="ToolWindow" Closed="Window_Closed">
+
+    <Window.Resources>
+        <Style TargetType="Label">
+            <Setter Property="Foreground" Value="DarkBlue"/>
+            <!-- Couleur du texte rouge -->
+            <Setter Property="FontSize" Value="10"/>
+            <!-- Taille de la police 10 -->
+            <!-- Autres setters pour le style des labels peuvent être ajoutés ici -->
+        </Style>
+    </Window.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="5*" />
@@ -14,7 +25,31 @@
             <RowDefinition Height="10*" />
         </Grid.RowDefinitions>
         <TreeView x:Name="tvPresets" Grid.Row="1" SelectedItemChanged="tvPresets_SelectedItemChanged"/>
-        <Label Grid.Row="0" Content="Choose a Preset" FontWeight="Bold" Foreground="Red"/>
-        <Label Name="lblPresetInfo" Grid.Row="2" Content="Data :" FontWeight="Bold" Foreground="BlueViolet"/>
+        <Label Name="lblCaption"  Grid.Row="0" Content="Select a Preset" FontWeight="Bold" Foreground="Red"/>
+        <StackPanel Grid.Column="0" Grid.Row="2" Background="LightGray" >
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="15*" />
+                    <ColumnDefinition Width="8*" />
+                    <ColumnDefinition Width="5*" />
+                    <ColumnDefinition Width="8*" />
+                    <ColumnDefinition Width="5*" />
+                    <ColumnDefinition Width="8*" />
+                    <ColumnDefinition Width="5*" />
+                    <ColumnDefinition Width="10*" />
+                    <ColumnDefinition Width="26*" />
+                    <ColumnDefinition Width="2*" />
+                </Grid.ColumnDefinitions>
+                <Label Name="lblPresetInfo" Grid.Column="0"  Content="Data :" Foreground="Red"/>
+                <Label Grid.Column="1" Content="LSB :"/>
+                <TextBox Name="tbLsb" Grid.Column="2" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                <Label Grid.Column="3" Content="MSB :"/>
+                <TextBox Name="tbMsb" Grid.Column="4" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                <Label Grid.Column="5" Content="PRG :"/>
+                <TextBox Name="tbPrg" Grid.Column="6" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                <Label Grid.Column="7" Content="NAME :"/>
+                <TextBox Name="tbName" Text="Preset Name" Grid.Column="8" MaxLength="30" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+            </Grid>
+        </StackPanel>
     </Grid>
 </Window>

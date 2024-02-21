@@ -1,6 +1,8 @@
-﻿using MidiTools;
+﻿using MaterialDesignColors.ColorManipulation;
+using MidiTools;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -9,7 +11,6 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace MidiLiveSystem
 {
@@ -28,7 +29,57 @@ namespace MidiLiveSystem
 
             FromConfigScreen = bFromConfig;
             Instrument = instr;
-            PopulateHierarchyTree();
+
+            if (instr != null)
+            {
+                PopulateHierarchyTree();
+            }
+
+            if (bFromConfig)
+            {
+                lblCaption.Content = "Preset Browser";
+            }
+            else
+            {
+                lblCaption.Content = "Select a Preset";
+            }
+        }
+
+        private void Window_Closed(object sender, EventArgs e)
+        {
+            if (!FromConfigScreen)
+            {
+                if (SelectedPreset[0].Length == 0)
+                {
+                    try
+                    {
+                        int iPrg = Convert.ToInt32(tbPrg.Text.Trim());
+                        int iMsb = Convert.ToInt32(tbMsb.Text.Trim());
+                        int iLsb = Convert.ToInt32(tbLsb.Text.Trim());
+                        if (iPrg < 0 || iPrg > 127) { throw new Exception("Prg Invalid"); }
+                        if (iMsb < 0 || iMsb > 127) { throw new Exception("Msb Invalid"); }
+                        if (iLsb < 0 || iLsb > 127) { throw new Exception("iLsb Invalid"); }
+
+                        string sTechName = string.Concat(iPrg.ToString(), "-", iMsb.ToString(), "-", iLsb.ToString());
+                        SelectedPreset = new string[2] { tbName.Text.Trim(), sTechName };
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Invalid Preset Data. Using Default Values (" + ex.Message + ")");
+                        SelectedPreset = new string[2] { "Invalid Preset", "0-0-0" };
+                    }
+                }
+            }
+        }
+
+        private void tvPresets_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            TreeViewItem tvi = (TreeViewItem)e.NewValue;
+            if (!tvi.Tag.ToString().Equals("")) //c'est une catégorie
+            {
+                string idx = tvi.Tag.ToString();
+                ChangePreset(idx);
+            }
         }
 
         private void PopulateHierarchyTree()
@@ -110,23 +161,17 @@ namespace MidiLiveSystem
             return null;
         }
 
-        private void tvPresets_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
-        {
-            TreeViewItem tvi = (TreeViewItem)e.NewValue;
-            if (!tvi.Tag.ToString().Equals("")) //c'est une catégorie
-            {
-                string idx = tvi.Tag.ToString();
-                ChangePreset(idx);
-            }
-        }
-
         private void ChangePreset(string idx)
         {
             if (idx.Length > 0)
             {
                 MidiPreset mp = Instrument.GetPreset(idx);
-                SelectedPreset = new string[2] { mp.PresetName, mp.TechName };
-                lblPresetInfo.Content = mp.TechName;
+                SelectedPreset = new string[2] { mp.PresetName, string.Concat(mp.Prg.ToString(), "-", mp.Msb.ToString(), "-", mp.Lsb.ToString()) };
+                lblPresetInfo.Content = Path.GetFileName(Instrument.CubaseFile);
+                tbMsb.Text = mp.Msb.ToString();
+                tbLsb.Text = mp.Lsb.ToString();
+                tbPrg.Text = mp.Prg.ToString();
+                tbName.Text = mp.PresetName.ToString();
 
                 if (!FromConfigScreen)
                 {
@@ -134,5 +179,6 @@ namespace MidiLiveSystem
                 }
             }
         }
+
     }
 }

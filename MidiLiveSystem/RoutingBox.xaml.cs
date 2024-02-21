@@ -30,6 +30,7 @@ namespace MidiLiveSystem
     {
         public Guid RoutingGuid { get; set; }
         public Guid BoxGuid = Guid.NewGuid();
+        private ProjectConfiguration Project;
 
         public delegate void RoutingBoxEventHandler(Guid gBox, string sControl, object sValue);
         public event RoutingBoxEventHandler OnUIEvent;
@@ -37,9 +38,10 @@ namespace MidiLiveSystem
         BoxPreset[] TempMemory;
 
 
-        public RoutingBox(List<IMidiInputDeviceInfo> inputDevices, List<IMidiOutputDeviceInfo> outputDevices)
+        public RoutingBox(ProjectConfiguration conf, List<IMidiInputDeviceInfo> inputDevices, List<IMidiOutputDeviceInfo> outputDevices)
         {
             TempMemory = new BoxPreset[8] { new BoxPreset(BoxGuid), new BoxPreset(BoxGuid), new BoxPreset(BoxGuid), new BoxPreset(BoxGuid), new BoxPreset(BoxGuid), new BoxPreset(BoxGuid), new BoxPreset(BoxGuid), new BoxPreset(BoxGuid) };
+            Project = conf;
 
             InitializeComponent();
             InitPage(inputDevices, outputDevices);
@@ -90,13 +92,32 @@ namespace MidiLiveSystem
 
         private void tbChoosePreset_Click(object sender, RoutedEventArgs e)
         {
-            string sInstrTemp = Directory.GetCurrentDirectory() + "\\SYNTH\\E-MU_UltraProteus.txt";
             //charger la liste des presets de l'instrument
-            MidiTools.InstrumentData Instrument = new InstrumentData(sInstrTemp);
-            PresetBrowser pB = new PresetBrowser(Instrument, false);
-            pB.ShowDialog();
-            lbPreset.Content = pB.SelectedPreset[0];
-            lbPreset.Tag = pB.SelectedPreset[1];
+            if (cbMidiOut.SelectedValue != null)
+            {
+                string sDevice = ((ComboBoxItem)cbMidiOut.SelectedItem).Tag.ToString();
+
+                if (Project != null && Project.Instruments != null && Project.Instruments.Count > 0 && Project.Instruments.FirstOrDefault(i => i.Device.Equals(sDevice)) != null)
+                {
+                    var instr = Project.Instruments.FirstOrDefault(i => i.Device.Equals(sDevice));
+                    PresetBrowser pB = new PresetBrowser(instr, false);
+                    pB.ShowDialog();
+                    lbPreset.Content = pB.SelectedPreset[0];
+                    lbPreset.Tag = pB.SelectedPreset[1];
+                }
+                else
+                {
+                    MessageBox.Show("No Instrument Data. It can be created from 'Configuration' Menu. You can manually set Preset data instead (MSB + LSB + PRG)");
+                    PresetBrowser pB = new PresetBrowser(null, false);
+                    pB.ShowDialog();
+                    lbPreset.Content = pB.SelectedPreset[0];
+                    lbPreset.Tag = pB.SelectedPreset[1];
+                }
+            }
+            else
+            {
+                MessageBox.Show("Please choose a OUT Device first.");
+            }
         }
 
         private void tbSolo_Click(object sender, RoutedEventArgs e)
@@ -281,7 +302,7 @@ namespace MidiLiveSystem
                 MessageBox.Show("Unable to recall Preset");
             }
         }
-        
+
         public void Snapshot()
         {
             var bp = MemCurrentPreset();
@@ -417,7 +438,18 @@ namespace MidiLiveSystem
         {
             if (cbChannelPreset.SelectedItem != null)
             {
-                return new MidiPreset("", Convert.ToInt32(((ComboBoxItem)cbChannelPreset.SelectedItem).Tag.ToString()), 0, 0, 0, lbPreset.Content.ToString());
+                try
+                {
+                    int iPrg = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[0]);
+                    int iMsb = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[1]);
+                    int iLsb = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[2]);
+                    return new MidiPreset("", Convert.ToInt32(((ComboBoxItem)cbChannelPreset.SelectedItem).Tag.ToString()), iPrg, iMsb, iLsb, lbPreset.Content.ToString());
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Invalid Program (" + ex.Message + ")");
+                    return new MidiPreset("", 1, 0, 0, 0, "Unknown Preset");
+                }
             }
             else
             {

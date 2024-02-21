@@ -142,7 +142,7 @@ namespace MidiLiveSystem
 
         private void btnAddBox_Click(object sender, RoutedEventArgs e)
         {
-            RoutingBox rtb = new RoutingBox(MidiRouting.InputDevices, MidiRouting.OutputDevices);
+            RoutingBox rtb = new RoutingBox(Project, MidiRouting.InputDevices, MidiRouting.OutputDevices);
             Boxes.Add(rtb);
             AddRoutingBoxToFrame(rtb);
         }
@@ -209,7 +209,7 @@ namespace MidiLiveSystem
                     {
                         Project = project.Item2;
 
-                        Boxes = project.Item3.GetBoxes();
+                        Boxes = project.Item3.GetBoxes(Project);
 
                         if (Boxes != null)
                         {
@@ -386,7 +386,7 @@ namespace MidiLiveSystem
 
         }
 
-        internal List<RoutingBox> GetBoxes()
+        internal List<RoutingBox> GetBoxes(ProjectConfiguration project)
         {
             IEnumerable<Guid> distinctValues = AllPresets.Select(arr => arr.BoxGuid).Distinct();
             List<RoutingBox> boxes = new List<RoutingBox>();
@@ -396,7 +396,7 @@ namespace MidiLiveSystem
                 var presetsample = AllPresets.FirstOrDefault(p => p.BoxGuid == g);
                 if (presetsample != null)
                 {
-                    var box = new RoutingBox(MidiTools.MidiRouting.InputDevices, MidiTools.MidiRouting.OutputDevices);
+                    var box = new RoutingBox(project, MidiTools.MidiRouting.InputDevices, MidiTools.MidiRouting.OutputDevices);
                     box.BoxGuid = g;
                     box.LoadMemory(AllPresets.Where(p => p.BoxGuid == g).ToArray());
                     boxes.Add(box);

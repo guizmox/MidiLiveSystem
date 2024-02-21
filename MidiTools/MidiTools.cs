@@ -53,6 +53,15 @@ namespace MidiTools
             }
             else { return false; }
         }
+
+        internal bool CheckPreset(MidiPreset preset)
+        {
+            if (preset.Lsb != Preset.Lsb || preset.Msb != Preset.Msb || preset.Prg != Preset.Prg)
+            {
+                return true;
+            }
+            else { return false; }
+        }
     }
 
     public class MidiOptions
@@ -700,7 +709,14 @@ namespace MidiTools
                     routing.DeviceOut.OpenDevice();
                     routing.Active = active;
                 }
+
+                bool bPresetChanged = routing.CheckPreset(preset);
                 routing.Preset = preset;
+                if (bPresetChanged)
+                {
+                    SendPresetChange(routingGuid, preset);
+                }
+
                 return true;
             }
             else { return false; }
