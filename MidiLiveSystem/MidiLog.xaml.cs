@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MidiTools;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Windows;
@@ -17,37 +18,80 @@ namespace MidiLiveSystem
     /// </summary>
     public partial class MidiLog : Window
     {
+        private bool OnlyIN = false;
+
         public MidiLog()
         {
             InitializeComponent();
+            InitPage();
         }
 
-        internal void AddLog(string sLog)
+        private void InitPage()
         {
-            if (!Dispatcher.CheckAccess())
+            cbMidiDevices.Items.Add(new ComboBoxItem() { Tag = "ALL", Content = "All Devices" });
+
+            foreach (var dev in MidiRouting.InputDevices)
             {
-                Dispatcher.Invoke(() =>
+                cbMidiDevices.Items.Add(new ComboBoxItem() { Tag = dev.Name, Content = string.Concat("[IN] ", dev.Name) });
+            }
+            foreach (var dev in MidiRouting.OutputDevices)
             {
-                Paragraph paragraph = new Paragraph(new Run(sLog));
-                paragraph.LineHeight = 1;
-                rtbMidiLog.Document.Blocks.Add(paragraph);
-                if (rtbMidiLog.Document.Blocks.Count > 100)
-                {
-                    rtbMidiLog.Document.Blocks.Clear();
-                }
-                rtbMidiLog.ScrollToEnd();
-            });
+                cbMidiDevices.Items.Add(new ComboBoxItem() { Tag = dev.Name, Content = string.Concat("[OUT] ", dev.Name) });
+            }
+            cbMidiDevices.SelectedIndex = 0;
+        }
+
+        internal void AddLog(string sDevice, bool bIn, string sLog)
+        {
+            if (!bIn && OnlyIN) //on ne veut voir que les signaux IN
+            {
+
             }
             else
             {
-                Paragraph paragraph = new Paragraph(new Run(sLog));
-                paragraph.LineHeight = 1;
-                rtbMidiLog.Document.Blocks.Add(paragraph);
-                if (rtbMidiLog.Document.Blocks.Count > 100)
+                if (!Dispatcher.CheckAccess())
                 {
-                    rtbMidiLog.Document.Blocks.Clear();
+                    Dispatcher.Invoke(() =>
+                {
+                    if (cbMidiDevices.SelectedIndex == 0 || cbMidiDevices.SelectedValue.ToString().Equals(sDevice))
+                    {
+                        Paragraph paragraph = new Paragraph(new Run(sLog));
+                        paragraph.LineHeight = 1;
+                        rtbMidiLog.Document.Blocks.Add(paragraph);
+                        if (rtbMidiLog.Document.Blocks.Count > 100)
+                        {
+                            rtbMidiLog.Document.Blocks.Clear();
+                        }
+                        rtbMidiLog.ScrollToEnd();
+                    }
+                });
                 }
-                rtbMidiLog.ScrollToEnd();
+                else
+                {
+                    if (cbMidiDevices.SelectedIndex == 0 || cbMidiDevices.SelectedValue.ToString().Equals(sDevice))
+                    {
+                        Paragraph paragraph = new Paragraph(new Run(sLog));
+                        paragraph.LineHeight = 1;
+                        rtbMidiLog.Document.Blocks.Add(paragraph);
+                        if (rtbMidiLog.Document.Blocks.Count > 100)
+                        {
+                            rtbMidiLog.Document.Blocks.Clear();
+                        }
+                        rtbMidiLog.ScrollToEnd();
+                    }
+                }
+            }
+        }
+
+        private void ckOnlyIn_Checked(object sender, RoutedEventArgs e)
+        {
+            if (ckOnlyIn.IsChecked.Value)
+            {
+                OnlyIN = true;
+            }
+            else
+            {
+                OnlyIN = false;
             }
         }
     }

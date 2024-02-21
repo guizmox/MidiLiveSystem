@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:MidiLiveSystem"      
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
-        Title="MainWindow" Height="1000" Width="1600">
+        Title="MainWindow" Height="1000" Width="1600" Closed="Window_Closed">
     <Grid Grid.Column="1" Margin="5,5,5,5">
         <Grid.RowDefinitions>
             <RowDefinition Height="92*" />
@@ -37,7 +37,8 @@
                     <ColumnDefinition Width="11*" />
                     <ColumnDefinition Width="11*" />
                     <ColumnDefinition Width="11*" />
-                    <ColumnDefinition Width="53*" />
+                    <ColumnDefinition Width="11*" />
+                    <ColumnDefinition Width="42*" />
                     <ColumnDefinition Width="2*" />
                 </Grid.ColumnDefinitions>
                 
@@ -88,8 +89,20 @@
                         <TextBlock Text="Configuration" />
                     </StackPanel>
                 </Button>
-                
-                <Label Name="lblCharge" Grid.Column="5" Content="Charge" >
+
+                <Button Name="btnLog" Width="140" Height="60" Grid.Column="5" Background="IndianRed" Click="btnLog_Click" >
+                    <StackPanel>
+                        <TextBlock HorizontalAlignment="Center">
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="MidiPort" />
+                        </TextBlock>
+                        <TextBlock Text="MIDI Monitor" />
+                    </StackPanel>
+                </Button>
+
+                <Label Name="lblCharge" Grid.Column="6" Content="Charge" >
 
                 </Label>
             </Grid>

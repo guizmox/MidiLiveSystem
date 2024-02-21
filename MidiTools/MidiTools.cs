@@ -35,6 +35,24 @@ namespace MidiTools
             RoutingGuid = Guid.NewGuid();
             Preset = preset;
         }
+
+        internal bool CheckDeviceIn(string sDeviceIn)
+        {
+            if (DeviceIn != null && DeviceIn.Name != sDeviceIn)
+            {
+                return true;
+            }
+            else { return false; }
+        }
+
+        internal bool CheckDeviceOut(string sDeviceOut)
+        {
+            if (DeviceOut != null && DeviceOut.Name != sDeviceOut)
+            {
+                return true;
+            }
+            else { return false; }
+        }
     }
 
     public class MidiOptions
@@ -161,6 +179,8 @@ namespace MidiTools
 
     public class MidiRouting
     {
+        private static double CLOCK_INTERVAL = 20;
+
         public static List<RtMidi.Core.Devices.Infos.IMidiInputDeviceInfo> InputDevices
         {
             get
@@ -231,11 +251,11 @@ namespace MidiTools
                 DevicesOUT.Add(new MidiDevice(dev));
             }
 
-            MidiDevice.OnLogAdded += MidiDevice_OnLogAdded;
+            //MidiDevice.OnLogAdded += MidiDevice_OnLogAdded;
 
             Clock = new System.Timers.Timer();
             Clock.Elapsed += QueueProcessor_OnEvent;
-            Clock.Interval = 10;
+            Clock.Interval = CLOCK_INTERVAL;
             Clock.Start();
         }
 
@@ -325,6 +345,60 @@ namespace MidiTools
         private void MidiDevice_OnLogAdded(string sDevice, bool bIn, string sLog)
         {
             NewLog?.Invoke(sDevice, bIn, sLog);
+        }
+
+        private void CheckPortUsage(bool bIN)
+        {
+            if (bIN)
+            {
+                List<string> usedIn = new List<string>();
+                foreach (var mat in MidiMatrix)
+                {
+                    if (mat.Active && !usedIn.Contains(mat.DeviceIn.Name))
+                    {
+                        usedIn.Add(mat.DeviceIn.Name);
+                    }
+                }
+
+                foreach (var dev in usedIn)
+                {
+                    var device = MidiMatrix.FirstOrDefault(m => m.DeviceIn.Name.Equals(dev));
+                    device.DeviceIn.OpenDevice();
+                }
+
+                var notusedIN = MidiMatrix.Where(m => !usedIn.Contains(m.DeviceIn.Name)).ToList();
+                foreach (var dev in notusedIN)
+                {
+                    dev.DeviceIn.CloseDevice();
+                }
+            }
+            else
+            {
+                List<string> usedOut = new List<string>();
+
+                foreach (var mat in MidiMatrix)
+                {
+                    if (mat.Active && !usedOut.Contains(mat.DeviceOut.Name))
+                    {
+                        usedOut.Add(mat.DeviceOut.Name);
+                    }
+                }
+
+                foreach (var dev in usedOut)
+                {
+                    var device = MidiMatrix.FirstOrDefault(m => m.DeviceOut.Name.Equals(dev));
+                    device.DeviceOut.OpenDevice();
+                }
+
+
+                var notusedOUT = MidiMatrix.Where(m => !usedOut.Contains(m.DeviceOut.Name)).ToList();
+                foreach (var dev in notusedOUT)
+                {
+                    dev.DeviceOut.CloseDevice();
+                }
+
+            }
+
         }
 
         private void CheckAndOpenPorts(MidiDevice devIn, MidiDevice devOut)
@@ -598,6 +672,41 @@ namespace MidiTools
             else { return false; }
         }
 
+        public bool ModifyRouting(Guid routingGuid, string sDeviceIn, string sDeviceOut, int iChIn, int iChOut, MidiOptions options, MidiPreset preset = null)
+        {
+            var routing = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
+            if (routing != null)
+            {
+                routing.Options = options;
+                routing.ChannelIn = iChIn;
+                routing.ChannelOut = iChOut;
+                bool bINChanged = routing.CheckDeviceIn(sDeviceIn);
+                bool bOUTChanged = routing.CheckDeviceOut(sDeviceOut);
+                if (bINChanged)
+                {
+                    bool active = routing.Active;
+                    routing.Active = false;
+                    CheckPortUsage(true);
+                    routing.DeviceIn = new MidiDevice(MidiRouting.InputDevices.FirstOrDefault(m => m.Name.Equals(sDeviceIn)));
+                    routing.DeviceIn.OpenDevice();
+                    routing.Active = active;
+                }
+                if (bOUTChanged)
+                {
+                    bool active = routing.Active;
+                    routing.Active = false;
+                    CheckPortUsage(false);
+                    routing.DeviceOut = new MidiDevice(MidiRouting.OutputDevices.FirstOrDefault(m => m.Name.Equals(sDeviceOut)));
+                    routing.DeviceOut.OpenDevice();
+                    routing.Active = active;
+                }
+                routing.Preset = preset;
+                return true;
+            }
+            else { return false; }
+        }
+
+
         public bool ModifyRoutingPreset(Guid routingGuid, MidiPreset preset)
         {
             var routing = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
@@ -800,6 +909,16 @@ namespace MidiTools
             }
         }
 
+        public void StopLog()
+        {
+            MidiDevice.OnLogAdded -= MidiDevice_OnLogAdded;
+        }
+
+        public void StartLog()
+        {
+            MidiDevice.OnLogAdded += MidiDevice_OnLogAdded;
+        }
+
         #endregion
 
     }
@@ -857,8 +976,6 @@ namespace MidiTools
 
         internal delegate void MidiEventHandler(bool bIn, MidiDevice.MidiEvent ev);
         internal event MidiEventHandler OnMidiEvent;
-
-        private static StringBuilder _sblog = new StringBuilder();
 
         internal MidiDevice(RtMidi.Core.Devices.Infos.IMidiInputDeviceInfo inputDevice)
         {
@@ -1007,28 +1124,34 @@ namespace MidiTools
 
         internal static void AddLog(string sDevice, bool bIn, Channel iChannel, string sType, string sValue, string sExtra, string sExtraValue)
         {
-            string sCh = iChannel.ToString();
-
-            sCh = Regex.Replace(sCh, @"([A-z]+)(\d+)", "$1 $2");
-            sValue = Regex.Replace(sValue, @"([A-z]+)(\d+)", "$1 $2");
-            sExtraValue = Regex.Replace(sExtraValue, @"([A-z]+)(\d+)", "$1 $2");
-
-            string sMessage = string.Concat(bIn ? "[IN]".PadRight(6, ' ') : "[OUT]".PadRight(6, ' '), sDevice, " - ", sCh.PadRight(10, ' '), " : ", sType, (sValue.Length > 0 ? (" = " + sValue) : ""));
-            if (sExtra.Length > 0)
+            if (OnLogAdded != null)
             {
-                sMessage = string.Concat(sMessage, " / ", sExtra, (sExtraValue.Length > 0 ? (" = " + sExtraValue) : ""));
-            }
-            lock (_sblog)
-            {
-                _sblog.AppendLine(sMessage);
-            }
+                string sCh = iChannel.ToString();
 
-            OnLogAdded?.Invoke(sDevice, bIn, sMessage);
+                sCh = Regex.Replace(sCh, @"([A-z]+)(\d+)", "$1 $2");
+                sValue = Regex.Replace(sValue, @"([A-z]+)(\d+)", "$1 $2");
+                sExtraValue = Regex.Replace(sExtraValue, @"([A-z]+)(\d+)", "$1 $2");
+
+                string sMessage = string.Concat(bIn ? "[IN]".PadRight(6, ' ') : "[OUT]".PadRight(6, ' '), sDevice, " - ", sCh.PadRight(10, ' '), " : ", sType, (sValue.Length > 0 ? (" = " + sValue) : ""));
+                if (sExtra.Length > 0)
+                {
+                    sMessage = string.Concat(sMessage, " / ", sExtra, (sExtraValue.Length > 0 ? (" = " + sExtraValue) : ""));
+                }
+
+                OnLogAdded?.Invoke(sDevice, bIn, sMessage);
+            }
         }
 
         internal void SendMidiEvent(MidiEvent midiEvent)
         {
-            MIDI_OutputEvents.SendEvent(midiEvent);
+            if (MIDI_OutputEvents != null)
+            {
+                MIDI_OutputEvents.SendEvent(midiEvent);
+            }
+            else
+            {
+
+            }
         }
 
     }

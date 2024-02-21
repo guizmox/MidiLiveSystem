@@ -6,9 +6,27 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:MidiLiveSystem"
         mc:Ignorable="d"
-        Title="MidiLog" Height="400" Width="600">
+        Title="MidiLog" Height="600" Width="600">
     <Grid>
-        <RichTextBox x:Name="rtbMidiLog" Background="Black" Foreground="White" FontSize="9" FontFamily="Consolas">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="90*" />
+            <RowDefinition Height="5*" />
+        </Grid.RowDefinitions>
+
+        <DockPanel Grid.Row="1">
+            <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="20*" />
+                <ColumnDefinition Width="40*" />
+                <ColumnDefinition Width="40*" />
+            </Grid.ColumnDefinitions>
+            <CheckBox Name="ckOnlyIn" Grid.Column="0"  Content="Only IN" Checked="ckOnlyIn_Checked"></CheckBox>
+            <ComboBox Name="cbMidiDevices" Grid.Column="1" Grid.Row="1" SelectedValuePath="Tag" />
+        </Grid>
+
+        </DockPanel>
+
+        <RichTextBox x:Name="rtbMidiLog" Grid.Row="0" Background="Black" Foreground="White" FontSize="9" FontFamily="Consolas">
             <FlowDocument>
                 <Paragraph LineHeight="1">
                 </Paragraph>

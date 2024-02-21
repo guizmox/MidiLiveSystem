@@ -29,17 +29,17 @@ namespace MidiLiveSystem
     public partial class RoutingBox : Page
     {
         public Guid RoutingGuid { get; set; }
-        public Guid BoxGuid { get; internal set; }
+        public Guid BoxGuid = Guid.NewGuid();
 
         public delegate void RoutingBoxEventHandler(Guid gBox, string sControl, object sValue);
         public event RoutingBoxEventHandler OnUIEvent;
 
-        private BoxPreset[] TempMemory = new BoxPreset[8] { new BoxPreset(), new BoxPreset(), new BoxPreset(), new BoxPreset(), new BoxPreset(), new BoxPreset(), new BoxPreset(), new BoxPreset() };
+        BoxPreset[] TempMemory;
 
 
         public RoutingBox(List<IMidiInputDeviceInfo> inputDevices, List<IMidiOutputDeviceInfo> outputDevices)
         {
-            BoxGuid = Guid.NewGuid();
+            TempMemory = new BoxPreset[8] { new BoxPreset(BoxGuid), new BoxPreset(BoxGuid), new BoxPreset(BoxGuid), new BoxPreset(BoxGuid), new BoxPreset(BoxGuid), new BoxPreset(BoxGuid), new BoxPreset(BoxGuid), new BoxPreset(BoxGuid) };
 
             InitializeComponent();
             InitPage(inputDevices, outputDevices);
@@ -74,6 +74,18 @@ namespace MidiLiveSystem
             }
 
             cbPresetButton.SelectedIndex = 0;
+        }
+
+        public void LoadMemory(BoxPreset[] mem)
+        {
+            if (mem != null && mem.Length > 0)
+            {
+                TempMemory = mem;
+                if (TempMemory != null && TempMemory.Length > 0)
+                {
+                    FillUI(TempMemory[0], true);
+                }
+            }
         }
 
         private void tbChoosePreset_Click(object sender, RoutedEventArgs e)
@@ -129,7 +141,7 @@ namespace MidiLiveSystem
                     TempMemory[idxOut] = bp;
 
                     int idxIn = Convert.ToInt32(cbIn.Tag.ToString());
-                    FillUI(TempMemory[idxIn]);
+                    FillUI(TempMemory[idxIn], idxIn > 0 ? false : true);
                 }
             }
             catch (Exception ex)
@@ -137,7 +149,6 @@ namespace MidiLiveSystem
                 MessageBox.Show("Unable to Save Preset (" + ex.Message + ")");
             }
         }
-
 
         private void btnAddCCConvert_Click(object sender, RoutedEventArgs e)
         {
@@ -199,7 +210,7 @@ namespace MidiLiveSystem
         {
             if (cbCCConvert.SelectedItem != null)
             {
-                var cb = cbCCConvert.SelectedItem;
+                var cb = cbCCConvert.SelectedValue;
                 cbCCConvert.Items.Remove(cb);
             }
         }
@@ -208,7 +219,7 @@ namespace MidiLiveSystem
         {
             if (cbNOTEConvert.SelectedItem != null)
             {
-                var cb = cbNOTEConvert.SelectedItem;
+                var cb = cbNOTEConvert.SelectedValue;
                 cbNOTEConvert.Items.Remove(cb);
             }
         }
@@ -238,7 +249,7 @@ namespace MidiLiveSystem
                 var copied = MidiLiveSystem.MainWindow.CopiedPreset;
                 if (copied != null)
                 {
-                    FillUI(copied);
+                    FillUI(copied, cbPresetButton.SelectedIndex == 0 ? true : false);
                 }
                 else
                 {
@@ -259,7 +270,7 @@ namespace MidiLiveSystem
 
             if (bp != null)
             {
-                FillUI(bp);
+                FillUI(bp, idx > 0 ? false : true);
 
                 OnUIEvent?.Invoke(BoxGuid, "PRESET_CHANGE", bp.MidiOptions);
 
@@ -268,6 +279,17 @@ namespace MidiLiveSystem
             else
             {
                 MessageBox.Show("Unable to recall Preset");
+            }
+        }
+        
+        public void Snapshot()
+        {
+            var bp = MemCurrentPreset();
+            var item = (ComboBoxItem)cbPresetButton.SelectedItem;
+            if (item != null)
+            {
+                int idxOut = Convert.ToInt32(item.Tag.ToString());
+                TempMemory[idxOut] = bp;
             }
         }
 
@@ -292,16 +314,36 @@ namespace MidiLiveSystem
             catch { throw; }
         }
 
-        private void FillUI(BoxPreset bp)
+        private void FillUI(BoxPreset bp, bool bIsFirst)
         {
+            if (bIsFirst)
+            {
+                cbMidiIn.IsEnabled = true;
+                cbMidiOut.IsEnabled = true;
+                cbChannelMidiIn.IsEnabled = true;
+                cbChannelMidiOut.IsEnabled = true;
+            }
+            else
+            {
+                cbMidiIn.IsEnabled = false;
+                cbMidiOut.IsEnabled = false;
+                cbChannelMidiIn.IsEnabled = false;
+                cbChannelMidiOut.IsEnabled = false;
+            }
+
             //remplissage des champs
             tbPresetName.Text = bp.PresetName;
             tbRoutingName.Text = bp.BoxName;
-            cbMidiIn.SelectedValue = bp.DeviceIn;
-            cbMidiOut.SelectedValue = bp.DeviceOut;
-            cbChannelMidiIn.SelectedItem = bp.ChannelIn;
-            cbChannelMidiOut.SelectedItem = bp.ChannelOut;
-            cbChannelPreset.SelectedItem = bp.MidiPreset.Channel;
+
+            if (bIsFirst)
+            {
+                cbMidiIn.SelectedValue = bp.DeviceIn;
+                cbMidiOut.SelectedValue = bp.DeviceOut;
+                cbChannelMidiIn.SelectedValue = bp.ChannelIn;
+                cbChannelMidiOut.SelectedValue = bp.ChannelOut;
+            }
+
+            cbChannelPreset.SelectedValue = bp.MidiPreset.Channel;
             lbPreset.Content = bp.MidiPreset.PresetName;
 
             tbFilterHighNote.Text = bp.MidiOptions.NoteFilterHigh.ToString();
@@ -482,9 +524,9 @@ namespace MidiLiveSystem
             return options;
         }
 
-        public RoutingBoxes GetRoutingBoxMemory()
+        public List<BoxPreset> GetRoutingBoxMemory()
         {
-            return new RoutingBoxes { AllPresets = TempMemory };
+            return TempMemory.ToList();
         }
 
         private int TextParser(string sText)
@@ -516,6 +558,11 @@ namespace MidiLiveSystem
         public BoxPreset()
         {
 
+        }
+
+        public BoxPreset(Guid boxGuid)
+        {
+            BoxGuid = boxGuid;
         }
 
         internal BoxPreset(Guid routingGuid, Guid boxGuid, string boxName, string presetName, MidiOptions midiOptions, MidiPreset midiPreset, string deviceIn, string deviceOut, int channelIn, int channelOut)

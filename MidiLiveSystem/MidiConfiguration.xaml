@@ -52,10 +52,10 @@
                 <TextBox Name="tbProjectName" Text="My Project" Grid.Column="1" Grid.Row="0" VerticalAlignment="Center"/>
                 
                 <Label Grid.Column="0" Grid.Row="2" Content="INPUT PORTS"/>
-                <ComboBox Name="cbMidiIn" Grid.Column="1" Grid.Row="2"/>
+                <ComboBox Name="cbMidiIn" Grid.Column="1" Grid.Row="2" SelectedValuePath="Tag" />
 
                 <Label Grid.Column="0" Grid.Row="3" Content="OUTPUT PORTS"/>
-                <ComboBox Name="cbMidiOut" Grid.Column="1" Grid.Row="3"/>
+                <ComboBox Name="cbMidiOut" Grid.Column="1" Grid.Row="3" SelectedValuePath="Tag" />
 
                 <Button Name="btnPastePreset" Grid.Column="3" Grid.Row="3" Click="btnLoadPresetFile_Click" >
                     <StackPanel Width="Auto">
