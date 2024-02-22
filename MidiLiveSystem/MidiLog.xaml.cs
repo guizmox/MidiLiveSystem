@@ -83,9 +83,10 @@ namespace MidiLiveSystem
             }
         }
 
-        private void ckOnlyIn_Checked(object sender, RoutedEventArgs e)
+        private void ckOnlyIn_Click(object sender, RoutedEventArgs e)
         {
-            if (ckOnlyIn.IsChecked.Value)
+            CheckBox cb = (CheckBox)sender;
+            if (cb.IsChecked.Value)
             {
                 OnlyIN = true;
             }

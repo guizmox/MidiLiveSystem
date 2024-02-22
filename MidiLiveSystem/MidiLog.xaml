@@ -20,7 +20,7 @@
                 <ColumnDefinition Width="40*" />
                 <ColumnDefinition Width="40*" />
             </Grid.ColumnDefinitions>
-            <CheckBox Name="ckOnlyIn" Grid.Column="0"  Content="Only IN" Checked="ckOnlyIn_Checked"></CheckBox>
+            <CheckBox Name="ckOnlyIn" Grid.Column="0"  Content="Only IN" Click="ckOnlyIn_Click"></CheckBox>
             <ComboBox Name="cbMidiDevices" Grid.Column="1" Grid.Row="1" SelectedValuePath="Tag" />
         </Grid>
 
