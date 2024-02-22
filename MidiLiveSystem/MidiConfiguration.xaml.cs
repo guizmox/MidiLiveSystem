@@ -24,17 +24,23 @@ namespace MidiLiveSystem
         public MidiConfiguration()
         {
             InitializeComponent();
-            InitPage(false);
+            InitPage(false, null);
         }
 
-        public MidiConfiguration(ProjectConfiguration pc)
+        public MidiConfiguration(List<RoutingBox> boxes)
+        {
+            InitializeComponent();
+            InitPage(false, boxes);
+        }
+
+        public MidiConfiguration(ProjectConfiguration pc, List<RoutingBox> boxes)
         {
             Configuration = pc;
             InitializeComponent();
-            InitPage(true);
+            InitPage(true, boxes);
         }
 
-        private void InitPage(bool bFromSave)
+        private void InitPage(bool bFromSave, List<RoutingBox> boxes)
         {
             //comparaison avec le projet et les devices réels
             if (bFromSave)
@@ -80,6 +86,16 @@ namespace MidiLiveSystem
                 foreach (var s in MidiTools.MidiRouting.OutputDevices)
                 {
                     cbMidiOut.Items.Add(new ComboBoxItem() { Tag = s.Name, Content = s.Name });
+                }
+            }
+
+            if (boxes != null)
+            {
+                int iB = 0;
+                foreach (var box in boxes)
+                {
+                    iB++;
+                    cbRoutingNames.Items.Add(new TextBox() { Text = box.BoxName.Equals("Routing Box") ? string.Concat("Routing Box ", iB) : box.BoxName, Tag = box.BoxGuid });
                 }
             }
         }
@@ -219,7 +235,14 @@ namespace MidiLiveSystem
                 sDevicesOut.Add(cb.Tag.ToString());
             }
 
+            List<string[]> boxnames = new List<string[]>();
+            foreach (TextBox cb in cbRoutingNames.Items)
+            {
+                boxnames.Add(new string[] { cb.Text, cb.Tag.ToString() });
+            }
+
             ProjectConfiguration pc = new ProjectConfiguration();
+            pc.BoxNames = boxnames;
             pc.ProjectName = projectName;
             pc.Instruments = Configuration.Instruments;
             pc.DevicesIN = sDevicesIn;
@@ -234,6 +257,7 @@ namespace MidiLiveSystem
     [Serializable]
     public class ProjectConfiguration
     {
+        private List<string> _sBoxNames = null;
         private List<string> _listDevicesIn = null;
         private List<string> _listDevicesOut = null;
 
@@ -278,6 +302,8 @@ namespace MidiLiveSystem
                 _listDevicesIn = value;
             }
         }
+
+        public List<string[]> BoxNames = null;
 
         public List<InstrumentData> Instruments = new List<InstrumentData>();
 

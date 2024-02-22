@@ -6,7 +6,7 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:MidiLiveSystem"
         mc:Ignorable="d"
-        Title="Preset Browser" Height="500" Width="600" ResizeMode="NoResize" ShowInTaskbar="False" WindowStyle="ToolWindow" Closed="Window_Closed">
+        Title="Preset Browser" Height="500" Width="600" ResizeMode="NoResize" ShowInTaskbar="False" WindowStyle="ToolWindow" Closed="Window_Closed" WindowStartupLocation="CenterOwner">
 
     <Window.Resources>
         <Style TargetType="Label">

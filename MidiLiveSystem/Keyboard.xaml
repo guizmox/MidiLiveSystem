@@ -1,0 +1,96 @@
+﻿<Window x:Class="MidiLiveSystem.Keyboard"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MidiLiveSystem"
+        mc:Ignorable="d"
+        Title="Keyboard" Height="400" Width="800" Background="DimGray" ResizeMode="NoResize" WindowStartupLocation="CenterOwner">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="20*"/>
+            <RowDefinition Height="15*"/>
+            <RowDefinition Height="15*"/>
+            <RowDefinition Height="15*"/>
+            <RowDefinition Height="15*"/>
+            <RowDefinition Height="20*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="10*"/>
+            <ColumnDefinition Width="10*"/>
+            <ColumnDefinition Width="10*"/>
+            <ColumnDefinition Width="10*"/>
+            <ColumnDefinition Width="10*"/>
+            <ColumnDefinition Width="10*"/>
+            <ColumnDefinition Width="10*"/>
+            <ColumnDefinition Width="10*"/>
+            <ColumnDefinition Width="10*"/>
+            <ColumnDefinition Width="10*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Première ligne : Chiffres -->
+        <Button Grid.Row="0" Grid.Column="0" Content="1" Tag="1" Background="IndianRed" Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="0" Grid.Column="1" Content="2" Tag="2" Background="IndianRed" Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="0" Grid.Column="2" Content="3" Tag="3" Background="IndianRed" Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="0" Grid.Column="3" Content="4" Tag="4" Background="IndianRed" Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="0" Grid.Column="4" Content="5" Tag="5" Background="IndianRed" Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="0" Grid.Column="5" Content="6" Tag="6" Background="IndianRed" Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="0" Grid.Column="6" Content="7" Tag="7" Background="IndianRed" Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="0" Grid.Column="7" Content="8" Tag="8" Background="IndianRed" Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="0" Grid.Column="8" Content="9" Tag="9" Background="IndianRed" Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="0" Grid.Column="9" Content="0" Tag="0" Background="IndianRed" Height="50" Click="KeyboardButton_Click"/>
+
+        <!-- Deuxième ligne : Lettres -->
+        <Button Grid.Row="1" Grid.Column="0" Content="Q" Tag="Q"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="1" Grid.Column="1" Content="W" Tag="W"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="1" Grid.Column="2" Content="E" Tag="E"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="1" Grid.Column="3" Content="R" Tag="R"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="1" Grid.Column="4" Content="T" Tag="T"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="1" Grid.Column="5" Content="Y" Tag="Y"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="1" Grid.Column="6" Content="U" Tag="U"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="1" Grid.Column="7" Content="I" Tag="I"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="1" Grid.Column="8" Content="O" Tag="O"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="1" Grid.Column="9" Content="P" Tag="P"  Height="50" Click="KeyboardButton_Click"/>
+
+        <!-- Troisième ligne : Lettres -->
+        <Button Grid.Row="2" Grid.Column="0" Content="A" Tag="A"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="2" Grid.Column="1" Content="S" Tag="S"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="2" Grid.Column="2" Content="D" Tag="D"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="2" Grid.Column="3" Content="F" Tag="F"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="2" Grid.Column="4" Content="G" Tag="G"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="2" Grid.Column="5" Content="H" Tag="H"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="2" Grid.Column="6" Content="J" Tag="J"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="2" Grid.Column="7" Content="K" Tag="K"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="2" Grid.Column="8" Content="L" Tag="L"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="2" Grid.Column="9" Content="M" Tag="M"  Height="50" Click="KeyboardButton_Click"/>
+
+        <!-- Troisième ligne : Lettres -->
+        <Button Grid.Row="3" Grid.Column="0" Content="Z" Tag="Z"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="3" Grid.Column="1" Content="X" Tag="X"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="3" Grid.Column="2" Content="C" Tag="C"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="3" Grid.Column="3" Content="V" Tag="V"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="3" Grid.Column="4" Content="B" Tag="B"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="3" Grid.Column="5" Content="N" Tag="N"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="3" Grid.Column="6" Content="," Tag=","  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="3" Grid.Column="7" Content="." Tag="."  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="3" Grid.Column="8" Content=":" Tag=":"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="3" Grid.Column="9" Content="!" Tag="!"  Height="50" Click="KeyboardButton_Click"/>
+
+        <!-- Quatrième ligne : Symboles -->
+        <Button Grid.Row="4" Grid.Column="0" Content="!" Tag="!"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="4" Grid.Column="1" Content="@" Tag="@"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="4" Grid.Column="2" Content="#" Tag="#"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="4" Grid.Column="3" Content="_" Tag="_"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="4" Grid.Column="4" Content="-" Tag="-"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="4" Grid.Column="5" Content="^" Tag="^"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="4" Grid.Column="6" Content="?" Tag="?"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="4" Grid.Column="7" Content="*" Tag="*"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="4" Grid.Column="8" Content="(" Tag="("  Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="4" Grid.Column="9" Content=")" Tag=")"  Height="50" Click="KeyboardButton_Click"/>
+
+        <!-- Cinquième ligne : Options -->
+        <Button Grid.Row="5" Grid.Column="3" Grid.ColumnSpan="4" Content="SPACE" Tag=" " Height="50" Click="KeyboardButton_Click"/>
+        <Button Grid.Row="5" Background="DarkGray" Grid.Column="8"  Grid.ColumnSpan="2" Content="BACK" Tag="BACK"  Height="50" Click="KeyboardButton_Click"/>
+        <Button Name="btnMaj" Background="DarkGray" Grid.Row="5" Grid.Column="0"  Grid.ColumnSpan="2" Content="MIN" Tag="MIN"  Height="50" Click="btnMaj_Click"/>
+    </Grid>
+</Window>

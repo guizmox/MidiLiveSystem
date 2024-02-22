@@ -166,7 +166,7 @@ namespace MidiLiveSystem
             if (idx.Length > 0)
             {
                 MidiPreset mp = Instrument.GetPreset(idx);
-                SelectedPreset = new string[2] { mp.PresetName, string.Concat(mp.Prg.ToString(), "-", mp.Msb.ToString(), "-", mp.Lsb.ToString()) };
+                SelectedPreset = new string[2] { mp.PresetName, mp.Tag };
                 lblPresetInfo.Content = Path.GetFileName(Instrument.CubaseFile);
                 tbMsb.Text = mp.Msb.ToString();
                 tbLsb.Text = mp.Lsb.ToString();

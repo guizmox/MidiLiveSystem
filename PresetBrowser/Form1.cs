@@ -249,7 +249,7 @@ namespace PresetBrowser
             if (idx.Length > 0)
             {
                 MidiPreset mp = Instrument.GetPreset(idx);
-                lbProgram.Text = mp.TechName;
+                lbProgram.Text = mp.Tag;
 
                 int iChannel = 0;
                 if (int.TryParse(tbChannelMidiOUT.Text, out iChannel))
@@ -341,7 +341,7 @@ namespace PresetBrowser
                     }
                     else
                     {
-                        Routing.InitRouting(RoutingGuid);
+                        Routing.InitRouting(RoutingGuid, new MidiOptions());
                     }
                 }
                 catch (Exception ex)
@@ -358,11 +358,11 @@ namespace PresetBrowser
             {
                 if (bOn)
                 {
-                    Routing.SendNote(Note, true, sDevice);
+                    Routing.SendNote(RoutingGuid, Note, true, sDevice);
                 }
                 else
                 {
-                    Routing.SendNote(Note, false, sDevice);
+                    Routing.SendNote(RoutingGuid, Note, false, sDevice);
                 }
             }
             catch (Exception ex)

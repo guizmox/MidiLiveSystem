@@ -22,6 +22,7 @@ using static MidiLiveSystem.RoutingBox;
 
 namespace MidiLiveSystem
 {
+
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
@@ -29,7 +30,9 @@ namespace MidiLiveSystem
     {
         private System.Timers.Timer Clock;
 
+        private MidiConfiguration ConfigWindow;
         private MidiLog Log = new MidiLog();
+        private Keyboard Keys;
         private MidiRouting Routing = new MidiRouting();
         private List<RoutingBox> Boxes = new List<RoutingBox>();
         private List<Frame> GridFrames = new List<Frame>();
@@ -52,6 +55,22 @@ namespace MidiLiveSystem
             Clock.Interval = 10000;
             Clock.Start();
 
+        }
+
+        private void Keyboard_KeyPressed(string sKey)
+        {
+            if (FocusManager.GetFocusedElement(this) is TextBox textBox)
+            {
+                if (sKey.Equals("BACK", StringComparison.OrdinalIgnoreCase))
+                {
+                    string sNew = textBox.Text.Length == 0 ? "" : textBox.Text.Substring(0, textBox.Text.Length - 1);
+                    textBox.Text = sNew;
+                }
+                else
+                {
+                    textBox.Text += sKey;
+                }
+            }
         }
 
         private void InitFrames()
@@ -97,11 +116,43 @@ namespace MidiLiveSystem
             Log = null;
         }
 
+        private void MainConfiguration_Closed(object sender, EventArgs e)
+        {
+            var config = ConfigWindow.Configuration;
+            if (config != null)
+            {
+                Project = config;
+                //rename des box
+                if (config.BoxNames != null)
+                {
+                    foreach (string[] boxname in config.BoxNames)
+                    {
+                        var b = Boxes.FirstOrDefault(b => b.BoxGuid.ToString().Equals(boxname[1]));
+                        if (b != null)
+                        {
+                            b.BoxName = boxname[0];
+                            Dispatcher.Invoke(() =>
+                            {
+                                b.tbRoutingName.Text = boxname[0];
+                            });
+                        }
+                    }
+                }
+            }
+            else
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    MessageBox.Show("Unable to get Project Configuration");
+                });
+            }
+        }
+
         private void Clock_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
             Dispatcher.Invoke(() =>
             {
-                lblCharge.Content = Routing.CyclesInfo;
+                this.Title = string.Concat("Midi Live System [", Routing.CyclesInfo, "]");
 
                 //sauvegarde temporaire
                 SaveTemplate();
@@ -117,27 +168,22 @@ namespace MidiLiveSystem
 
         private void btnSettings_Click(object sender, RoutedEventArgs e)
         {
-            MidiConfiguration mc;
+            if (ConfigWindow != null)
+            {
+                ConfigWindow.Closed -= MainConfiguration_Closed;
+            }
 
             if (Project != null)
             {
-                mc = new MidiConfiguration(Project);
+                ConfigWindow = new MidiConfiguration(Project, Boxes);
             }
             else
             {
-                mc = new MidiConfiguration();
+                ConfigWindow = new MidiConfiguration(Boxes);
             }
 
-            mc.ShowDialog();
-            var config = mc.Configuration;
-            if (config != null)
-            {
-                Project = config;
-            }
-            else
-            {
-                MessageBox.Show("Unable to get Project Configuration");
-            }
+            ConfigWindow.Show();
+            ConfigWindow.Closed += MainConfiguration_Closed;  
         }
 
         private void btnAddBox_Click(object sender, RoutedEventArgs e)
@@ -261,6 +307,22 @@ namespace MidiLiveSystem
             }
         }
 
+        private void btnKeyboard_Click(object sender, RoutedEventArgs e)
+        {
+            if (Keys == null)
+            {
+                Keys = new Keyboard();
+                Keyboard.KeyPressed += Keyboard_KeyPressed;
+                Keys.Show();
+            }
+            else
+            {
+                Keyboard.KeyPressed -= Keyboard_KeyPressed;
+                Keys.Close();
+                Keys = null;
+            }
+        }
+
         private void RoutingBox_UIEvent(Guid gBox, string sControl, object sValue)
         {
             var box = Boxes.FirstOrDefault(b => b.BoxGuid == gBox);
@@ -309,6 +371,18 @@ namespace MidiLiveSystem
                     case "COPY_PRESET":
                         CopiedPreset = (BoxPreset)sValue;
                         break;
+                    case "CHECK_OUT_CHANNEL":
+                        int iChannel = (int)sValue;
+                        SaveTemplate(); //pour obtenir une version propre de ce qui a été saisi et enregistré sur les box
+                        if (Routing.CheckChannelUsage(box.RoutingGuid, iChannel, false))
+                        {
+                            Dispatcher.Invoke(() =>
+                            {
+                                //MessageBox.Show("Warning : The selected OUT Channel is already in use ! (" + iChannel.ToString() + ")");
+                                box.cbChannelMidiOut.SelectedIndex += 1;
+                            });
+                        }
+                        break;
                 }
             }
         }
@@ -355,25 +429,27 @@ namespace MidiLiveSystem
                 box.Snapshot(); //enregistrement du preset en cours
                 if (box.RoutingGuid == Guid.Empty)
                 {
-                    if (box.cbMidiIn.SelectedItem != null && box.cbMidiOut.SelectedItem != null)
-                    {
-                        box.RoutingGuid = Routing.AddRouting(((ComboBoxItem)box.cbMidiIn.SelectedItem).Tag.ToString(),
-                                           ((ComboBoxItem)box.cbMidiOut.SelectedItem).Tag.ToString(),
-                                           Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
-                                           Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
-                                           box.LoadOptions(), box.GetPreset());
-                    }
+                    string sDevIn = box.cbMidiIn.SelectedItem != null ? ((ComboBoxItem)box.cbMidiIn.SelectedItem).Tag.ToString() : "";
+                    string sDevOut = box.cbMidiOut.SelectedItem != null ? ((ComboBoxItem)box.cbMidiOut.SelectedItem).Tag.ToString() : "";
+
+                    box.RoutingGuid = Routing.AddRouting(sDevIn, sDevOut,
+                                       Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
+                                       Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
+                                       box.LoadOptions(), box.GetPreset());
                 }
                 else
                 {
-                    Routing.ModifyRouting(box.RoutingGuid, ((ComboBoxItem)box.cbMidiIn.SelectedItem).Tag.ToString(),
-                                           ((ComboBoxItem)box.cbMidiOut.SelectedItem).Tag.ToString(),
+                    string sDevIn = box.cbMidiIn.SelectedItem != null ? ((ComboBoxItem)box.cbMidiIn.SelectedItem).Tag.ToString() : "";
+                    string sDevOut = box.cbMidiOut.SelectedItem != null ? ((ComboBoxItem)box.cbMidiOut.SelectedItem).Tag.ToString() : "";
+
+                    Routing.ModifyRouting(box.RoutingGuid, sDevIn, sDevOut,
                                            Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
                                            Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
                                            box.LoadOptions(), box.GetPreset());
                 }
             }
         }
+
     }
 
     [Serializable]
@@ -407,4 +483,3 @@ namespace MidiLiveSystem
         }
     }
 }
-    

@@ -2,6 +2,7 @@
 using RtMidi.Core.Devices.Infos;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -19,17 +20,40 @@ using System.Windows.Shapes;
 
 namespace MidiLiveSystem
 {
-    public class ComboBoxCustomItem
+    public class ComboBoxCustomItem : INotifyPropertyChanged
     {
-        public string Description { get; set; }
-        public string Value { get; set; }
+        private string _value;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
         public string Id { get; set; }
+
+        public string Description { get; set; }
+
+        public string Value
+        {
+            get { return _value; }
+            set
+            {
+                if (_value != value)
+                {
+                    _value = value;
+                    OnPropertyChanged("Value");
+                }
+            }
+        }
+
+        protected virtual void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
 
     public partial class RoutingBox : Page
     {
         public Guid RoutingGuid { get; set; }
         public Guid BoxGuid = Guid.NewGuid();
+        public string BoxName = "Routing Box";
         private ProjectConfiguration Project;
 
         public delegate void RoutingBoxEventHandler(Guid gBox, string sControl, object sValue);
@@ -40,7 +64,9 @@ namespace MidiLiveSystem
 
         public RoutingBox(ProjectConfiguration conf, List<IMidiInputDeviceInfo> inputDevices, List<IMidiOutputDeviceInfo> outputDevices)
         {
-            TempMemory = new BoxPreset[8] { new BoxPreset(BoxGuid), new BoxPreset(BoxGuid), new BoxPreset(BoxGuid), new BoxPreset(BoxGuid), new BoxPreset(BoxGuid), new BoxPreset(BoxGuid), new BoxPreset(BoxGuid), new BoxPreset(BoxGuid) };
+            TempMemory = new BoxPreset[8] { new BoxPreset(BoxGuid, "Preset 1"), new BoxPreset(BoxGuid, "Preset 2"), new BoxPreset(BoxGuid, "Preset 3"),
+                                            new BoxPreset(BoxGuid, "Preset 4"), new BoxPreset(BoxGuid, "Preset 5"), new BoxPreset(BoxGuid, "Preset 6"),
+                                            new BoxPreset(BoxGuid, "Preset 7"), new BoxPreset(BoxGuid, "Preset 8") };
             Project = conf;
 
             InitializeComponent();
@@ -75,7 +101,9 @@ namespace MidiLiveSystem
                 cbPresetButton.Items.Add(new ComboBoxItem() { Tag = (i - 1).ToString(), Content = "BUTTON " + i.ToString() });
             }
 
-            cbPresetButton.SelectedIndex = 0;
+            cbPresetButton.SelectedIndex = -1;
+            cbPresetButton.SelectedIndex = 0; //trick pour le forcer à déclencher l'évènement
+
         }
 
         public void LoadMemory(BoxPreset[] mem)
@@ -152,22 +180,24 @@ namespace MidiLiveSystem
         {
             try
             {
-                if (e.RemovedItems.Count > 0)
+                if (((ComboBox)sender).SelectedIndex > -1)
                 {
-                    ComboBoxItem cbOut = (ComboBoxItem)e.RemovedItems[0];
-                    ComboBoxItem cbIn = (ComboBoxItem)e.AddedItems[0];
-
-                    var bp = MemCurrentPreset();
-                    int idxOut = Convert.ToInt32(cbOut.Tag.ToString());
-                    TempMemory[idxOut] = bp;
-
-                    int idxIn = Convert.ToInt32(cbIn.Tag.ToString());
-                    FillUI(TempMemory[idxIn], idxIn > 0 ? false : true);
+                    ComboBoxItem cbIn = (ComboBoxItem)((ComboBox)sender).SelectedItem;
+                    LoadPreset(Convert.ToInt32(cbIn.Tag.ToString()));
                 }
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Unable to Save Preset (" + ex.Message + ")");
+            }
+        }
+
+        private void cbChannelMidiOut_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (cbChannelMidiOut.SelectedIndex > -1)
+            {
+                ComboBoxItem cbOut = (ComboBoxItem)cbChannelMidiOut.SelectedItem;
+                OnUIEvent?.Invoke(BoxGuid, "CHECK_OUT_CHANNEL", Convert.ToInt32(cbOut.Tag.ToString()));
             }
         }
 
@@ -247,7 +277,9 @@ namespace MidiLiveSystem
 
         private void btnPreset_Click(object sender, RoutedEventArgs e)
         {
-            RecallRoutingPreset(((Button)sender).Tag.ToString());
+            string sNew = ((Button)sender).Tag.ToString();
+            cbPresetButton.SelectedValue = sNew;
+
         }
 
         private void btnCopyPreset_Click(object sender, RoutedEventArgs e)
@@ -283,23 +315,153 @@ namespace MidiLiveSystem
             }
         }
 
-        private void RecallRoutingPreset(string sPresetIndex)
+        private void LoadPreset(int iNew)
         {
-            //RECALL PRESET
-            int idx = Convert.ToInt32(sPresetIndex);
-            BoxPreset bp = TempMemory[idx];
+            int iPrec = -1;
 
-            if (bp != null)
+            //identification du preset en cours
+            if (btnPreset1.Background == Brushes.IndianRed) { iPrec = 0;  }
+            else if (btnPreset2.Background == Brushes.IndianRed) { iPrec = 1; }
+            else if (btnPreset3.Background == Brushes.IndianRed) { iPrec = 2; }
+            else if (btnPreset4.Background == Brushes.IndianRed) { iPrec = 3; }
+            else if (btnPreset5.Background == Brushes.IndianRed) { iPrec = 4; }
+            else if (btnPreset6.Background == Brushes.IndianRed) { iPrec = 5; }
+            else if (btnPreset7.Background == Brushes.IndianRed) { iPrec = 6; }
+            else if (btnPreset8.Background == Brushes.IndianRed) { iPrec = 7; }
+
+            TempMemory[iPrec] = MemCurrentPreset();
+
+            if (TempMemory[iNew] != null)
             {
-                FillUI(bp, idx > 0 ? false : true);
+                FillUI(TempMemory[iNew], iNew > 0 ? false : true);
 
-                OnUIEvent?.Invoke(BoxGuid, "PRESET_CHANGE", bp.MidiOptions);
+                OnUIEvent?.Invoke(BoxGuid, "PRESET_CHANGE", TempMemory[iNew].MidiOptions);
 
-                OnUIEvent?.Invoke(BoxGuid, "PROGRAM_CHANGE", bp.MidiPreset);
+                OnUIEvent?.Invoke(BoxGuid, "PROGRAM_CHANGE", TempMemory[iNew].MidiPreset);
             }
             else
             {
                 MessageBox.Show("Unable to recall Preset");
+            }
+
+            switch (iPrec)
+            {
+                case 0:
+                    btnPreset1.Content = TempMemory[iPrec].PresetName;
+                    break;
+                case 1:
+                    btnPreset2.Content = TempMemory[iPrec].PresetName;
+                    break;
+                case 2:
+                    btnPreset3.Content = TempMemory[iPrec].PresetName;
+                    break;
+                case 3:
+                    btnPreset4.Content = TempMemory[iPrec].PresetName;
+                    break;
+                case 4:
+                    btnPreset5.Content = TempMemory[iPrec].PresetName;
+                    break;
+                case 5:
+                    btnPreset6.Content = TempMemory[iPrec].PresetName;
+                    break;
+                case 6:
+                    btnPreset7.Content = TempMemory[iPrec].PresetName;
+                    break;
+                case 7:
+                    btnPreset8.Content = TempMemory[iPrec].PresetName;
+                    break;
+            }
+            //maj couleur boutons
+            switch (iNew)
+            {
+                case 0:
+                    btnPreset1.Content = tbPresetName.Text;
+                    btnPreset1.Background = Brushes.IndianRed;
+                    btnPreset2.Background = Brushes.MediumPurple;
+                    btnPreset3.Background = Brushes.MediumPurple;
+                    btnPreset4.Background = Brushes.MediumPurple;
+                    btnPreset5.Background = Brushes.MediumPurple;
+                    btnPreset6.Background = Brushes.MediumPurple;
+                    btnPreset7.Background = Brushes.MediumPurple;
+                    btnPreset8.Background = Brushes.MediumPurple;
+                    break;
+                case 1:
+                    btnPreset2.Content = tbPresetName.Text;
+                    btnPreset1.Background = Brushes.MediumPurple;
+                    btnPreset2.Background = Brushes.IndianRed;
+                    btnPreset3.Background = Brushes.MediumPurple;
+                    btnPreset4.Background = Brushes.MediumPurple;
+                    btnPreset5.Background = Brushes.MediumPurple;
+                    btnPreset6.Background = Brushes.MediumPurple;
+                    btnPreset7.Background = Brushes.MediumPurple;
+                    btnPreset8.Background = Brushes.MediumPurple;
+                    break;
+                case 2:
+                    btnPreset3.Content = tbPresetName.Text;
+                    btnPreset1.Background = Brushes.MediumPurple;
+                    btnPreset2.Background = Brushes.MediumPurple;
+                    btnPreset3.Background = Brushes.IndianRed;
+                    btnPreset4.Background = Brushes.MediumPurple;
+                    btnPreset5.Background = Brushes.MediumPurple;
+                    btnPreset6.Background = Brushes.MediumPurple;
+                    btnPreset7.Background = Brushes.MediumPurple;
+                    btnPreset8.Background = Brushes.MediumPurple;
+                    break;
+                case 3:
+                    btnPreset4.Content = tbPresetName.Text;
+                    btnPreset1.Background = Brushes.MediumPurple;
+                    btnPreset2.Background = Brushes.MediumPurple;
+                    btnPreset3.Background = Brushes.MediumPurple;
+                    btnPreset4.Background = Brushes.IndianRed;
+                    btnPreset5.Background = Brushes.MediumPurple;
+                    btnPreset6.Background = Brushes.MediumPurple;
+                    btnPreset7.Background = Brushes.MediumPurple;
+                    btnPreset8.Background = Brushes.MediumPurple;
+                    break;
+                case 4:
+                    btnPreset5.Content = tbPresetName.Text;
+                    btnPreset1.Background = Brushes.MediumPurple;
+                    btnPreset2.Background = Brushes.MediumPurple;
+                    btnPreset3.Background = Brushes.MediumPurple;
+                    btnPreset4.Background = Brushes.MediumPurple;
+                    btnPreset5.Background = Brushes.IndianRed;
+                    btnPreset6.Background = Brushes.MediumPurple;
+                    btnPreset7.Background = Brushes.MediumPurple;
+                    btnPreset8.Background = Brushes.MediumPurple;
+                    break;
+                case 5:
+                    btnPreset6.Content = tbPresetName.Text;
+                    btnPreset1.Background = Brushes.MediumPurple;
+                    btnPreset2.Background = Brushes.MediumPurple;
+                    btnPreset3.Background = Brushes.MediumPurple;
+                    btnPreset4.Background = Brushes.MediumPurple;
+                    btnPreset5.Background = Brushes.MediumPurple;
+                    btnPreset6.Background = Brushes.IndianRed;
+                    btnPreset7.Background = Brushes.MediumPurple;
+                    btnPreset8.Background = Brushes.MediumPurple;
+                    break;
+                case 6:
+                    btnPreset7.Content = tbPresetName.Text;
+                    btnPreset1.Background = Brushes.MediumPurple;
+                    btnPreset2.Background = Brushes.MediumPurple;
+                    btnPreset3.Background = Brushes.MediumPurple;
+                    btnPreset4.Background = Brushes.MediumPurple;
+                    btnPreset5.Background = Brushes.MediumPurple;
+                    btnPreset6.Background = Brushes.MediumPurple;
+                    btnPreset7.Background = Brushes.IndianRed;
+                    btnPreset8.Background = Brushes.MediumPurple;
+                    break;
+                case 7:
+                    btnPreset8.Content = tbPresetName.Text;
+                    btnPreset1.Background = Brushes.MediumPurple;
+                    btnPreset2.Background = Brushes.MediumPurple;
+                    btnPreset3.Background = Brushes.MediumPurple;
+                    btnPreset4.Background = Brushes.MediumPurple;
+                    btnPreset5.Background = Brushes.MediumPurple;
+                    btnPreset6.Background = Brushes.MediumPurple;
+                    btnPreset7.Background = Brushes.MediumPurple;
+                    btnPreset8.Background = Brushes.IndianRed;
+                    break;
             }
         }
 
@@ -366,6 +528,7 @@ namespace MidiLiveSystem
 
             cbChannelPreset.SelectedValue = bp.MidiPreset.Channel;
             lbPreset.Content = bp.MidiPreset.PresetName;
+            lbPreset.Tag = bp.MidiPreset.Tag;
 
             tbFilterHighNote.Text = bp.MidiOptions.NoteFilterHigh.ToString();
             tbFilterLowNote.Text = bp.MidiOptions.NoteFilterLow.ToString();
@@ -570,7 +733,6 @@ namespace MidiLiveSystem
             }
             else { return 999; }
         }
-
     }
 
     [Serializable]
@@ -592,9 +754,10 @@ namespace MidiLiveSystem
 
         }
 
-        public BoxPreset(Guid boxGuid)
+        public BoxPreset(Guid boxGuid, string sName)
         {
             BoxGuid = boxGuid;
+            PresetName = sName;
         }
 
         internal BoxPreset(Guid routingGuid, Guid boxGuid, string boxName, string presetName, MidiOptions midiOptions, MidiPreset midiPreset, string deviceIn, string deviceOut, int channelIn, int channelOut)

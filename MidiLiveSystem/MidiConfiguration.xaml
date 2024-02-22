@@ -7,7 +7,7 @@
         xmlns:local="clr-namespace:MidiLiveSystem"
         mc:Ignorable="d"
         Title="Project Configuration" Height="450" Width="600"
-        Closed="Window_Closed">
+        Closed="Window_Closed" WindowStyle="ToolWindow" ResizeMode="NoResize" WindowStartupLocation="CenterOwner">
 
 
     <Window.Resources>
@@ -83,6 +83,9 @@
                         <TextBox Name="tbVerticalItems" Grid.Column="3" Text="3" MaxLength="1" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
                     </Grid>
                 </StackPanel>
+
+            <Label Grid.Column="0" Grid.Row="6" Content="ROUTING NAMES"/>
+                <ComboBox Name="cbRoutingNames" Grid.Column="1" Grid.Row="6" SelectedValuePath="Tag" />
             </Grid>
         </DockPanel>
     </Grid>

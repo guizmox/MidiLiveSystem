@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:MidiLiveSystem"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
-        Title="Projects" Height="350" Width="450">
+        Title="Projects" Height="350" Width="450" ShowInTaskbar="False" ResizeMode="NoResize" WindowStyle="None" WindowStartupLocation="CenterOwner">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="10*" />
