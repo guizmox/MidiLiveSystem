@@ -6,11 +6,14 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Timers;
+using System.Xml.Serialization;
 using RtMidi.Core;
 using RtMidi.Core.Devices;
 using RtMidi.Core.Enums;
 using RtMidi.Core.Messages;
+using static MidiTools.MidiDevice;
 
 namespace MidiTools
 {
@@ -291,8 +294,7 @@ namespace MidiTools
         {
             foreach (var ev in events)
             {
-                var noteoff = (NoteOffMessage)ev.Event; //TODO : contrôle avec vélocité aussi ?
-                var noteon = _pendingATNoteMessages.FirstOrDefault(n => n.Item2.Key == noteoff.Key && n.Item2.Channel == noteoff.Channel && ev.Device == n.Item1 && n.Item3);
+                var noteon = _pendingATNoteMessages.FirstOrDefault(n => n.Item2.Key == ev.GetKey() && n.Item2.Channel == ev.GetChannel() && ev.Device == n.Item1 && n.Item3);
                 lock (_pendingATNoteMessages) { _pendingATNoteMessages.Remove(noteon); }
             }
         }
@@ -301,7 +303,7 @@ namespace MidiTools
         {
             foreach (var ev in events)
             {
-                lock (_pendingATNoteMessages) { _pendingATNoteMessages.Add(new Tuple<string, NoteOnMessage, bool>(ev.Device, (NoteOnMessage)ev.Event, false)); }
+                lock (_pendingATNoteMessages) { _pendingATNoteMessages.Add(new Tuple<string, NoteOnMessage, bool>(ev.Device, new NoteOnMessage(ev.GetChannel(), ev.GetKey(), ev.Values[1]), false)); }
             }
         }
 
@@ -432,7 +434,7 @@ namespace MidiTools
 
         private void CreateOUTEvent(MidiDevice.MidiEvent ev, bool bForce)
         {
-            var matrix = MidiMatrix.Where(i => i.Active && i.DeviceIn != null && i.DeviceIn.Name == ev.Device && (i.ChannelIn == 0 || MidiDevice.GetChannel(i.ChannelIn) == ev.MidiChannel)).ToList();
+            var matrix = MidiMatrix.Where(i => i.Active && i.DeviceIn != null && i.DeviceIn.Name == ev.Device && (i.ChannelIn == 0 || Tools.GetChannel(i.ChannelIn) == ev.Channel)).ToList();
 
             //gestion des évènements du synthé externe : pas un vrai device
             if (matrix.Count == 0 && MidiMatrix.Count == 1)
@@ -453,39 +455,31 @@ namespace MidiTools
                         case MidiDevice.TypeEvent.CC:
                             if (item.Options.AllowAllCC || bForce)
                             {
-                                var msg = (ControlChangeMessage)ev.Event;
-
-                                if (item.Options.CC_ToVolume == msg.Control)
+                                if (item.Options.CC_ToVolume == ev.Values[0])
                                 {
-                                    var msgout = new ControlChangeMessage(MidiDevice.GetChannel(i), 7, msg.Value);
-                                    _eventsOUT.Add(new MidiDevice.MidiEvent(ev.Type, msgout, msgout.Channel, item.DeviceOut.Name));
+                                    _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { 7, ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
                                 }
                                 else
                                 {
-                                    var convertedCC = item.Options.CC_Converters.FirstOrDefault(i => i[0] == msg.Control);
-                                    var msgout = new ControlChangeMessage(MidiDevice.GetChannel(i), convertedCC != null ? convertedCC[1] : msg.Control, msg.Value);
-                                    _eventsOUT.Add(new MidiDevice.MidiEvent(ev.Type, msgout, msgout.Channel, item.DeviceOut.Name));
+                                    var convertedCC = item.Options.CC_Converters.FirstOrDefault(i => i[0] == ev.Values[0]);
+                                    _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { convertedCC != null ? convertedCC[1] : ev.Values[0], ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
                                 }
                             }
                             break;
                         case MidiDevice.TypeEvent.CH_PRES:
                             if (item.Options.AllowAftertouch || bForce)
                             {
-                                var msg = (ChannelPressureMessage)ev.Event;
-                                var msgout = new ChannelPressureMessage(MidiDevice.GetChannel(i), msg.Pressure);
-                                _eventsOUT.Add(new MidiDevice.MidiEvent(ev.Type, msgout, msgout.Channel, item.DeviceOut.Name));
+                                _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
                             }
                             if (item.Options.AftertouchVolume)
                             {
-                                var msg = (ChannelPressureMessage)ev.Event;
-                                if (msg.Pressure == 0) //on balance un note off à tous les évènements en attente
+                                if (ev.Values[0] == 0) //on balance un note off à tous les évènements en attente
                                 {
                                     foreach (var noteon in _pendingATNoteMessages)
                                     {
                                         if (noteon.Item3) //a déjà été déclenché
                                         {
-                                            var msgout = new NoteOffMessage(MidiDevice.GetChannel(i), noteon.Item2.Key, msg.Pressure);
-                                            _eventsOUT.Add(new MidiDevice.MidiEvent(ev.Type, msgout, msgout.Channel, item.DeviceOut.Name));
+                                            _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { Tools.GetNoteInt(noteon.Item2.Key), ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
                                         }
                                     }
                                 }
@@ -498,85 +492,68 @@ namespace MidiTools
                                             //réécriture de la valeur pour signifier que la note a déjà été appuyée (pour éviter qu'à chaque modulation de l'AT, ça retrigger une note)
                                             _pendingATNoteMessages[ipd] = new Tuple<string, NoteOnMessage, bool>(_pendingATNoteMessages[ipd].Item1, _pendingATNoteMessages[ipd].Item2, true);
 
-                                            var msgout = new NoteOnMessage(MidiDevice.GetChannel(i), _pendingATNoteMessages[ipd].Item2.Key, msg.Pressure);
-                                            _eventsOUT.Add(new MidiDevice.MidiEvent(ev.Type, msgout, msgout.Channel, item.DeviceOut.Name));
+                                            _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { Tools.GetNoteInt(_pendingATNoteMessages[ipd].Item2.Key), ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
                                         }
                                     }
                                 }
-                                var msgoutCC = new ControlChangeMessage(MidiDevice.GetChannel(i), 7, msg.Pressure); //envoi du CC pour moduler le volume
-                                _eventsOUT.Add(new MidiDevice.MidiEvent(ev.Type, msgoutCC, msgoutCC.Channel, item.DeviceOut.Name));
+                                //envoi du CC pour moduler le volume
+                                _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { 7, ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
                             }
                             break;
                         case MidiDevice.TypeEvent.NOTE_OFF:
                             if (item.Options.AllowNotes || bForce)
                             {
-                                var msg = (NoteOffMessage)ev.Event;
-
-                                int iNote = GetNoteIndex(msg.Key, msg.Velocity, item.Options);
-                                var convertedNote = item.Options.Note_Converters.FirstOrDefault(i => i[0] == GetNoteIndex(msg.Key, 0, null));
+                                int iNote = Tools.GetNoteIndex(ev.Values[0], ev.Values[1], item.Options);
+                                var convertedNote = item.Options.Note_Converters.FirstOrDefault(i => i[0] == Tools.GetNoteIndex(ev.Values[0], 0, null));
                                 if (convertedNote != null) { iNote = convertedNote[1]; } //TODO DOUTE
 
                                 if (iNote > -1)
                                 {
-                                    var msgout = new NoteOffMessage(MidiDevice.GetChannel(i), MidiDevice.GetNote(iNote), msg.Velocity);
-                                    _eventsOUT.Add(new MidiDevice.MidiEvent(ev.Type, msgout, msgout.Channel, item.DeviceOut.Name));
+                                    _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { iNote, ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
                                 }
                             }
                             break;
                         case MidiDevice.TypeEvent.NOTE_ON:
                             if (item.Options.AllowNotes || bForce)
                             {
-                                var msg = (NoteOnMessage)ev.Event;
-
-                                int iNote = GetNoteIndex(msg.Key, msg.Velocity, item.Options);
-                                var convertedNote = item.Options.Note_Converters.FirstOrDefault(i => i[0] == GetNoteIndex(msg.Key, 0, null));
+                                int iNote = Tools.GetNoteIndex(ev.Values[0], ev.Values[1], item.Options);
+                                var convertedNote = item.Options.Note_Converters.FirstOrDefault(i => i[0] == Tools.GetNoteIndex(ev.Values[0], 0, null));
                                 if (convertedNote != null) { iNote = convertedNote[1]; } //TODO DOUTE
 
                                 if (iNote > -1)
                                 {
-                                    var msgout = new NoteOnMessage(MidiDevice.GetChannel(i), MidiDevice.GetNote(iNote), msg.Velocity);
-                                    _eventsOUT.Add(new MidiDevice.MidiEvent(ev.Type, msgout, msgout.Channel, item.DeviceOut.Name));
+                                    _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { iNote, ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
                                 }
                             }
                             break;
                         case MidiDevice.TypeEvent.NRPN:
                             if (item.Options.AllowNrpn || bForce)
                             {
-                                var msg = (NrpnMessage)ev.Event;
-                                var msgout = new NrpnMessage(MidiDevice.GetChannel(i), msg.Parameter, msg.Value);
-                                _eventsOUT.Add(new MidiDevice.MidiEvent(ev.Type, msgout, msgout.Channel, item.DeviceOut.Name));
+                                _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0], ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
                             }
                             break;
                         case MidiDevice.TypeEvent.PB:
                             if (item.Options.AllowPitchBend || bForce)
                             {
-                                var msg = (PitchBendMessage)ev.Event;
-                                var msgout = new PitchBendMessage(MidiDevice.GetChannel(i), msg.Value);
-                                _eventsOUT.Add(new MidiDevice.MidiEvent(ev.Type, msgout, msgout.Channel, item.DeviceOut.Name));
+                                _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
                             }
                             break;
                         case MidiDevice.TypeEvent.PC:
                             if (item.Options.AllowProgramChange || bForce)
                             {
-                                var msg = (ProgramChangeMessage)ev.Event;
-                                var msgout = new ProgramChangeMessage(MidiDevice.GetChannel(i), msg.Program);
-                                _eventsOUT.Add(new MidiDevice.MidiEvent(ev.Type, msgout, msgout.Channel, item.DeviceOut.Name));
+                                _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
                             }
                             break;
                         case MidiDevice.TypeEvent.POLY_PRES:
                             if (item.Options.AllowAftertouch || bForce)
                             {
-                                var msg = (PolyphonicKeyPressureMessage)ev.Event;
-                                var msgout = new PolyphonicKeyPressureMessage(MidiDevice.GetChannel(i), msg.Key, msg.Pressure);
-                                _eventsOUT.Add(new MidiDevice.MidiEvent(ev.Type, msgout, msgout.Channel, item.DeviceOut.Name));
+                                _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0], ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
                             }
                             break;
                         case MidiDevice.TypeEvent.SYSEX:
                             if (item.Options.AllowSysex || bForce)
                             {
-                                var msg = (SysExMessage)ev.Event;
-                                var msgout = new SysExMessage(SysExTranscoder(msg.Data));
-                                _eventsOUT.Add(new MidiDevice.MidiEvent(ev.Type, msgout, Channel.Channel1, item.DeviceOut.Name));
+                                _eventsOUT.Add(new MidiEvent(ev.Type, SysExTranscoder(ev.SysExData), item.DeviceOut.Name));
                             }
                             break;
                     }
@@ -602,35 +579,35 @@ namespace MidiTools
                 {
                     if (routing.Options.CC_Attack_Value > -1)
                     {
-                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new ControlChangeMessage(MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.CC_Attack, routing.Options.CC_Attack_Value), MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Attack, routing.Options.CC_Attack_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
                     }
                     if (routing.Options.CC_Brightness_Value > -1)
                     {
-                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new ControlChangeMessage(MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.CC_Brightness, routing.Options.CC_Brightness_Value), MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Brightness, routing.Options.CC_Brightness_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
                     }
                     if (routing.Options.CC_Chorus_Value > -1)
                     {
-                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new ControlChangeMessage(MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.CC_Chorus, routing.Options.CC_Chorus_Value), MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Chorus, routing.Options.CC_Chorus_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
                     }
                     if (routing.Options.CC_Decay_Value > -1)
                     {
-                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new ControlChangeMessage(MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.CC_Decay, routing.Options.CC_Decay_Value), MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Decay, routing.Options.CC_Decay_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
                     }
                     if (routing.Options.CC_Pan_Value > -1)
                     {
-                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new ControlChangeMessage(MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.CC_Pan, routing.Options.CC_Pan_Value), MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Pan, routing.Options.CC_Pan_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
                     }
                     if (routing.Options.CC_Release_Value > -1)
                     {
-                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new ControlChangeMessage(MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.CC_Release, routing.Options.CC_Release_Value), MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Release, routing.Options.CC_Release_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
                     }
                     if (routing.Options.CC_Reverb_Value > -1)
                     {
-                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new ControlChangeMessage(MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.CC_Reverb, routing.Options.CC_Reverb_Value), MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Reverb, routing.Options.CC_Reverb_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
                     }
                     if (routing.Options.CC_Volume_Value > -1)
                     {
-                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new ControlChangeMessage(MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.CC_Volume, routing.Options.CC_Volume_Value), MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Volume, routing.Options.CC_Volume_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
                     }
                 }
                 else
@@ -638,35 +615,35 @@ namespace MidiTools
                     //comparer
                     if (newop.CC_Attack_Value != routing.Options.CC_Attack_Value)
                     {
-                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new ControlChangeMessage(MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.CC_Attack, newop.CC_Attack_Value), MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Attack, newop.CC_Attack_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
                     }
                     if (newop.CC_Brightness_Value != routing.Options.CC_Brightness_Value)
                     {
-                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new ControlChangeMessage(MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.CC_Brightness, newop.CC_Brightness_Value), MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Brightness, newop.CC_Brightness_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
                     }
                     if (newop.CC_Chorus_Value != routing.Options.CC_Chorus_Value)
                     {
-                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new ControlChangeMessage(MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.CC_Chorus, newop.CC_Chorus_Value), MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Chorus, newop.CC_Chorus_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
                     }
                     if (newop.CC_Decay_Value != routing.Options.CC_Decay_Value)
                     {
-                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new ControlChangeMessage(MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.CC_Decay, newop.CC_Decay_Value), MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Decay, newop.CC_Decay_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
                     }
                     if (newop.CC_Pan_Value != routing.Options.CC_Pan_Value)
                     {
-                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new ControlChangeMessage(MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.CC_Pan, newop.CC_Pan_Value), MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Pan, newop.CC_Pan_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
                     }
                     if (newop.CC_Release_Value != routing.Options.CC_Release_Value)
                     {
-                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new ControlChangeMessage(MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.CC_Release, newop.CC_Release_Value), MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Release, newop.CC_Release_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
                     }
                     if (newop.CC_Reverb_Value != routing.Options.CC_Reverb_Value)
                     {
-                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new ControlChangeMessage(MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.CC_Reverb, newop.CC_Reverb_Value), MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Reverb, newop.CC_Reverb_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
                     }
                     if (newop.CC_Volume_Value != routing.Options.CC_Volume_Value)
                     {
-                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new ControlChangeMessage(MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.CC_Volume, newop.CC_Volume_Value), MidiDevice.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Volume, newop.CC_Volume_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
                     }
                 }
             }
@@ -694,28 +671,12 @@ namespace MidiTools
             }
         }
 
-        private byte[] SysExTranscoder(byte[] data)
+        private string SysExTranscoder(string data)
         {
             //TODO SCRIPT TRANSCO
             return data;
         }
 
-        private int GetNoteIndex(Key key, int vel, MidiOptions options)
-        {
-            int iNote = -1;
-            int iKey = Convert.ToInt32(key.ToString().Substring(3));
-
-            if (options != null)
-            {
-                if (iKey >= options.NoteFilterLow && iKey <= options.NoteFilterHigh
-                    && (vel == 0 || (vel >= options.VelocityFilterLow && vel <= options.VelocityFilterHigh))) //attention, la vélocité d'un noteoff est souvent à 0 (dépend des devices mais généralement)
-                {
-                    iNote = iKey + options.TranspositionOffset;
-                }
-            }
-
-            return iNote;
-        }
 
         #endregion
 
@@ -734,7 +695,7 @@ namespace MidiTools
                 CheckAndOpenPorts(MidiMatrix.Last(), 0);
                 var guid = MidiMatrix.Last().RoutingGuid;
                 return guid;
-           
+
             }
             else { return Guid.Empty; }
         }
@@ -904,15 +865,15 @@ namespace MidiTools
 
             if (routing != null)
             {
-                ControlChangeMessage pc00 = new ControlChangeMessage(MidiDevice.GetChannel(preset.Channel), 0, preset.Msb);
-                ControlChangeMessage pc32 = new ControlChangeMessage(MidiDevice.GetChannel(preset.Channel), 32, preset.Lsb);
-                ProgramChangeMessage prg = new ProgramChangeMessage(MidiDevice.GetChannel(preset.Channel), preset.Prg);
+                ControlChangeMessage pc00 = new ControlChangeMessage(Tools.GetChannel(preset.Channel), 0, preset.Msb);
+                ControlChangeMessage pc32 = new ControlChangeMessage(Tools.GetChannel(preset.Channel), 32, preset.Lsb);
+                ProgramChangeMessage prg = new ProgramChangeMessage(Tools.GetChannel(preset.Channel), preset.Prg);
 
                 if (MidiMatrix.Any(d => d.RoutingGuid == routingGuid && d.DeviceOut != null))
                 {
-                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, pc00, pc00.Channel, routing.DeviceOut.Name), true);
-                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, pc32, pc32.Channel, routing.DeviceOut.Name), true);
-                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.PC, prg, prg.Channel, routing.DeviceOut.Name), true);
+                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { pc00.Control, pc00.Value }, pc00.Channel, routing.DeviceOut.Name), true);
+                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { pc32.Control, pc32.Value }, pc32.Channel, routing.DeviceOut.Name), true);
+                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.PC, new List<int> { prg.Program }, prg.Channel, routing.DeviceOut.Name), true);
                 }
             }
         }
@@ -921,8 +882,7 @@ namespace MidiTools
         {
             if (MidiMatrix.Any(d => d.RoutingGuid == routingGuid && d.DeviceOut != null))
             {
-                var cc = new ControlChangeMessage(MidiDevice.GetChannel(iChannel), iCC, iValue);
-                CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, cc, cc.Channel, sDevice), true);
+                CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { iCC, iValue }, Tools.GetChannel(iChannel), sDevice), true);
             }
         }
 
@@ -930,18 +890,16 @@ namespace MidiTools
         {
             if (bOn)
             {
-                NoteOnMessage msg = new NoteOnMessage(note.Channel, note.Note, note.Velocity);
                 if (MidiMatrix.Any(d => d.RoutingGuid == routingGuid && d.DeviceOut != null))
                 {
-                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.NOTE_ON, msg, msg.Channel, sDevice), true);
+                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.NOTE_ON, new List<int> { Tools.GetNoteInt(note.Note), note.Velocity }, note.Channel, sDevice), true);
                 }
             }
             else
             {
-                NoteOffMessage msg = new NoteOffMessage(note.Channel, note.Note, note.Velocity);
                 if (MidiMatrix.Any(d => d.RoutingGuid == routingGuid && d.DeviceOut != null))
                 {
-                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.NOTE_OFF, msg, msg.Channel, sDevice), true);
+                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.NOTE_OFF, new List<int> { Tools.GetNoteInt(note.Note), note.Velocity }, note.Channel, sDevice), true);
                 }
             }
         }
@@ -954,6 +912,10 @@ namespace MidiTools
         public void StartLog()
         {
             MidiDevice.OnLogAdded += MidiDevice_OnLogAdded;
+        }
+
+        public void Debug()
+        {
         }
 
         #endregion
@@ -984,21 +946,56 @@ namespace MidiTools
             POLY_PRES = 8
         }
 
+        [Serializable]
         public class MidiEvent
         {
-            internal DateTime EventDate { get; set; }
-            internal MidiDevice.TypeEvent Type { get; set; }
-            internal Channel MidiChannel { get; set; }
-            internal object Event { get; set; }
-            internal string Device { get; set; }
+            public DateTime EventDate;
+            public MidiDevice.TypeEvent Type;
+            public Channel Channel;
+            public List<int> Values = new List<int>();
+            public string Device;
+            public string SysExData;
 
-            internal MidiEvent(MidiDevice.TypeEvent evType, object ev, Channel ch, string device)
+            internal MidiEvent(MidiDevice.TypeEvent evType, List<int> values, Channel ch, string device)
             {
-                Event = ev;
+                //Event = ev;
+                Values = values;
                 EventDate = DateTime.Now;
                 Type = evType;
-                MidiChannel = ch;
+                Channel = ch;
                 Device = device;
+            }
+
+            internal MidiEvent(MidiDevice.TypeEvent evType, string sSysex, string device)
+            {
+                //Event = ev;
+                EventDate = DateTime.Now;
+                Type = evType;
+                SysExData = sSysex;
+                Device = device;
+            }
+
+            internal MidiEvent()
+            {
+
+            }
+
+            internal Key GetKey()
+            {
+                if (Type == TypeEvent.NOTE_ON || Type == TypeEvent.NOTE_OFF || Type == TypeEvent.POLY_PRES)
+                {
+                    Key noteValue;
+                    Enum.TryParse<Key>(string.Concat("Key", Values[0].ToString()), out noteValue);
+                    return noteValue;
+                }
+                else { return Key.Key0; }
+            }
+
+            internal Channel GetChannel()
+            {
+                Channel channelValue;
+                Enum.TryParse<Channel>(string.Concat("Channel", Values[0].ToString()), out channelValue);
+                return channelValue;
             }
         }
 
@@ -1014,6 +1011,11 @@ namespace MidiTools
 
         internal delegate void MidiEventHandler(bool bIn, MidiDevice.MidiEvent ev);
         internal event MidiEventHandler OnMidiEvent;
+
+        internal delegate void MidiEventSequenceHandlerIN(MidiDevice.MidiEvent ev);
+        internal static event MidiEventSequenceHandlerIN OnMidiSequenceEventIN;
+        internal delegate void MidiEventSequenceHandlerOUT(MidiDevice.MidiEvent ev);
+        internal static event MidiEventSequenceHandlerOUT OnMidiSequenceEventOUT;
 
         internal MidiDevice(RtMidi.Core.Devices.Infos.IMidiInputDeviceInfo inputDevice)
         {
@@ -1033,12 +1035,14 @@ namespace MidiTools
         {
             //renvoyer l'évènement plus haut
             OnMidiEvent?.Invoke(true, ev);
+            OnMidiSequenceEventIN?.Invoke(ev);
         }
 
         private void MIDI_OutputEvents_OnMidiEvent(MidiEvent ev)
         {
             //renvoyer l'évènement plus haut
             OnMidiEvent?.Invoke(false, ev);
+            OnMidiSequenceEventOUT?.Invoke(ev);
         }
 
         internal bool OpenDevice()
@@ -1111,53 +1115,6 @@ namespace MidiTools
                     return false;
                 }
             }
-        }
-
-        internal static Channel GetChannel(int iC)
-        {
-            switch (iC)
-            {
-                case 1:
-                    return RtMidi.Core.Enums.Channel.Channel1;
-                case 2:
-                    return RtMidi.Core.Enums.Channel.Channel2;
-                case 3:
-                    return RtMidi.Core.Enums.Channel.Channel3;
-                case 4:
-                    return RtMidi.Core.Enums.Channel.Channel4;
-                case 5:
-                    return RtMidi.Core.Enums.Channel.Channel5;
-                case 6:
-                    return RtMidi.Core.Enums.Channel.Channel6;
-                case 7:
-                    return RtMidi.Core.Enums.Channel.Channel7;
-                case 8:
-                    return RtMidi.Core.Enums.Channel.Channel8;
-                case 9:
-                    return RtMidi.Core.Enums.Channel.Channel9;
-                case 10:
-                    return RtMidi.Core.Enums.Channel.Channel10;
-                case 11:
-                    return RtMidi.Core.Enums.Channel.Channel11;
-                case 12:
-                    return RtMidi.Core.Enums.Channel.Channel12;
-                case 13:
-                    return RtMidi.Core.Enums.Channel.Channel13;
-                case 14:
-                    return RtMidi.Core.Enums.Channel.Channel14;
-                case 15:
-                    return RtMidi.Core.Enums.Channel.Channel15;
-                case 16:
-                    return RtMidi.Core.Enums.Channel.Channel16;
-                default:
-                    return RtMidi.Core.Enums.Channel.Channel1;
-            }
-        }
-
-        internal static Key GetNote(int iNote)
-        {
-            Enum.TryParse("Key" + iNote, out RtMidi.Core.Enums.Key nt);
-            return nt;
         }
 
         internal static void AddLog(string sDevice, bool bIn, Channel iChannel, string sType, string sValue, string sExtra, string sExtraValue)
@@ -1241,94 +1198,76 @@ namespace MidiTools
             switch (ev.Type)
             {
                 case MidiDevice.TypeEvent.NOTE_ON:
-                    var midi1 = (NoteOnMessage)ev.Event;
-
                     if (outputDevice != null && outputDevice.IsOpen)
                     {
-                        NoteOnMessage msg = new NoteOnMessage(midi1.Channel, midi1.Key, midi1.Velocity);
+                        NoteOnMessage msg = new NoteOnMessage(ev.Channel, ev.GetKey(), ev.Values[1]);
                         outputDevice.Send(msg);
                     }
-                    MidiDevice.AddLog(outputDevice.Name, false, midi1.Channel, "Note On", midi1.Key.ToString(), "Velocity", midi1.Velocity.ToString());
+                    MidiDevice.AddLog(outputDevice.Name, false, ev.Channel, "Note On", ev.Values[0].ToString(), "Velocity", ev.Values[1].ToString());
                     break;
                 case MidiDevice.TypeEvent.NOTE_OFF:
-                    var midi2 = (NoteOffMessage)ev.Event;
-
                     if (outputDevice != null && outputDevice.IsOpen)
                     {
-                        NoteOffMessage msg = new NoteOffMessage(midi2.Channel, midi2.Key, midi2.Velocity);
+                        NoteOffMessage msg = new NoteOffMessage(ev.Channel, ev.GetKey(), ev.Values[1]);
                         outputDevice.Send(msg);
                     }
-                    MidiDevice.AddLog(outputDevice.Name, false, midi2.Channel, "Note Off", midi2.Key.ToString(), "Velocity", midi2.Velocity.ToString());
+                    MidiDevice.AddLog(outputDevice.Name, false, ev.Channel, "Note Off", ev.Values[0].ToString(), "Velocity", ev.Values[1].ToString());
                     break;
                 case MidiDevice.TypeEvent.NRPN:
-                    var midi3 = (NrpnMessage)ev.Event;
-
                     if (outputDevice != null && outputDevice.IsOpen)
                     {
-                        NrpnMessage msg = new NrpnMessage(midi3.Channel, midi3.Parameter, midi3.Value);
+                        NrpnMessage msg = new NrpnMessage(ev.Channel, ev.Values[0], ev.Values[1]);
                         outputDevice.Send(msg);
                     }
-                    MidiDevice.AddLog(outputDevice.Name, false, midi3.Channel, "Nrpn", midi3.Parameter.ToString(), "Value", midi3.Value.ToString());
+                    MidiDevice.AddLog(outputDevice.Name, false, ev.Channel, "Nrpn", ev.Values[0].ToString(), "Value", ev.Values[1].ToString());
                     break;
                 case MidiDevice.TypeEvent.PB:
-                    var midi4 = (PitchBendMessage)ev.Event;
-
                     if (outputDevice != null && outputDevice.IsOpen)
                     {
-                        PitchBendMessage msg = new PitchBendMessage(midi4.Channel, midi4.Value);
+                        PitchBendMessage msg = new PitchBendMessage(ev.Channel, ev.Values[0]);
                         outputDevice.Send(msg);
                     }
-                    MidiDevice.AddLog(outputDevice.Name, false, midi4.Channel, "Pitch Bend", midi4.Value.ToString(), "", "");
+                    MidiDevice.AddLog(outputDevice.Name, false, ev.Channel, "Pitch Bend", ev.Values[0].ToString(), "", "");
                     break;
                 case MidiDevice.TypeEvent.PC:
-                    var midi5 = (ProgramChangeMessage)ev.Event;
-
                     if (outputDevice != null && outputDevice.IsOpen)
                     {
-                        ProgramChangeMessage msg = new ProgramChangeMessage(midi5.Channel, midi5.Program);
+                        ProgramChangeMessage msg = new ProgramChangeMessage(ev.Channel, ev.Values[0]);
                         outputDevice.Send(msg);
                     }
-                    MidiDevice.AddLog(outputDevice.Name, false, midi5.Channel, "Program Change", midi5.Program.ToString(), "", "");
+                    MidiDevice.AddLog(outputDevice.Name, false, ev.Channel, "Program Change", ev.Values[0].ToString(), "", "");
                     break;
                 case MidiDevice.TypeEvent.SYSEX:
-                    var midi6 = (SysExMessage)ev.Event;
-
                     if (outputDevice != null && outputDevice.IsOpen)
                     {
-                        SysExMessage msg = new SysExMessage(midi6.Data);
+                        SysExMessage msg = new SysExMessage(Encoding.ASCII.GetBytes(ev.SysExData));
                         outputDevice.Send(msg);
                     }
-                    MidiDevice.AddLog(outputDevice.Name, false, 0, "SysEx", System.Text.Encoding.UTF8.GetString(midi6.Data), "", "");
+                    MidiDevice.AddLog(outputDevice.Name, false, 0, "SysEx", ev.SysExData, "", "");
                     break;
                 case MidiDevice.TypeEvent.CC:
-                    var midi7 = (ControlChangeMessage)ev.Event;
-
                     if (outputDevice != null && outputDevice.IsOpen)
                     {
-                        ControlChangeMessage msg = new ControlChangeMessage(midi7.Channel, midi7.Control, midi7.Value);
+                        ControlChangeMessage msg = new ControlChangeMessage(ev.Channel, ev.Values[0], ev.Values[1]);
                         outputDevice.Send(msg);
                     }
-                    MidiDevice.AddLog(outputDevice.Name, false, midi7.Channel, "Control Change", midi7.Control.ToString(), "Value", midi7.Value.ToString());
+                    MidiDevice.AddLog(outputDevice.Name, false, ev.Channel, "Control Change", ev.Values[0].ToString(), "Value", ev.Values[1].ToString());
                     break;
                 case MidiDevice.TypeEvent.CH_PRES:
-                    var midi8 = (ChannelPressureMessage)ev.Event;
-
                     if (outputDevice != null && outputDevice.IsOpen)
                     {
-                        ChannelPressureMessage msg = new ChannelPressureMessage(midi8.Channel, midi8.Pressure);
+                        ChannelPressureMessage msg = new ChannelPressureMessage(ev.Channel, ev.Values[0]);
                         outputDevice.Send(msg);
                     }
-                    MidiDevice.AddLog(outputDevice.Name, false, midi8.Channel, "Channel Pressure", midi8.Pressure.ToString(), "", "");
+                    MidiDevice.AddLog(outputDevice.Name, false, ev.Channel, "Channel Pressure", ev.Values[0].ToString(), "", "");
                     break;
                 case MidiDevice.TypeEvent.POLY_PRES:
-                    var midi9 = (RtMidi.Core.Messages.PolyphonicKeyPressureMessage)ev.Event;
-
                     if (outputDevice != null && outputDevice.IsOpen)
                     {
-                        PolyphonicKeyPressureMessage msg = new PolyphonicKeyPressureMessage(midi9.Channel, midi9.Key, midi9.Pressure);
+                        PolyphonicKeyPressureMessage msg = new PolyphonicKeyPressureMessage(ev.Channel, ev.GetKey(), ev.Values[1]);
                         outputDevice.Send(msg);
                     }
-                    MidiDevice.AddLog(outputDevice.Name, false, midi9.Channel, "Poly. Channel Pressure", midi9.Pressure.ToString(), "Key", midi9.Key.ToString());
+                    MidiDevice.AddLog(outputDevice.Name, false, ev.Channel, "Poly. Channel Key", ev.Values[0].ToString(), "Pressure", ev.Values[1].ToString());
                     break;
             }
             OnMidiEvent?.Invoke(ev);
@@ -1438,68 +1377,74 @@ namespace MidiTools
         {
             MidiDevice.AddLog(inputDevice.Name, true, msg.Channel, "Nrpn", msg.Parameter.ToString(), "Value", msg.Value.ToString());
 
-            AddEvent(MidiDevice.TypeEvent.NRPN, msg, msg.Channel);
+            AddEvent(MidiDevice.TypeEvent.NRPN, new List<int> { msg.Parameter, msg.Value }, msg.Channel);
         }
 
         private void ProgramChangeChangeHandler(IMidiInputDevice sender, in ProgramChangeMessage msg)
         {
             MidiDevice.AddLog(inputDevice.Name, true, msg.Channel, "Program Change", msg.Program.ToString(), "", "");
 
-            AddEvent(MidiDevice.TypeEvent.PC, msg, msg.Channel);
+            AddEvent(MidiDevice.TypeEvent.PC, new List<int> { msg.Program }, msg.Channel);
         }
 
         private void SysexChangeHandler(IMidiInputDevice sender, in SysExMessage msg)
         {
-            MidiDevice.AddLog(inputDevice.Name, true, 0, "SysEx", System.Text.Encoding.UTF8.GetString(msg.Data), "", "");
+            string sData = System.Text.Encoding.ASCII.GetString(msg.Data);
+            MidiDevice.AddLog(inputDevice.Name, true, 0, "SysEx", sData, "", "");
 
-            AddEvent(MidiDevice.TypeEvent.SYSEX, msg, Channel.Channel1);
+            AddEventSysEx(MidiDevice.TypeEvent.SYSEX, sData);
         }
 
         private void PitchBendChangeHandler(IMidiInputDevice sender, in PitchBendMessage msg)
         {
             MidiDevice.AddLog(inputDevice.Name, true, msg.Channel, "Pitch Bend", msg.Value.ToString(), "", "");
 
-            AddEvent(MidiDevice.TypeEvent.PB, msg, msg.Channel);
+            AddEvent(MidiDevice.TypeEvent.PB, new List<int> { msg.Value }, msg.Channel);
         }
 
         private void NoteOffChangeHandler(IMidiInputDevice sender, in NoteOffMessage msg)
         {
             MidiDevice.AddLog(inputDevice.Name, true, msg.Channel, "Note Off", msg.Key.ToString(), "Velocity", msg.Velocity.ToString());
 
-            AddEvent(MidiDevice.TypeEvent.NOTE_OFF, msg, msg.Channel);
+            AddEvent(MidiDevice.TypeEvent.NOTE_OFF, new List<int> { Tools.GetNoteInt(msg.Key), msg.Velocity }, msg.Channel);
         }
 
         private void NoteOnChangeHandler(IMidiInputDevice sender, in NoteOnMessage msg)
         {
             MidiDevice.AddLog(inputDevice.Name, true, msg.Channel, "Note On", msg.Key.ToString(), "Velocity", msg.Velocity.ToString());
 
-            AddEvent(MidiDevice.TypeEvent.NOTE_ON, msg, msg.Channel);
+            AddEvent(MidiDevice.TypeEvent.NOTE_ON, new List<int> { Tools.GetNoteInt(msg.Key), msg.Velocity }, msg.Channel);
         }
 
         private void ControlChangeHandler(IMidiInputDevice sender, in ControlChangeMessage msg)
         {
             MidiDevice.AddLog(inputDevice.Name, true, msg.Channel, "Control Change", msg.Control.ToString(), "Value", msg.Value.ToString());
 
-            AddEvent(MidiDevice.TypeEvent.CC, msg, msg.Channel);
+            AddEvent(MidiDevice.TypeEvent.CC, new List<int> { msg.Control, msg.Value }, msg.Channel);
         }
 
         private void PolyphonicPressure(IMidiInputDevice sender, in PolyphonicKeyPressureMessage msg)
         {
             MidiDevice.AddLog(inputDevice.Name, true, msg.Channel, "Poly. Channel Pressure", msg.Pressure.ToString(), "Key", msg.Key.ToString());
 
-            AddEvent(MidiDevice.TypeEvent.POLY_PRES, msg, msg.Channel);
+            AddEvent(MidiDevice.TypeEvent.POLY_PRES, new List<int> { Tools.GetNoteInt(msg.Key), msg.Pressure }, msg.Channel);
         }
 
         private void ChannelPressureHandler(IMidiInputDevice sender, in ChannelPressureMessage msg)
         {
             MidiDevice.AddLog(inputDevice.Name, true, msg.Channel, "Channel Pressure", msg.Pressure.ToString(), "", "");
 
-            AddEvent(MidiDevice.TypeEvent.CH_PRES, msg, msg.Channel);
+            AddEvent(MidiDevice.TypeEvent.CH_PRES, new List<int> { msg.Pressure }, msg.Channel);
         }
 
-        private void AddEvent(MidiDevice.TypeEvent evType, object ev, Channel ch)
+        private void AddEvent(MidiDevice.TypeEvent evType, List<int> values, Channel ch)
         {
-            OnMidiEvent?.Invoke(new MidiDevice.MidiEvent(evType, ev, ch, inputDevice.Name));
+            OnMidiEvent?.Invoke(new MidiDevice.MidiEvent(evType, values, ch, inputDevice.Name));
+        }
+
+        private void AddEventSysEx(MidiDevice.TypeEvent evType, string sData)
+        {
+            OnMidiEvent?.Invoke(new MidiDevice.MidiEvent(evType, sData, inputDevice.Name));
         }
 
         internal void Stop()
@@ -1524,6 +1469,250 @@ namespace MidiTools
                 }
             }
         }
+    }
+
+    internal static class Tools
+    {
+        internal static int GetNoteInt(Key key)
+        {
+            return Convert.ToInt32(key.ToString().Substring(3));
+        }
+
+        internal static Key GetNote(int iNote)
+        {
+            Enum.TryParse("Key" + iNote, out RtMidi.Core.Enums.Key nt);
+            return nt;
+        }
+
+        internal static Channel GetChannel(int iC)
+        {
+            switch (iC)
+            {
+                case 1:
+                    return RtMidi.Core.Enums.Channel.Channel1;
+                case 2:
+                    return RtMidi.Core.Enums.Channel.Channel2;
+                case 3:
+                    return RtMidi.Core.Enums.Channel.Channel3;
+                case 4:
+                    return RtMidi.Core.Enums.Channel.Channel4;
+                case 5:
+                    return RtMidi.Core.Enums.Channel.Channel5;
+                case 6:
+                    return RtMidi.Core.Enums.Channel.Channel6;
+                case 7:
+                    return RtMidi.Core.Enums.Channel.Channel7;
+                case 8:
+                    return RtMidi.Core.Enums.Channel.Channel8;
+                case 9:
+                    return RtMidi.Core.Enums.Channel.Channel9;
+                case 10:
+                    return RtMidi.Core.Enums.Channel.Channel10;
+                case 11:
+                    return RtMidi.Core.Enums.Channel.Channel11;
+                case 12:
+                    return RtMidi.Core.Enums.Channel.Channel12;
+                case 13:
+                    return RtMidi.Core.Enums.Channel.Channel13;
+                case 14:
+                    return RtMidi.Core.Enums.Channel.Channel14;
+                case 15:
+                    return RtMidi.Core.Enums.Channel.Channel15;
+                case 16:
+                    return RtMidi.Core.Enums.Channel.Channel16;
+                default:
+                    return RtMidi.Core.Enums.Channel.Channel1;
+            }
+        }
+
+
+        internal static int GetNoteIndex(int key, int vel, MidiOptions options)
+        {
+            int iNote = -1;
+
+            if (options != null)
+            {
+                if (key >= options.NoteFilterLow && key <= options.NoteFilterHigh
+                    && (vel == 0 || (vel >= options.VelocityFilterLow && vel <= options.VelocityFilterHigh))) //attention, la vélocité d'un noteoff est souvent à 0 (dépend des devices mais généralement)
+                {
+                    iNote = key + options.TranspositionOffset;
+                }
+            }
+
+            return iNote;
+        }
+    }
+
+    [Serializable]
+    public class MidiSequence
+    {
+        public delegate void SequenceFinishedHandler(string sInfo);
+        public event SequenceFinishedHandler SequenceFinished;
+
+        public bool StopSequenceRequested = false;
+
+        private List<MidiEvent> _events = new List<MidiEvent>();
+
+        public List<MidiEvent> Events { get { return _events; } }
+
+        public bool IsStopped = true;
+
+        public MidiSequence()
+        {
+
+        }
+
+        public string GetSequenceInfo()
+        {
+            int iTracks = 0;
+            StringBuilder sbInfo = new StringBuilder();
+            sbInfo.AppendLine("Sequence Status :");
+            sbInfo.AppendLine(Environment.NewLine);
+            var devices = _events.Select(e => e.Device).Distinct();
+
+            foreach (var s in devices)
+            {
+                sbInfo.AppendLine(s + "[Ch : ");
+                for (int i = 1; i <= 16; i++)
+                {
+                    if (_events.Count(e => e.Device.Equals(s) && e.Channel == Tools.GetChannel(i)) > 0)
+                    {
+                        iTracks++;
+                        sbInfo.Append(i.ToString() + ", ");
+                        break;
+                    }
+                }
+                sbInfo.Append("]");
+            }
+            sbInfo.AppendLine(Environment.NewLine);
+            sbInfo.AppendLine("Tracks : " + iTracks.ToString());
+            return sbInfo.ToString();
+        }
+
+        public void StartRecording(bool bIn, bool bOut)
+        {
+            if (bIn)
+            {
+                MidiDevice.OnMidiSequenceEventIN += MidiEventSequenceHandler_OnMidiEventIN;
+            }
+            if (bOut)
+            {
+                MidiDevice.OnMidiSequenceEventOUT += MidiEventSequenceHandler_OnMidiEventOUT;
+            }
+
+            IsStopped = false;
+        }
+
+        public void StopRecording(bool bIn, bool bOut)
+        {
+            if (bIn)
+            {
+                MidiDevice.OnMidiSequenceEventIN -= MidiEventSequenceHandler_OnMidiEventIN;
+            }
+            if (bOut)
+            {
+                MidiDevice.OnMidiSequenceEventOUT -= MidiEventSequenceHandler_OnMidiEventOUT;
+            }
+
+            IsStopped = true;
+        }
+
+        private void MidiEventSequenceHandler_OnMidiEventIN(MidiEvent ev)
+        {
+            lock (_events) { _events.Add(ev); }
+        }
+
+        private void MidiEventSequenceHandler_OnMidiEventOUT(MidiEvent ev)
+        {
+            lock (_events) { _events.Add(ev); }
+        }
+
+        public void Clear()
+        {
+            _events.Clear();
+        }
+
+
+        public async void PlaySequenceAsync(List<MidiEvent> events)
+        {
+            StopSequenceRequested = false;
+            bool bPlay = true;
+
+            //ouvrir tous les devices
+            List<MidiDevice> devicesPlay = new List<MidiDevice>();
+            var devices = events.Select(e => e.Device).Distinct().ToList();
+            foreach (var dev in devices)
+            {
+                try
+                {
+                    devicesPlay.Add(new MidiDevice(MidiRouting.OutputDevices.FirstOrDefault(d => d.Name.Equals(dev))));
+                }
+                catch
+                {
+                    bPlay = false;
+                    SequenceFinished?.Invoke("Missing MIDI Device [" + dev + "]. Can't Play Sequence.");
+                }
+            }
+
+            if (bPlay)
+            {
+                foreach (var dev in devicesPlay)
+                {
+                    dev.OpenDevice();
+                }
+
+                await Task.Factory.StartNew(() =>
+                {
+                    PlaySequence(events, devicesPlay);
+                });
+            }
+        }
+
+        private void PlaySequence(List<MidiEvent> events, List<MidiDevice> devices)
+        {
+            int iPendingNotes = 0;
+
+
+
+            for (int i = 0; i < events.Count; i++)
+            {
+                //pour éviter des notes non relâchées
+                if (StopSequenceRequested && iPendingNotes == 0)
+                { break; }
+
+                var device = devices.FirstOrDefault(d => d.Name.Equals(events[i].Device));
+
+                double waitingTime = 0;
+
+                if (i < events.Count - 1)
+                {
+                    TimeSpan diff = events[i + 1].EventDate - events[i].EventDate;
+                    waitingTime = diff.TotalMilliseconds;
+                }
+
+                if (device != null)
+                {
+                    if (events[i].Type == TypeEvent.NOTE_ON) { iPendingNotes--; }
+                    if (events[i].Type == TypeEvent.NOTE_OFF) { iPendingNotes--; }
+
+                    device.SendMidiEvent(events[i]);
+                    Thread.Sleep((int)waitingTime);
+                }
+            }
+
+            foreach (var dev in devices)
+            {
+                dev.CloseDevice();
+            }
+
+            SequenceFinished?.Invoke(events.Count.ToString() + " event(s) have been played.");
+        }
+
+        public void StopSequence()
+        {
+            StopSequenceRequested = true;
+        }
+
     }
 
     internal class MidiDeviceContent
@@ -1836,7 +2025,7 @@ namespace MidiTools
 
         public NoteGenerator(int iChannel, int iOctave, int iNote, int iVelocity)
         {
-            Channel = MidiDevice.GetChannel(iChannel);
+            Channel = Tools.GetChannel(iChannel);
             SetOctave(iOctave);
             SetNote(iNote.ToString());
             SetVelocity(iVelocity.ToString());
@@ -1890,7 +2079,7 @@ namespace MidiTools
             {
                 if (iCh > 0 && iCh <= 16)
                 {
-                    Channel = MidiDevice.GetChannel(iCh);
+                    Channel = Tools.GetChannel(iCh);
                 }
             }
         }

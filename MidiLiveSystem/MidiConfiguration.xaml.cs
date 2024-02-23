@@ -92,10 +92,10 @@ namespace MidiLiveSystem
             if (boxes != null)
             {
                 int iB = 0;
-                foreach (var box in boxes)
+                foreach (var box in boxes.OrderBy(b => b.GridPosition))
                 {
                     iB++;
-                    cbRoutingNames.Items.Add(new TextBox() { Text = box.BoxName.Equals("Routing Box") ? string.Concat("Routing Box ", iB) : box.BoxName, Tag = box.BoxGuid });
+                    cbRoutingNames.Items.Add(new TextBox() { Text = box.BoxName, Tag = box.BoxGuid });
                 }
             }
         }
@@ -236,9 +236,11 @@ namespace MidiLiveSystem
             }
 
             List<string[]> boxnames = new List<string[]>();
+            int iPos = 0;
             foreach (TextBox cb in cbRoutingNames.Items)
             {
-                boxnames.Add(new string[] { cb.Text, cb.Tag.ToString() });
+                boxnames.Add(new string[] { cb.Text, cb.Tag.ToString(), iPos.ToString() });
+                iPos++;
             }
 
             ProjectConfiguration pc = new ProjectConfiguration();

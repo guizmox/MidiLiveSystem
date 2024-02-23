@@ -52,6 +52,9 @@ namespace MidiLiveSystem
     public partial class RoutingBox : Page
     {
         public Guid RoutingGuid { get; set; }
+        public bool Detached { get; internal set; } = false;
+        public int GridPosition = 0;
+
         public Guid BoxGuid = Guid.NewGuid();
         public string BoxName = "Routing Box";
         private ProjectConfiguration Project;
@@ -62,8 +65,10 @@ namespace MidiLiveSystem
         BoxPreset[] TempMemory;
 
 
-        public RoutingBox(ProjectConfiguration conf, List<IMidiInputDeviceInfo> inputDevices, List<IMidiOutputDeviceInfo> outputDevices)
+        public RoutingBox(ProjectConfiguration conf, List<IMidiInputDeviceInfo> inputDevices, List<IMidiOutputDeviceInfo> outputDevices, int gridPosition)
         {
+            GridPosition = gridPosition;
+
             TempMemory = new BoxPreset[8] { new BoxPreset(BoxGuid, "Preset 1"), new BoxPreset(BoxGuid, "Preset 2"), new BoxPreset(BoxGuid, "Preset 3"),
                                             new BoxPreset(BoxGuid, "Preset 4"), new BoxPreset(BoxGuid, "Preset 5"), new BoxPreset(BoxGuid, "Preset 6"),
                                             new BoxPreset(BoxGuid, "Preset 7"), new BoxPreset(BoxGuid, "Preset 8") };
@@ -71,10 +76,13 @@ namespace MidiLiveSystem
 
             InitializeComponent();
             InitPage(inputDevices, outputDevices);
+            GridPosition = gridPosition;
         }
 
         private void InitPage(List<IMidiInputDeviceInfo> inputDevices, List<IMidiOutputDeviceInfo> outputDevices)
         {
+            tbRoutingName.Text = "Routing Box " + (GridPosition + 1).ToString();
+
             foreach (var s in inputDevices)
             {
                 cbMidiIn.Items.Add(new ComboBoxItem() { Tag = s.Name, Content = s.Name });
@@ -118,6 +126,30 @@ namespace MidiLiveSystem
             }
         }
 
+        private void Page_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // Récupérer le contexte du menu à partir des ressources
+            ContextMenu contextMenu = (ContextMenu)this.Resources["RoutingBoxContextMenu"];
+
+            // Ouvrir le menu contextuel
+            contextMenu.IsOpen = true;
+        }
+
+        private void Menu_OpenMenu(object sender, MouseButtonEventArgs e)
+        {
+            // Récupérer le contexte du menu à partir des ressources
+            ContextMenu contextMenu = (ContextMenu)this.Resources["RoutingBoxContextMenu"];
+
+            // Ouvrir le menu contextuel
+            contextMenu.IsOpen = true;
+        }
+
+        private void MenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            MenuItem menuItem = (MenuItem)sender;
+            OnUIEvent?.Invoke(BoxGuid, menuItem.Tag.ToString(), null);
+        }
+
         private void tbChoosePreset_Click(object sender, RoutedEventArgs e)
         {
             //charger la liste des presets de l'instrument
@@ -130,7 +162,7 @@ namespace MidiLiveSystem
                     var instr = Project.Instruments.FirstOrDefault(i => i.Device.Equals(sDevice));
                     PresetBrowser pB = new PresetBrowser(instr, false);
                     pB.ShowDialog();
-                    lbPreset.Content = pB.SelectedPreset[0];
+                    lbPreset.Text = pB.SelectedPreset[0];
                     lbPreset.Tag = pB.SelectedPreset[1];
                 }
                 else
@@ -138,7 +170,7 @@ namespace MidiLiveSystem
                     MessageBox.Show("No Instrument Data. It can be created from 'Configuration' Menu. You can manually set Preset data instead (MSB + LSB + PRG)");
                     PresetBrowser pB = new PresetBrowser(null, false);
                     pB.ShowDialog();
-                    lbPreset.Content = pB.SelectedPreset[0];
+                    lbPreset.Text = pB.SelectedPreset[0];
                     lbPreset.Tag = pB.SelectedPreset[1];
                 }
             }
@@ -527,7 +559,7 @@ namespace MidiLiveSystem
             }
 
             cbChannelPreset.SelectedValue = bp.MidiPreset.Channel;
-            lbPreset.Content = bp.MidiPreset.PresetName;
+            lbPreset.Text = bp.MidiPreset.PresetName;
             lbPreset.Tag = bp.MidiPreset.Tag;
 
             tbFilterHighNote.Text = bp.MidiOptions.NoteFilterHigh.ToString();
@@ -606,7 +638,7 @@ namespace MidiLiveSystem
                     int iPrg = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[0]);
                     int iMsb = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[1]);
                     int iLsb = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[2]);
-                    return new MidiPreset("", Convert.ToInt32(((ComboBoxItem)cbChannelPreset.SelectedItem).Tag.ToString()), iPrg, iMsb, iLsb, lbPreset.Content.ToString());
+                    return new MidiPreset("", Convert.ToInt32(((ComboBoxItem)cbChannelPreset.SelectedItem).Tag.ToString()), iPrg, iMsb, iLsb, lbPreset.Text);
                 }
                 catch (Exception ex)
                 {

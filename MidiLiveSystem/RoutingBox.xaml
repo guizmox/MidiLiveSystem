@@ -7,40 +7,114 @@
       xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
       mc:Ignorable="d" 
       d:DesignHeight="250" d:DesignWidth="400"
-      Title="RoutingBox" Background="DimGray">
+      Title="RoutingBox" Background="DimGray" MouseRightButtonDown="Page_MouseRightButtonDown" >
 
     <Page.Resources>
+        <ContextMenu x:Key="RoutingBoxContextMenu">
+            <MenuItem Header="Remove Box" Tag="REMOVE" Click="MenuItem_Click"/>
+            <MenuItem Header="Maximize" Tag="MAXIMIZE" Click="MenuItem_Click"/>
+            <MenuItem Header="Minimize" Tag="MINIMIZE" Click="MenuItem_Click"/>
+            <MenuItem Header="Detach" Tag="DETACH" Click="MenuItem_Click"/>
+            <MenuItem Header="Move To Next Slot" Tag="MOVE_NEXT" Click="MenuItem_Click"/>
+            <MenuItem Header="Move To Previous Slot" Tag="MOVE_PREVIOUS" Click="MenuItem_Click"/>
+        </ContextMenu>
         <Style x:Key="TabControlHeaderStyle" TargetType="{x:Type TabItem}">
-            <Setter Property="Height" Value="20"/>
             <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
-        <Style TargetType="Label">
+        <Style TargetType="TextBlock">
             <Setter Property="Foreground" Value="LightYellow"/>
-            <!-- Couleur du texte rouge -->
-            <Setter Property="FontSize" Value="10"/>
-            <!-- Taille de la police 10 -->
-            <!-- Autres setters pour le style des labels peuvent être ajoutés ici -->
+            <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
     </Page.Resources>
 
     <Grid>
-        <TabControl ItemContainerStyle="{StaticResource TabControlHeaderStyle}" Padding="2">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="90*"/>
+            <ColumnDefinition Width="10*" />
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Row="0" Grid.Column="1" Margin="2,2,2,2" >
+            <Grid.RowDefinitions>
+                <RowDefinition Height="20*"/>
+                <RowDefinition Height="80*"/>
+            </Grid.RowDefinitions>
+            <TextBlock MouseDown="Menu_OpenMenu" Grid.Row="0" HorizontalAlignment="Center">
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="Menu" />
+        </TextBlock>
+
+            <Grid Grid.Row="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="25*"/>
+                    <RowDefinition Height="25*"/>
+                    <RowDefinition Height="25*"/>
+                    <RowDefinition Height="25*"/>
+                </Grid.RowDefinitions>
+                <Button Name="tbSolo" Grid.Row="0" Background="DarkGray" Click="tbSolo_Click"  >
+                    <StackPanel>
+                            <TextBlock>
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="VolumeHigh" />
+                            </TextBlock>
+                    </StackPanel>
+                </Button>
+                <Button Name="tbMute" Grid.Row="1" Background="DarkGray" Click="tbMute_Click" >
+                    <StackPanel>
+                            <TextBlock>
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="Mute" />
+                            </TextBlock>
+                    </StackPanel>
+                </Button>
+
+                <Button Name="btnCopyPreset" Grid.Row="2" Background="DarkGray" Click="btnCopyPreset_Click" >
+                    <StackPanel>
+                            <TextBlock>
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="ContentCopy" />
+                            </TextBlock>
+                    </StackPanel>
+                </Button>
+
+                <Button Name="btnPastePreset" Grid.Row="3" Background="DarkGray" Click="btnPastePreset_Click" >
+                    <StackPanel>
+                            <TextBlock>
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="ContentPaste" />
+                            </TextBlock>
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Grid>
+
+        <TabControl ItemContainerStyle="{StaticResource TabControlHeaderStyle}" Padding="2" Grid.Column="0" Grid.RowSpan="2">
             <TabItem>
                 <TabItem.Header>
                     <StackPanel>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="50*" />
-                                <ColumnDefinition Width="50*" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Name="tbRoutingName" Grid.Column="0" Text="Routing Name" VerticalAlignment="Center" HorizontalAlignment="Left" Foreground="IndianRed" FontSize="10" />
-                            <TextBlock Grid.Column="1" HorizontalAlignment="Center">  
+                        <Viewbox>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="80*" />
+                                    <ColumnDefinition Width="20*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Name="tbRoutingName" Grid.Column="0" Text="Routing Name" VerticalAlignment="Center" HorizontalAlignment="Left" Foreground="IndianRed" />
+                                <TextBlock Grid.Column="1" >  
                                 <materialDesign:PackIcon
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Center"
-                                Kind="Music" />
-                            </TextBlock>
-                        </Grid>
+                                Kind="Play" />
+                                </TextBlock>
+                            </Grid>
+                        </Viewbox>
                     </StackPanel>
                 </TabItem.Header>
                 <Grid x:Name="gridBoxes">
@@ -56,28 +130,28 @@
                         <ColumnDefinition Width="25*" />
                     </Grid.ColumnDefinitions>
 
-                    <Button x:Name="btnPreset1" Background="IndianRed" Tag="0" Grid.Row="0" Grid.Column="0" Height="90" Width="90" Click="btnPreset_Click">
+                    <Button x:Name="btnPreset1" Background="IndianRed" Tag="0" Grid.Row="0" Grid.Column="0" Margin="5,5,5,5" Height="Auto" Width="Auto" Click="btnPreset_Click">
                         <TextBlock Text="Preset 1" />
                     </Button>
-                    <Button x:Name="btnPreset2" Tag="1" Grid.Row="0" Grid.Column="1" Height="90" Width="90" Click="btnPreset_Click">
+                    <Button x:Name="btnPreset2" Tag="1" Grid.Row="0" Grid.Column="1" Margin="5,5,5,5" Height="Auto" Width="Auto" Click="btnPreset_Click">
                         <TextBlock Text="Preset 2" />
                     </Button>
-                    <Button x:Name="btnPreset3" Tag="2" Grid.Row="0" Grid.Column="2" Height="90" Width="90" Click="btnPreset_Click">
+                    <Button x:Name="btnPreset3" Tag="2" Grid.Row="0" Grid.Column="2" Margin="5,5,5,5" Height="Auto" Width="Auto" Click="btnPreset_Click">
                         <TextBlock Text="Preset 3" />
                     </Button>
-                    <Button x:Name="btnPreset4" Tag="3" Grid.Row="0" Grid.Column="3" Height="90" Width="90" Click="btnPreset_Click">
+                    <Button x:Name="btnPreset4" Tag="3" Grid.Row="0" Grid.Column="3" Margin="5,5,5,5" Height="Auto" Width="Auto" Click="btnPreset_Click">
                         <TextBlock Text="Preset 4" />
                     </Button>
-                    <Button x:Name="btnPreset5" Tag="4" Grid.Row="1" Grid.Column="0" Height="90" Width="90" Click="btnPreset_Click">
+                    <Button x:Name="btnPreset5" Tag="4" Grid.Row="1" Grid.Column="0" Margin="5,5,5,5" Height="Auto" Width="Auto" Click="btnPreset_Click">
                         <TextBlock Text="Preset 5" />
                     </Button>
-                    <Button x:Name="btnPreset6" Tag="5" Grid.Row="1" Grid.Column="1" Height="90" Width="90" Click="btnPreset_Click">
+                    <Button x:Name="btnPreset6" Tag="5" Grid.Row="1" Grid.Column="1" Margin="5,5,5,5" Height="Auto" Width="Auto" Click="btnPreset_Click">
                         <TextBlock Text="Preset 6" />
                     </Button>
-                    <Button x:Name="btnPreset7" Tag="6" Grid.Row="1" Grid.Column="2" Height="90" Width="90" Click="btnPreset_Click">
+                    <Button x:Name="btnPreset7" Tag="6" Grid.Row="1" Grid.Column="2" Margin="5,5,5,5" Height="Auto" Width="Auto" Click="btnPreset_Click">
                         <TextBlock Text="Preset 7" />
                     </Button>
-                    <Button x:Name="btnPreset8" Tag="7" Grid.Row="1" Grid.Column="3" Height="90" Width="90" Click="btnPreset_Click">
+                    <Button x:Name="btnPreset8" Tag="7" Grid.Row="1" Grid.Column="3" Margin="5,5,5,5" Height="Auto" Width="Auto" Click="btnPreset_Click">
                         <TextBlock Text="Preset 8" />
                     </Button>
                 </Grid>
@@ -94,131 +168,118 @@
                         </TextBlock>
                     </StackPanel>
                 </TabItem.Header>
-                <Grid x:Name="gridSettings">
-                    <!-- Définir une grille de 4x4 cellules -->
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="15*" />
-                        <RowDefinition Height="15*" />
-                        <RowDefinition Height="15*" />
-                        <RowDefinition Height="15*" />
-                        <RowDefinition Height="15*" />
-                        <RowDefinition Height="15*" />
-                        <RowDefinition Height="15*" />
-                        <RowDefinition Height="15*" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="25*" />
-                        <ColumnDefinition Width="50*" />
-                        <ColumnDefinition Width="15*" />
-                        <ColumnDefinition Width="10*" />
-                    </Grid.ColumnDefinitions>
-                    <Button Name="tbSolo" Grid.Column="2" Grid.Row="6" Grid.RowSpan="2" Grid.ColumnSpan="2" Width="50" Background="DarkGray" Click="tbSolo_Click" >
-                        <StackPanel Width="Auto">
-                            <TextBlock HorizontalAlignment="Center">
-                            <materialDesign:PackIcon
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Kind="VolumeHigh" />
-                            </TextBlock>
-                        </StackPanel>
-                    </Button>
-                    <Button Name="tbMute" Grid.Column="2" Grid.Row="4" Grid.RowSpan="2" Grid.ColumnSpan="2" Width="50" Background="DarkGray" Click="tbMute_Click" >
-                        <StackPanel Width="Auto">
-                            <TextBlock HorizontalAlignment="Center">
-                            <materialDesign:PackIcon
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Kind="Mute" />
-                            </TextBlock>
-                        </StackPanel>
-                    </Button>
-                    <Label Grid.Column="0" Grid.Row="0" Content="PRESET BUTTON"/>
-                    <TextBox Name="tbPresetName" Text="Preset 1" Grid.Column="1" Grid.Row="0" MaxLength="30" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                    <ComboBox Name="cbPresetButton" Grid.Column="2" Grid.ColumnSpan="2" Grid.Row="0" SelectedValuePath="Tag"  SelectionChanged="cbPresetButton_SelectionChanged"/>
-                    <Label Grid.Column="0" Grid.Row="1" Content="INPUT PORT + CH"/>
-                    <Label Grid.Column="0" Grid.Row="2" Content="OUTPUT PORT + CH"/>
-                    <ComboBox Name="cbMidiIn" Grid.Column="1" Grid.Row="1" SelectedValuePath="Tag" />
-                    <ComboBox Name="cbMidiOut" Grid.Column="1" Grid.Row="2" SelectedValuePath="Tag" SelectionChanged="cbChannelMidiOut_SelectionChanged" />
-                    <ComboBox Name="cbChannelMidiIn" Grid.Column="2" Grid.Row="1" Grid.ColumnSpan="2" SelectedValuePath="Tag"  />
-                    <ComboBox Name="cbChannelMidiOut" Grid.Column="2" Grid.Row="2" Grid.ColumnSpan="2" SelectedValuePath="Tag" SelectionChanged="cbChannelMidiOut_SelectionChanged" />
-                    <Label Grid.Column="0" Grid.Row="3" Content="PROGRAM"/>
-                    <StackPanel Grid.Column="1" Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" >
-                        <Button Name="tbChoosePreset" Click="tbChoosePreset_Click" Content="Choose Preset" FontSize="8" Width="90" Height="20"/>
-                        <ComboBox Name="cbChannelPreset" SelectedValuePath="Tag"/>
-                        <Label Name="lbPreset" Tag="0-0-0" Content="" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <Label Grid.Column="0" Grid.Row="4" Content="NOTE RANGE"/>
-                    <StackPanel Grid.Column="1" Grid.Row="4" >
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="30*" />
-                                <ColumnDefinition Width="20*" />
-                                <ColumnDefinition Width="30*" />
-                                <ColumnDefinition Width="20*" />
-                            </Grid.ColumnDefinitions>
-                            <Label Grid.Column="0" Content="Low"/>
-                            <TextBox Name="tbFilterLowNote" Grid.Column="1" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                            <Label Grid.Column="2" Content="High"/>
-                            <TextBox Name="tbFilterHighNote" Grid.Column="3" MaxLength="3" Text="127" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                        </Grid>
-                    </StackPanel>
-                    <Label Grid.Column="0" Grid.Row="5" Content="VELOCITY RANGE"/>
-                    <StackPanel Grid.Column="1" Grid.Row="5" >
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="30*" />
-                                <ColumnDefinition Width="20*" />
-                                <ColumnDefinition Width="30*" />
-                                <ColumnDefinition Width="20*" />
-                            </Grid.ColumnDefinitions>
-                            <Label Grid.Column="0" Content="Low"/>
-                            <TextBox Name="tbFilterLowVelo" Grid.Column="1" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                            <Label Grid.Column="2" Content="High"/>
-                            <TextBox Name="tbFilterHighVelo" Grid.Column="3" MaxLength="3" Text="127" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                        </Grid>
-                    </StackPanel>
-                    <Label Grid.Column="0" Grid.Row="6" Content="INIT CC VALUES"/>
-                    <ComboBox Name="cbCCDefaultValues" BorderThickness="0" Grid.Column="1" Grid.Row="6"  SelectedValuePath="Tag" SelectedValue="{Binding SelectedItem, Mode=TwoWay}" >
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="60*"/>
-                                        <ColumnDefinition Width="40*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="{Binding Description, Mode=TwoWay}" HorizontalAlignment="Left"/>
-                                    <TextBox Grid.Column="1" Width="40" Text="{Binding Value, Mode=TwoWay}" MaxLength="3" HorizontalAlignment="Right" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                                </Grid>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                        <local:ComboBoxCustomItem Id="tbCC_Pan" Description="Pan :" Value="64"/>
-                        <local:ComboBoxCustomItem Id="tbCC_Volume" Description="Volume :" Value="100"/>
-                        <local:ComboBoxCustomItem Id="tbCC_Reverb" Description="Reverb :" Value="-1"/>
-                        <local:ComboBoxCustomItem Id="tbCC_Chorus" Description="Chorus :" Value="-1"/>
-                        <local:ComboBoxCustomItem Id="tbCC_Release" Description="Release :" Value="-1"/>
-                        <local:ComboBoxCustomItem Id="tbCC_Attack" Description="Attack :" Value="-1"/>
-                        <local:ComboBoxCustomItem Id="tbCC_Decay" Description="Decay :" Value="-1"/>
-                        <local:ComboBoxCustomItem Id="tbCC_Bright" Description="Bright :" Value="-1"/>
-                    </ComboBox>
-                    <StackPanel Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="4">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="114*" />
-                                <ColumnDefinition Width="38*" />
-                                <ColumnDefinition Width="19*" />
-                                <ColumnDefinition Width="105*" />
-                                <ColumnDefinition Width="38*" />
-                                <ColumnDefinition Width="30*" />
-                                <ColumnDefinition Width="55*"/>
-                            </Grid.ColumnDefinitions>
-                            <Label Grid.Column="0" Content="TRANSPOSITION"/>
-                            <TextBox Name="tbNoteTransposition" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed" Grid.ColumnSpan="2" Margin="114,0,0,0"/>
-                            <Label Grid.Column="2" Content="AFTERTOUCH PLAY" Grid.ColumnSpan="3" Margin="19,0,38,0"/>
-                            <CheckBox Name="ckAftertouchToNote" Grid.Column="4" IsChecked="False" Grid.ColumnSpan="2" Margin="0,0,30,0"/>
-                        </Grid>
-                    </StackPanel>
+                <Viewbox>
+                    <Grid x:Name="gridSettings">
+                        <!-- Définir une grille de 4x4 cellules -->
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="15*" />
+                            <RowDefinition Height="15*" />
+                            <RowDefinition Height="15*" />
+                            <RowDefinition Height="15*" />
+                            <RowDefinition Height="15*" />
+                            <RowDefinition Height="15*" />
+                            <RowDefinition Height="15*" />
+                            <RowDefinition Height="15*" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="20*" />
+                            <ColumnDefinition Width="50*" />
+                            <ColumnDefinition Width="10*" />
+                            <ColumnDefinition Width="10*" />
+                            <ColumnDefinition Width="10*" />
+                        </Grid.ColumnDefinitions>
 
-                </Grid>
+                        <TextBlock TextWrapping="Wrap" Grid.Column="0" Grid.Row="0" Text="PRESET BUTTON"/>
+                        <TextBox Name="tbPresetName" Text="Preset 1" Grid.Column="1" Grid.ColumnSpan="2" Grid.Row="0" MaxLength="30" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                        <ComboBox Name="cbPresetButton" Grid.Column="3" Grid.ColumnSpan="2" Grid.Row="0" SelectedValuePath="Tag"  SelectionChanged="cbPresetButton_SelectionChanged"/>
+                        <TextBlock Grid.Column="0" Grid.Row="1" Text="INPUT PORT + CH"/>
+                        <TextBlock Grid.Column="0" Grid.Row="2" Text="OUTPUT PORT + CH"/>
+                        <ComboBox Name="cbMidiIn" MinWidth="120" Grid.ColumnSpan="2" Grid.Column="1" Grid.Row="1" SelectedValuePath="Tag" />
+                        <ComboBox Name="cbMidiOut" MinWidth="120" Grid.ColumnSpan="2" Grid.Column="1" Grid.Row="2" SelectedValuePath="Tag" SelectionChanged="cbChannelMidiOut_SelectionChanged" />
+                        <ComboBox Name="cbChannelMidiIn" MinWidth="40" Grid.Column="4" Grid.Row="1" SelectedValuePath="Tag"  />
+                        <ComboBox Name="cbChannelMidiOut" MinWidth="40" Grid.Column="4" Grid.Row="2" SelectedValuePath="Tag" SelectionChanged="cbChannelMidiOut_SelectionChanged" />
+                        <TextBlock Grid.Column="0" Grid.Row="3" Text="PROGRAM"/>
+                        <ComboBox Name="cbChannelPreset" MinWidth="40" Grid.Column="4" Grid.Row="3" SelectedValuePath="Tag"/>
+                        <StackPanel Grid.Column="1" Grid.Row="3" Grid.ColumnSpan="3">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="40*" />
+                                    <ColumnDefinition Width="60*" />
+                                </Grid.ColumnDefinitions>
+                                <Viewbox>
+                                    <Button Name="tbChoosePreset" FontSize="9" Grid.Column="0" Height="20" Width="100" Click="tbChoosePreset_Click" Content="Sel. Program" />
+                                </Viewbox>
+                                <TextBlock Name="lbPreset" Grid.Column="1" Tag="0-0-0" Text="" VerticalAlignment="Center"/>
+                            </Grid>
+                        </StackPanel>
+                        <TextBlock Grid.Column="0" Grid.Row="4" Text="NOTE RANGE"/>
+                        <StackPanel Grid.Column="1" Grid.ColumnSpan="3" Grid.Row="4" >
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="30*" />
+                                    <ColumnDefinition Width="20*" />
+                                    <ColumnDefinition Width="30*" />
+                                    <ColumnDefinition Width="20*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Low"/>
+                                <TextBox Name="tbFilterLowNote" Grid.Column="1" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                                <TextBlock Grid.Column="2" Text="High"/>
+                                <TextBox Name="tbFilterHighNote" Grid.Column="3" MaxLength="3" Text="127" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                            </Grid>
+                        </StackPanel>
+                        <TextBlock Grid.Column="0" Grid.Row="5" Text="VELOCITY RANGE"/>
+                        <StackPanel Grid.Column="1" Grid.Row="5" Grid.ColumnSpan="3" >
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="30*" />
+                                    <ColumnDefinition Width="20*" />
+                                    <ColumnDefinition Width="30*" />
+                                    <ColumnDefinition Width="20*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Low"/>
+                                <TextBox Name="tbFilterLowVelo" Grid.Column="1" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                                <TextBlock Grid.Column="2" Text="High"/>
+                                <TextBox Name="tbFilterHighVelo" Grid.Column="3" MaxLength="3" Text="127" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                            </Grid>
+                        </StackPanel>
+                        <TextBlock Grid.Column="0" Grid.Row="6" Text="INIT CC VALUES"/>
+                        <ComboBox Name="cbCCDefaultValues" Grid.ColumnSpan="3"  BorderThickness="0" Grid.Column="1" Grid.Row="6"  SelectedValuePath="Tag" SelectedValue="{Binding SelectedItem, Mode=TwoWay}" >
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="60*"/>
+                                            <ColumnDefinition Width="40*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Description, Mode=TwoWay}" HorizontalAlignment="Left"/>
+                                        <TextBox Grid.Column="1" Width="40" Text="{Binding Value, Mode=TwoWay}" MaxLength="3" HorizontalAlignment="Right" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                            <local:ComboBoxCustomItem Id="tbCC_Pan" Description="Pan :" Value="64"/>
+                            <local:ComboBoxCustomItem Id="tbCC_Volume" Description="Volume :" Value="100"/>
+                            <local:ComboBoxCustomItem Id="tbCC_Reverb" Description="Reverb :" Value="-1"/>
+                            <local:ComboBoxCustomItem Id="tbCC_Chorus" Description="Chorus :" Value="-1"/>
+                            <local:ComboBoxCustomItem Id="tbCC_Release" Description="Release :" Value="-1"/>
+                            <local:ComboBoxCustomItem Id="tbCC_Attack" Description="Attack :" Value="-1"/>
+                            <local:ComboBoxCustomItem Id="tbCC_Decay" Description="Decay :" Value="-1"/>
+                            <local:ComboBoxCustomItem Id="tbCC_Bright" Description="Bright :" Value="-1"/>
+                        </ComboBox>
+                        <TextBlock Grid.Column="0" Grid.Row="7" Text="TRANSPOSITION"/>
+                        <TextBox Name="tbNoteTransposition" Grid.Column="1" Grid.Row="7" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed" />
+                        <StackPanel Grid.Row="7" Grid.Column="2" Grid.ColumnSpan="2">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="70*" />
+                                    <ColumnDefinition Width="30*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="AFTERTOUCH PLAY" />
+                                <CheckBox Name="ckAftertouchToNote" Grid.Column="1" IsChecked="False" />
+                            </Grid>
+                        </StackPanel>
+
+                    </Grid>
+                </Viewbox>
             </TabItem>
             <TabItem>
                 <TabItem.Header>
@@ -231,119 +292,100 @@
                         </TextBlock>
                     </StackPanel>
                 </TabItem.Header>
-                <Grid x:Name="gridSettings2">
-                    <!-- Définir une grille de 4x4 cellules -->
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="15*" />
-                        <RowDefinition Height="15*" />
-                        <RowDefinition Height="15*" />
-                        <RowDefinition Height="15*" />
-                        <RowDefinition Height="15*" />
-                        <RowDefinition Height="15*" />
-                        <RowDefinition Height="15*" />
-                        <RowDefinition Height="15*" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="30*" />
-                        <ColumnDefinition Width="40*" />
-                        <ColumnDefinition Width="15*" />
-                        <ColumnDefinition Width="15*" />
-                    </Grid.ColumnDefinitions>
-                    <Button Name="btnCopyPreset" Grid.Column="2" Grid.Row="6" Grid.RowSpan="2" Width="50" Background="DarkGray" Click="btnCopyPreset_Click" >
-                        <StackPanel Width="Auto">
-                            <TextBlock HorizontalAlignment="Center">
-                            <materialDesign:PackIcon
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Kind="ContentCopy" />
-                            </TextBlock>
+                <Viewbox>
+                    <Grid x:Name="gridSettings2">
+                        <!-- Définir une grille de 4x4 cellules -->
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="15*" />
+                            <RowDefinition Height="15*" />
+                            <RowDefinition Height="15*" />
+                            <RowDefinition Height="15*" />
+                            <RowDefinition Height="15*" />
+                            <RowDefinition Height="15*" />
+                            <RowDefinition Height="15*" />
+                            <RowDefinition Height="15*" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="30*" />
+                            <ColumnDefinition Width="40*" />
+                            <ColumnDefinition Width="15*" />
+                            <ColumnDefinition Width="15*" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" Grid.Row="0" Text="FILTERS"/>
+                        <ComboBox Grid.Column="1" Grid.Row="0" SelectedValuePath="Tag" >
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox Content="{Binding Content}" IsChecked="{Binding IsChecked}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                            <CheckBox Name="ckAllowModulation" IsChecked="True" Content="Modulation"/>
+                            <CheckBox Name="ckAllowNotes" IsChecked="True" Content="Notes"/>
+                            <CheckBox Name="ckAllowAllCC"  IsChecked="True" Content="CC"/>
+                            <CheckBox Name="ckAllowSysex" IsChecked="True" Content="SysEx"/>
+                            <CheckBox Name="ckAllowNrpn" IsChecked="True" Content="Nrpn"/>
+                            <CheckBox Name="ckAllowAftertouch" IsChecked="True" Content="Aftertouch"/>
+                            <CheckBox Name="ckAllowPitchBend" IsChecked="True" Content="Pitch"/>
+                            <CheckBox Name="ckAllowProgramChange" IsChecked="True" Content="Prog. Change"/>
+                        </ComboBox>
+                        <TextBlock Grid.Column="0" Grid.Row="2" Text="CC CONVERTERS"/>
+                        <StackPanel Grid.Column="2" Grid.Row="2" Grid.ColumnSpan="2" Grid.RowSpan="2">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="50*"/>
+                                    <ColumnDefinition Width="50*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Name="btnAddCCConvert" Grid.Column="0" Margin="5,5,5,5" Content="+" Background="DarkOliveGreen" Click="btnAddCCConvert_Click" />
+                                <Button Name="btnRemoveCCConvert" Grid.Column="1" Margin="5,5,5,5" Content="-" Background="IndianRed" Click="btnRemoveCCConvert_Click" />
+                            </Grid>
                         </StackPanel>
-                    </Button>
 
-                    <Button Name="btnPastePreset" Grid.Column="3" Grid.Row="6" Grid.RowSpan="2" Width="50" Background="DarkGray" Click="btnPastePreset_Click" >
-                        <StackPanel Width="Auto">
-                            <TextBlock HorizontalAlignment="Center">
-                            <materialDesign:PackIcon
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Kind="ContentPaste" />
-                            </TextBlock>
+                        <ComboBox Name="cbCCConvert" Grid.Column="1" Grid.Row="3" SelectedValuePath="Tag" />
+                        <StackPanel Grid.Column="1" Grid.Row="2">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="30*"/>
+                                    <ColumnDefinition Width="20*"/>
+                                    <ColumnDefinition Width="30*"/>
+                                    <ColumnDefinition Width="20*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="FROM "/>
+                                <TextBox Name="tbCCConvertFrom" MinWidth="30" Grid.Column="1" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                                <TextBlock Grid.Column="2" Text=" TO "/>
+                                <TextBox Name="tbCCConvertTo" MinWidth="30" Grid.Column="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                            </Grid>
                         </StackPanel>
-                    </Button>
-                    
-                    <Label Grid.Column="0" Grid.Row="0" Content="FILTERS"/>
-                    <ComboBox Grid.Column="1" Grid.Row="0" SelectedValuePath="Tag" >
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <CheckBox Content="{Binding Content}" IsChecked="{Binding IsChecked}"/>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                        <CheckBox Name="ckAllowModulation" IsChecked="True" Content="Modulation"/>
-                        <CheckBox Name="ckAllowNotes" IsChecked="True" Content="Notes"/>
-                        <CheckBox Name="ckAllowAllCC"  IsChecked="True" Content="CC"/>
-                        <CheckBox Name="ckAllowSysex" IsChecked="True" Content="SysEx"/>
-                        <CheckBox Name="ckAllowNrpn" IsChecked="True" Content="Nrpn"/>
-                        <CheckBox Name="ckAllowAftertouch" IsChecked="True" Content="Aftertouch"/>
-                        <CheckBox Name="ckAllowPitchBend" IsChecked="True" Content="Pitch"/>
-                        <CheckBox Name="ckAllowProgramChange" IsChecked="True" Content="Prog. Change"/>
-                    </ComboBox>
-                    <Label Grid.Column="0" Grid.Row="2" Content="CC CONVERTERS"/>
-                    <StackPanel Grid.Column="2" Grid.Row="2" Grid.ColumnSpan="2" Grid.RowSpan="2">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="50*"/>
-                                <ColumnDefinition Width="50*"/>
-                            </Grid.ColumnDefinitions>
-                            <Button Name="btnAddCCConvert" Grid.Column="0" Width="50" Content="+" Background="DarkOliveGreen" Click="btnAddCCConvert_Click" />
-                            <Button Name="btnRemoveCCConvert" Grid.Column="1" Width="50" Content="-" Background="IndianRed" Click="btnRemoveCCConvert_Click" />
-                        </Grid>
-                    </StackPanel>
 
-                    <ComboBox Name="cbCCConvert" Grid.Column="1" Grid.Row="3" SelectedValuePath="Tag" />
-                    <StackPanel Grid.Column="1" Grid.Row="2">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="30*"/>
-                                <ColumnDefinition Width="20*"/>
-                                <ColumnDefinition Width="30*"/>
-                                <ColumnDefinition Width="20*"/>
-                            </Grid.ColumnDefinitions>
-                            <Label Grid.Column="0" Content="FROM"/>
-                            <TextBox Name="tbCCConvertFrom" Grid.Column="1" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                            <Label Grid.Column="2" Content="TO"/>
-                            <TextBox Name="tbCCConvertTo" Grid.Column="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                        </Grid>
-                    </StackPanel>
-
-                    <Label Grid.Column="0" Grid.Row="4" Content="NOTE CONVERTERS"/>
-                    <StackPanel Grid.Column="2" Grid.Row="4" Grid.ColumnSpan="2" Grid.RowSpan="2">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="50*"/>
-                                <ColumnDefinition Width="50*"/>
-                            </Grid.ColumnDefinitions>
-                            <Button Name="btnAddNOTEConvert" Grid.Column="0" Width="50" Content="+" Background="DarkOliveGreen" Click="btnAddNOTEConvert_Click" />
-                            <Button Name="btnRemoveNOTEConvert" Grid.Column="1" Width="50" Content="-" Background="IndianRed" Click="btnRemoveNOTEConvert_Click" />
-                        </Grid>
-                    </StackPanel>
-                    <ComboBox Name="cbNOTEConvert" Grid.Column="1" Grid.Row="5" SelectedValuePath="Tag" />
-                    <StackPanel Grid.Column="1" Grid.Row="4">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="30*"/>
-                                <ColumnDefinition Width="20*"/>
-                                <ColumnDefinition Width="30*"/>
-                                <ColumnDefinition Width="20*"/>
-                            </Grid.ColumnDefinitions>
-                            <Label Grid.Column="0" Content="FROM"/>
-                            <TextBox Name="tbNOTEConvertFrom" Grid.Column="1" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                            <Label Grid.Column="2" Content="TO"/>
-                            <TextBox Name="tbNOTEConvertTo" Grid.Column="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                        </Grid>
-                    </StackPanel>
-                    <Label Grid.Column="0" Grid.Row="6" Content="SCRIPT (UNSUPPORTED)"/>
-                    <RichTextBox Name="tbScript" Grid.Row="6" Grid.Column="1" Grid.RowSpan="2" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                </Grid>
+                        <TextBlock Grid.Column="0" Grid.Row="4" Text="NOTE CONVERTERS"/>
+                        <StackPanel Grid.Column="2" Grid.Row="4" Grid.ColumnSpan="2" Grid.RowSpan="2">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="50*"/>
+                                    <ColumnDefinition Width="50*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Name="btnAddNOTEConvert" Grid.Column="0" Margin="5,5,5,5" Content="+" Background="DarkOliveGreen" Click="btnAddNOTEConvert_Click" />
+                                <Button Name="btnRemoveNOTEConvert" Grid.Column="1" Margin="5,5,5,5" Content="-" Background="IndianRed" Click="btnRemoveNOTEConvert_Click" />
+                            </Grid>
+                        </StackPanel>
+                        <ComboBox Name="cbNOTEConvert" Grid.Column="1" Grid.Row="5" SelectedValuePath="Tag" />
+                        <StackPanel Grid.Column="1" Grid.Row="4">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="30*"/>
+                                    <ColumnDefinition Width="20*"/>
+                                    <ColumnDefinition Width="30*"/>
+                                    <ColumnDefinition Width="20*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="FROM "/>
+                                <TextBox Name="tbNOTEConvertFrom" MinWidth="30" Grid.Column="1" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                                <TextBlock Grid.Column="2" Text=" TO "/>
+                                <TextBox Name="tbNOTEConvertTo" MinWidth="30" Grid.Column="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                            </Grid>
+                        </StackPanel>
+                        <TextBlock Grid.Column="0" Grid.Row="6" Text="SCRIPT (UNSUPPORTED)"/>
+                        <RichTextBox Name="tbScript" Grid.Row="6" Grid.Column="1" Grid.RowSpan="2" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                    </Grid>
+                </Viewbox>
             </TabItem>
         </TabControl>
 

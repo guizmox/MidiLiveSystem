@@ -14,33 +14,25 @@
         </Grid.RowDefinitions>
         <DockPanel Grid.Row="0">
             <Grid x:Name="gridBoxes">
-                <!-- Définir une grille de 4x4 cellules -->
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
+
             </Grid>
         </DockPanel>
         <DockPanel Grid.Row="1">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="2*" />
-                    <ColumnDefinition Width="11*" />
-                    <ColumnDefinition Width="11*" />
-                    <ColumnDefinition Width="11*" />
-                    <ColumnDefinition Width="11*" />
-                    <ColumnDefinition Width="11*" />
-                    <ColumnDefinition Width="11*" />
-                    <ColumnDefinition Width="32*" />
-                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="10*" />
+                    <ColumnDefinition Width="10*" />
+                    <ColumnDefinition Width="10*" />
+                    <ColumnDefinition Width="10*" />
+                    <ColumnDefinition Width="10*" />
+                    <ColumnDefinition Width="10*" />
+                    <ColumnDefinition Width="8*" />
+                    <ColumnDefinition Width="8*" />
+                    <ColumnDefinition Width="8*" />
+                    <ColumnDefinition Width="8*" />
+                    <ColumnDefinition Width="8*" />
+                    <ColumnDefinition Width="1*" />
                 </Grid.ColumnDefinitions>
                 
                 <Button Name="btnAddBox" Width="140" Height="60" Grid.Column="1" Click="btnAddBox_Click" >
@@ -114,6 +106,31 @@
                         <TextBlock Text="Keyboard" />
                     </StackPanel>
                 </Button>
+
+                <Button Name="btnRecordSequence" Background="DarkGray" Width="80" Height="60" Grid.Column="10" Click="btnRecordSequence_Click" >
+                    <StackPanel>
+                        <TextBlock HorizontalAlignment="Center">
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="Record" />
+                        </TextBlock>
+                        <TextBlock Text="REC" />
+                    </StackPanel>
+                </Button>
+
+                <Button Name="btnPlaySequence" Background="DarkGray" Width="80" Height="60" Grid.Column="11" Click="btnPlaySequence_Click" >
+                    <StackPanel>
+                        <TextBlock HorizontalAlignment="Center">
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="Play" />
+                        </TextBlock>
+                        <TextBlock Text="PLAY" />
+                    </StackPanel>
+                </Button>
+                
             </Grid>
         </DockPanel>
     </Grid>

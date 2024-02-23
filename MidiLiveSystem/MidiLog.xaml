@@ -6,7 +6,7 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:MidiLiveSystem"
         mc:Ignorable="d"
-        Title="Midi Monitor" Height="600" Width="600" WindowStyle="ToolWindow" WindowStartupLocation="CenterOwner">
+        Title="Midi Monitor" Height="600" Width="600" WindowStyle="ToolWindow" Closed="Window_Closed" WindowStartupLocation="CenterOwner">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="90*" />

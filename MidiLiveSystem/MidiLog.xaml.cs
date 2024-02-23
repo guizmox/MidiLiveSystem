@@ -95,5 +95,10 @@ namespace MidiLiveSystem
                 OnlyIN = false;
             }
         }
+
+        private void Window_Closed(object sender, EventArgs e)
+        {
+
+        }
     }
 }
