@@ -194,12 +194,32 @@
                         <ComboBox Name="cbPresetButton" Grid.Column="3" Grid.ColumnSpan="2" Grid.Row="0" SelectedValuePath="Tag"  SelectionChanged="cbPresetButton_SelectionChanged"/>
                         <TextBlock Grid.Column="0" Grid.Row="1" Text="INPUT PORT + CH"/>
                         <TextBlock Grid.Column="0" Grid.Row="2" Text="OUTPUT PORT + CH"/>
-                        <ComboBox Name="cbMidiIn" MinWidth="120" Grid.ColumnSpan="2" Grid.Column="1" Grid.Row="1" SelectedValuePath="Tag" />
+                        <ComboBox Name="cbMidiIn" MinWidth="120" Grid.ColumnSpan="2" Grid.Column="1" Grid.Row="1" SelectedValuePath="Tag" SelectionChanged="cbMidiIn_SelectionChanged" />
                         <ComboBox Name="cbMidiOut" MinWidth="120" Grid.ColumnSpan="2" Grid.Column="1" Grid.Row="2" SelectedValuePath="Tag" SelectionChanged="cbChannelMidiOut_SelectionChanged" />
                         <ComboBox Name="cbChannelMidiIn" MinWidth="40" Grid.Column="4" Grid.Row="1" SelectedValuePath="Tag"  />
                         <ComboBox Name="cbChannelMidiOut" MinWidth="40" Grid.Column="4" Grid.Row="2" SelectedValuePath="Tag" SelectionChanged="cbChannelMidiOut_SelectionChanged" />
                         <TextBlock Grid.Column="0" Grid.Row="3" Text="PROGRAM"/>
                         <ComboBox Name="cbChannelPreset" MinWidth="40" Grid.Column="4" Grid.Row="3" SelectedValuePath="Tag" Visibility="Hidden"/>
+
+                        <StackPanel x:Name="pnlInternalGenerator" Grid.Column="2" Grid.ColumnSpan="3" Grid.Row="1" Visibility="Hidden" >
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="20*" />
+                                    <ColumnDefinition Width="10*" />
+                                    <ColumnDefinition Width="20*" />
+                                    <ColumnDefinition Width="10*" />
+                                    <ColumnDefinition Width="20*" />
+                                    <ColumnDefinition Width="10*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="NOTE"/>
+                                <TextBox Name="tbInternalGeneratorKey" Grid.Column="1" MaxLength="3" Text="64" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                                <TextBlock Grid.Column="2" Text="VEL"/>
+                                <TextBox Name="tbInternalGeneratorVelocity" Grid.Column="3" MaxLength="3" Text="127" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                                <TextBlock Grid.Column="4" Text="LEN"/>
+                                <TextBox Name="tbInternalGeneratorLength" Grid.Column="5" MaxLength="3" Text="1" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                            </Grid>
+                        </StackPanel>
+
                         <StackPanel Grid.Column="1" Grid.Row="3" Grid.ColumnSpan="3">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -267,7 +287,7 @@
                         </ComboBox>
                         <TextBlock Grid.Column="0" Grid.Row="7" Text="TRANSPOSITION"/>
                         <TextBox Name="tbNoteTransposition" Grid.Column="1" Grid.Row="7" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed" />
-                        <StackPanel Grid.Row="7" Grid.Column="2" Grid.ColumnSpan="2">
+                        <StackPanel Grid.Row="7" Grid.Column="2" Grid.ColumnSpan="2" VerticalAlignment="Center">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="70*" />

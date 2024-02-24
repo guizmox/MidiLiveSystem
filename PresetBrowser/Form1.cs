@@ -17,7 +17,7 @@ namespace PresetBrowser
 
         MidiRouting Routing = new MidiRouting();
         InstrumentData Instrument = null;
-        NoteGenerator Note = new NoteGenerator(1, 1, 1, 1);
+        NoteGenerator Note = new NoteGenerator(1, 1, 1, 1, 1);
         private Guid RoutingGuid;
 
         public Form1()
@@ -358,11 +358,11 @@ namespace PresetBrowser
             {
                 if (bOn)
                 {
-                    Routing.SendNote(RoutingGuid, Note, true, sDevice);
+                    Routing.SendNote(RoutingGuid, Note);
                 }
                 else
                 {
-                    Routing.SendNote(RoutingGuid, Note, false, sDevice);
+                    Routing.SendNote(RoutingGuid, Note);
                 }
             }
             catch (Exception ex)

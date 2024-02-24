@@ -70,6 +70,7 @@ namespace MidiTools
 
     public class MidiOptions
     {
+
         private int _TranspositionOffset = 0;
 
         private int _VelocityFilterLow = 0;
@@ -132,6 +133,7 @@ namespace MidiTools
             }
         }
 
+        public NoteGenerator PlayNote;
 
         public int TranspositionOffset
         {
@@ -154,6 +156,7 @@ namespace MidiTools
         public bool AllowAftertouch = true;
         public bool AllowPitchBend = true;
         public bool AllowProgramChange = true;
+
 
         public int CC_ToVolume { get; set; } = -1; //convertisseur de CC pour le volume (ex : CC 102 -> CC 7)
 
@@ -246,6 +249,8 @@ namespace MidiTools
         private int _eventsProcessedINLast = 0;
         private int _eventsProcessedOUTLast = 0;
 
+        private List<MidiEvent> _notesentforpanic = new List<MidiEvent>();
+
         public MidiRouting()
         {
             //MidiDevice.OnLogAdded += MidiDevice_OnLogAdded;
@@ -266,6 +271,39 @@ namespace MidiTools
             _eventsProcessedOUT = 0;
         }
 
+        public void RemovePendingNotes(bool bTransposed)
+        {
+            MidiEvent[] copy;
+
+            lock (_notesentforpanic)
+            {
+                copy = new MidiEvent[_notesentforpanic.Count];
+                _notesentforpanic.CopyTo(copy);
+                _notesentforpanic.Clear();
+            }
+
+            if (bTransposed)
+            {
+                foreach (var pending in copy)
+                {
+                    for (int i = 0; i <= 127; i++)
+                    {
+                        var eventout = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { i, 0 }, pending.Channel, pending.Device);
+                        CreateOUTEvent(eventout, true);
+                    }
+                }
+            }
+            else
+            {
+
+                foreach (var note in copy)
+                {
+                    var eventout = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { note.Values[0], 0 }, note.Channel, note.Device);
+                    CreateOUTEvent(eventout, true);
+                }
+            }
+        }
+
         public int AdjustUIRefreshRate()
         {
             int iAdjust = 1000; //1sec par défaut
@@ -283,8 +321,8 @@ namespace MidiTools
 
         private void CheckAndCloseUnusedDevices()
         {
-            var usedin = MidiMatrix.Select(d => d.DeviceIn.Name).Distinct();
-            var usedout = MidiMatrix.Select(d => d.DeviceOut.Name).Distinct();
+            var usedin = MidiMatrix.Where(d => d.DeviceIn != null).Select(d => d.DeviceIn.Name).Distinct();
+            var usedout = MidiMatrix.Where(d => d.DeviceOut != null).Select(d => d.DeviceOut.Name).Distinct();
 
             List<string> ToRemoveIN = new List<string>();
             foreach (var devin in UsedDevicesIN)
@@ -337,9 +375,13 @@ namespace MidiTools
         private void CreateOUTEvent(MidiDevice.MidiEvent ev, bool bForce)
         {
             //attention : c'est bien un message du device IN qui arrive ! ne marche pas si on a envoyé un message issu d'un device out
-            var matrix = MidiMatrix.Where(i => i.Active && i.DeviceIn != null && i.DeviceIn.Name == ev.Device && (i.ChannelIn == 0 || Tools.GetChannel(i.ChannelIn) == ev.Channel)).ToList();
+            List<MatrixItem> matrix = new List<MatrixItem>();
 
-            if (matrix.Count == 0 && bForce) //envoyé pour un device out
+            if (!bForce)
+            {
+                matrix = MidiMatrix.Where(i => i.Active && i.DeviceIn != null && i.DeviceIn.Name == ev.Device && (i.ChannelIn == 0 || Tools.GetChannel(i.ChannelIn) == ev.Channel)).ToList();
+            }
+            else if (bForce) //envoyé pour un device out
             {
                 matrix = MidiMatrix.Where(i => i.Active && i.DeviceOut != null && i.DeviceOut.Name == ev.Device && (i.ChannelOut == 0 || Tools.GetChannel(i.ChannelOut) == ev.Channel)).ToList();
             }
@@ -386,7 +428,17 @@ namespace MidiTools
 
                                 if (iNote > -1)
                                 {
-                                    _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { iNote, item.Options.AftertouchVolume ? 0 : ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
+                                    var eventout = new MidiEvent(ev.Type, new List<int> { iNote, item.Options.AftertouchVolume ? 0 : ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name);
+                                    _eventsOUT.Add(eventout);
+
+                                    lock (_notesentforpanic)
+                                    {
+                                        var toremove = _notesentforpanic.FirstOrDefault(n => n.Device == eventout.Device && n.Channel == eventout.Channel && n.Values[0] == eventout.Values[0]);
+                                        if (toremove != null)
+                                        {
+                                            _notesentforpanic.Remove(toremove);
+                                        }
+                                    }
                                 }
                             }
                             break;
@@ -401,7 +453,27 @@ namespace MidiTools
                                 {
                                     int iVelocity = item.Options.AftertouchVolume && ev.Values[1] > 0 ? 1 : ev.Values[1];
 
-                                    _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { iNote, iVelocity }, Tools.GetChannel(i), item.DeviceOut.Name));
+                                    var eventout = new MidiEvent(ev.Type, new List<int> { iNote, iVelocity }, Tools.GetChannel(i), item.DeviceOut.Name);
+                                    _eventsOUT.Add(eventout);
+
+                                    if (iVelocity == 0) //le genos n'envoie pas de note off mais que des ON à 0
+                                    {
+                                        lock (_notesentforpanic)
+                                        {
+                                            var toremove = _notesentforpanic.FirstOrDefault(n => n.Device == eventout.Device && n.Channel == eventout.Channel && n.Values[0] == eventout.Values[0]);
+                                            if (toremove != null)
+                                            {
+                                                _notesentforpanic.Remove(toremove);
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        lock (_notesentforpanic)
+                                        {
+                                            _notesentforpanic.Add(eventout);
+                                        }
+                                    }
                                 }
                             }
                             break;
@@ -491,6 +563,11 @@ namespace MidiTools
                 }
                 else
                 {
+                    if (newop.TranspositionOffset != routing.Options.TranspositionOffset) //midi panic
+                    {
+                        RemovePendingNotes(true);
+                    }
+
                     //comparer
                     if (newop.CC_Attack_Value != routing.Options.CC_Attack_Value)
                     {
@@ -627,13 +704,16 @@ namespace MidiTools
                     bool active = routing.Active;
                     routing.Active = false;
 
-                    if (sDeviceIn.Length > 0 && UsedDevicesIN.Count(d => d.Name.Equals(sDeviceIn)) == 0)
+                    if (!sDeviceIn.Equals(Tools.INTERNAL_GENERATOR))
                     {
-                        var device = new MidiDevice(InputDevices.FirstOrDefault(d => d.Name.Equals(sDeviceIn)));
-                        device.OnMidiEvent += DeviceIn_OnMidiEvent;
-                        UsedDevicesIN.Add(device);
+                        if (sDeviceIn.Length > 0 && UsedDevicesIN.Count(d => d.Name.Equals(sDeviceIn)) == 0)
+                        {
+                            var device = new MidiDevice(InputDevices.FirstOrDefault(d => d.Name.Equals(sDeviceIn)));
+                            device.OnMidiEvent += DeviceIn_OnMidiEvent;
+                            UsedDevicesIN.Add(device);
+                        }
+                        routing.DeviceIn = UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDeviceIn));
                     }
-                    routing.DeviceIn = UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDeviceIn));
 
                     routing.Active = active;
 
@@ -678,6 +758,7 @@ namespace MidiTools
             var routingOff = MidiMatrix.Where(m => m.RoutingGuid != routingGuid);
             foreach (var r in routingOff)
             {
+                RemovePendingNotes(false);
                 r.Active = false;
             }
         }
@@ -687,6 +768,7 @@ namespace MidiTools
             var routingOn = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
             if (routingOn != null)
             {
+                RemovePendingNotes(false);
                 routingOn.Active = false;
             }
         }
@@ -778,21 +860,18 @@ namespace MidiTools
             }
         }
 
-        public void SendNote(Guid routingGuid, NoteGenerator note, bool bOn, string sDevice)
+        public void SendNote(Guid routingGuid, NoteGenerator note)
         {
-            if (bOn)
+            var routing = MidiMatrix.FirstOrDefault(d => d.RoutingGuid == routingGuid && d.DeviceOut != null);
+
+            if (routing != null)
             {
-                if (MidiMatrix.Any(d => d.RoutingGuid == routingGuid && d.DeviceOut != null))
+                Task.Factory.StartNew(() =>
                 {
-                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.NOTE_ON, new List<int> { Tools.GetNoteInt(note.Note), note.Velocity }, note.Channel, sDevice), true);
-                }
-            }
-            else
-            {
-                if (MidiMatrix.Any(d => d.RoutingGuid == routingGuid && d.DeviceOut != null))
-                {
-                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.NOTE_OFF, new List<int> { Tools.GetNoteInt(note.Note), note.Velocity }, note.Channel, sDevice), true);
-                }
+                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.NOTE_ON, new List<int> { note.Note, note.Velocity }, Tools.GetChannel(note.Channel), routing.DeviceOut.Name), true);
+                    Thread.Sleep((int)(note.Length * 1000));
+                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.NOTE_OFF, new List<int> { note.Note, note.Velocity }, Tools.GetChannel(note.Channel), routing.DeviceOut.Name), false);
+                });
             }
         }
 
@@ -1403,6 +1482,8 @@ namespace MidiTools
 
     internal static class Tools
     {
+        internal static string INTERNAL_GENERATOR = "Internal Generator";
+
         internal static int GetNoteInt(Key key)
         {
             return Convert.ToInt32(key.ToString().Substring(3));
@@ -1454,7 +1535,6 @@ namespace MidiTools
                     return RtMidi.Core.Enums.Channel.Channel1;
             }
         }
-
 
         internal static int GetNoteIndex(int key, int vel, MidiOptions options)
         {
@@ -1950,19 +2030,34 @@ namespace MidiTools
         }
     }
 
+    [Serializable]
     public class NoteGenerator
     {
-        public int Velocity { get; private set; } = 64;
-        public RtMidi.Core.Enums.Key Note { get; private set; } = RtMidi.Core.Enums.Key.Key64;
-        public int Octave { get; private set; } = 3;
-        public RtMidi.Core.Enums.Channel Channel { get; private set; } = RtMidi.Core.Enums.Channel.Channel1;
+        public int Velocity = 64;
+        public int Note  = 64;
+        public int Octave  = 3;
+        public int Channel  = 1;
+        public decimal Length  = 1;
 
-        public NoteGenerator(int iChannel, int iOctave, int iNote, int iVelocity)
+        public NoteGenerator(int iChannel, int iOctave, int iNote, int iVelocity, decimal dLength)
         {
-            Channel = Tools.GetChannel(iChannel);
+            Channel = iChannel;
             SetOctave(iOctave);
             SetNote(iNote.ToString());
             SetVelocity(iVelocity.ToString());
+            SetLength(dLength);
+        }
+
+        public NoteGenerator()
+        {
+
+        }
+
+        private void SetLength(decimal dLength)
+        {
+            if (dLength > 9) { Length = 9; }
+            else if (dLength < 0) { Length = 0; }
+            else { Length = dLength; }
         }
 
         public void SetOctave(int iOctave)
@@ -1988,8 +2083,7 @@ namespace MidiTools
             {
                 if (iNote + (12 * Octave) > -1 && iNote + (12 * Octave) <= 127)
                 {
-                    Enum.TryParse("Key" + (iNote + (12 * Octave)), out RtMidi.Core.Enums.Key nt);
-                    Note = nt;
+                    Note = (iNote + (12 * Octave));
                 }
             }
         }
@@ -2002,18 +2096,6 @@ namespace MidiTools
                 if (iVel > -1 && iVel <= 127)
                 {
                     Velocity = iVel;
-                }
-            }
-        }
-
-        public void SetChannel(string sChannel)
-        {
-            int iCh = 0;
-            if (int.TryParse(sChannel.Trim(), out iCh))
-            {
-                if (iCh > 0 && iCh <= 16)
-                {
-                    Channel = Tools.GetChannel(iCh);
                 }
             }
         }

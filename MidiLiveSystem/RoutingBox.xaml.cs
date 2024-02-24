@@ -3,6 +3,7 @@ using RtMidi.Core.Devices.Infos;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -89,6 +90,9 @@ namespace MidiLiveSystem
             {
                 cbMidiIn.Items.Add(new ComboBoxItem() { Tag = s.Name, Content = s.Name });
             }
+
+            cbMidiIn.Items.Add(new ComboBoxItem() { Tag = "Internal Generator", Content = "Internal Generator" });
+
             foreach (var s in outputDevices)
             {
                 cbMidiOut.Items.Add(new ComboBoxItem() { Tag = s.Name, Content = s.Name });
@@ -137,6 +141,28 @@ namespace MidiLiveSystem
             OnUIEvent?.Invoke(BoxGuid, menuItem.Tag.ToString(), null);
         }
 
+        private void cbMidiIn_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var item = e.AddedItems.Count > 0 ? (ComboBoxItem)e.AddedItems[0] : null;
+
+            if (item != null)
+            {
+                if (item.Tag.Equals("Internal Generator"))
+                {
+                    Grid.SetColumnSpan(cbMidiIn, 1);
+                    cbChannelMidiIn.Visibility = Visibility.Hidden;
+                    pnlInternalGenerator.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    Grid.SetColumnSpan(cbMidiIn, 2);
+                    cbChannelMidiIn.Visibility = Visibility.Visible;
+                    pnlInternalGenerator.Visibility = Visibility.Hidden;
+                }
+            }
+
+        }
+
         private void cbPresetButton_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var item = e.RemovedItems.Count > 0 ? (ComboBoxItem)e.RemovedItems[0] : null;
@@ -163,7 +189,7 @@ namespace MidiLiveSystem
                 //passage en mode solo pour écoute
                 tbSolo.Background = Brushes.IndianRed;
                 OnUIEvent?.Invoke(BoxGuid, "SOLO", true);
-  
+
                 if (CubaseInstrumentData.Instruments != null && CubaseInstrumentData.Instruments.Count > 0 && CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(sDevice)) != null)
                 {
                     var instr = CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(sDevice));
@@ -249,7 +275,7 @@ namespace MidiLiveSystem
             {
                 ComboBoxItem cbOut = (ComboBoxItem)cbChannelMidiOut.SelectedItem;
                 cbChannelPreset.SelectedValue = cbOut.Tag;
-                
+
                 OnUIEvent?.Invoke(BoxGuid, "CHECK_OUT_CHANNEL", Convert.ToInt32(cbOut.Tag.ToString()));
             }
         }
@@ -333,7 +359,15 @@ namespace MidiLiveSystem
             string sNew = ((Button)sender).Tag.ToString();
             cbPresetButton.SelectedValue = sNew;
             LoadPreset(Convert.ToInt32(sNew));
-            OnUIEvent?.Invoke(BoxGuid, "PRESET_CHANGE", GetPreset());
+
+            if (pnlInternalGenerator.Visibility == Visibility.Visible)
+            {
+                OnUIEvent?.Invoke(BoxGuid, "PLAY_NOTE", GetOptions());
+            }
+            else
+            {
+                OnUIEvent?.Invoke(BoxGuid, "PRESET_CHANGE", GetPreset());
+            }
         }
 
         private void btnCopyPreset_Click(object sender, RoutedEventArgs e)
@@ -386,7 +420,7 @@ namespace MidiLiveSystem
             int iPrec = -1;
 
             //identification du preset en cours
-            if (btnPreset1.Background == Brushes.IndianRed) { iPrec = 0;  }
+            if (btnPreset1.Background == Brushes.IndianRed) { iPrec = 0; }
             else if (btnPreset2.Background == Brushes.IndianRed) { iPrec = 1; }
             else if (btnPreset3.Background == Brushes.IndianRed) { iPrec = 2; }
             else if (btnPreset4.Background == Brushes.IndianRed) { iPrec = 3; }
@@ -542,7 +576,7 @@ namespace MidiLiveSystem
             try
             {
                 //mémorisation des données en cours
-                var options = LoadOptions();
+                var options = GetOptions();
                 var preset = GetPreset();
                 var presetname = tbPresetName.Text.Trim();
                 var routingname = tbRoutingName.Text.Trim();
@@ -578,6 +612,13 @@ namespace MidiLiveSystem
             //remplissage des champs
             tbPresetName.Text = bp.PresetName;
             tbRoutingName.Text = bp.BoxName;
+
+            if (bp.MidiOptions.PlayNote != null)
+            {
+                tbInternalGeneratorKey.Text = bp.MidiOptions.PlayNote.Note.ToString();
+                tbInternalGeneratorVelocity.Text = bp.MidiOptions.PlayNote.Velocity.ToString();
+                tbInternalGeneratorLength.Text = bp.MidiOptions.PlayNote.Length.ToString();
+            }
 
             if (bIsFirst)
             {
@@ -681,9 +722,22 @@ namespace MidiLiveSystem
             }
         }
 
-        public MidiOptions LoadOptions()
+        public MidiOptions GetOptions()
         {
             var options = new MidiOptions();
+
+            int iNoteGen = -1;
+            int iVeloGen = -1;
+            int iChannel = -1;
+            decimal dLength = 0;
+            NumberStyles style = NumberStyles.AllowDecimalPoint | NumberStyles.AllowThousands;
+            CultureInfo culture = CultureInfo.InvariantCulture; // ou utilisez la culture appropriée selon vos besoins
+
+            int.TryParse(tbInternalGeneratorKey.Text, out iNoteGen);
+            int.TryParse(tbInternalGeneratorVelocity.Text, out iVeloGen);
+            int.TryParse(cbChannelMidiOut.SelectedValue.ToString(), out iChannel);
+            decimal.TryParse(tbInternalGeneratorLength.Text, style, culture, out dLength);
+            options.PlayNote = new NoteGenerator(iChannel, 0, iNoteGen, iVeloGen, dLength);
 
             options.NoteFilterHigh = TextParser(tbFilterHighNote.Text);
             tbFilterHighNote.Text = options.NoteFilterHigh.ToString();

@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -244,9 +245,9 @@ namespace MidiLiveSystem
                         }
                         else
                         {
-                            InitFrames(DefaultHorizontal, DefaultVertical); 
+                            InitFrames(DefaultHorizontal, DefaultVertical);
                         }
-                        AddRoutingBoxToFrame(box, false);
+                        AddAllRoutingBoxes();
                         break;
                     case "DETACH":
                         box.Detached = true;
@@ -309,6 +310,12 @@ namespace MidiLiveSystem
                             }
                         }
                         break;
+                    case "PLAY_NOTE":
+                        if (box.RoutingGuid != Guid.Empty)
+                        {
+                            Routing.SendNote(box.RoutingGuid, ((MidiOptions)sValue).PlayNote);
+                        }
+                        break;
                     case "PRESET_CHANGE":
                         if (box.RoutingGuid != Guid.Empty)
                         {
@@ -318,7 +325,7 @@ namespace MidiLiveSystem
                             Routing.ModifyRouting(box.RoutingGuid, sDevIn, sDevOut,
                                                    Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
                                                    Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
-                                                   box.LoadOptions(), box.GetPreset());
+                                                   box.GetOptions(), box.GetPreset());
                         }
                         break;
                     case "COPY_PRESET":
@@ -372,7 +379,7 @@ namespace MidiLiveSystem
                 ConfigWindow.Focus();
             }
             else
-            {   
+            {
                 if (ConfigWindow != null)
                 {
                     ConfigWindow.Closed -= MainConfiguration_Closed;
@@ -683,7 +690,7 @@ namespace MidiLiveSystem
                     box.RoutingGuid = Routing.AddRouting(sDevIn, sDevOut,
                                        Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
                                        Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
-                                       box.LoadOptions(), box.GetPreset());
+                                       box.GetOptions(), box.GetPreset());
                 }
                 else
                 {
@@ -693,7 +700,7 @@ namespace MidiLiveSystem
                     Routing.ModifyRouting(box.RoutingGuid, sDevIn, sDevOut,
                                            Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
                                            Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
-                                           box.LoadOptions(), box.GetPreset());
+                                           box.GetOptions(), box.GetPreset());
                 }
             }
         }
