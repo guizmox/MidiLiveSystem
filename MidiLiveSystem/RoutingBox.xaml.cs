@@ -91,7 +91,7 @@ namespace MidiLiveSystem
                 cbMidiIn.Items.Add(new ComboBoxItem() { Tag = s.Name, Content = s.Name });
             }
 
-            cbMidiIn.Items.Add(new ComboBoxItem() { Tag = "Internal Generator", Content = "Internal Generator" });
+            cbMidiIn.Items.Add(new ComboBoxItem() { Tag = Tools.INTERNAL_GENERATOR, Content = Tools.INTERNAL_GENERATOR });
 
             foreach (var s in outputDevices)
             {
@@ -147,7 +147,7 @@ namespace MidiLiveSystem
 
             if (item != null)
             {
-                if (item.Tag.Equals("Internal Generator"))
+                if (item.Tag.Equals(Tools.INTERNAL_GENERATOR))
                 {
                     Grid.SetColumnSpan(cbMidiIn, 1);
                     cbChannelMidiIn.Visibility = Visibility.Hidden;

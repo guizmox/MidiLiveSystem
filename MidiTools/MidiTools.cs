@@ -1480,9 +1480,9 @@ namespace MidiTools
         }
     }
 
-    internal static class Tools
+    public static class Tools
     {
-        internal static string INTERNAL_GENERATOR = "Internal Generator";
+        public static string INTERNAL_GENERATOR = "Note Generator";
 
         internal static int GetNoteInt(Key key)
         {
