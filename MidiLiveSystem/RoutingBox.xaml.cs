@@ -747,6 +747,12 @@ namespace MidiLiveSystem
 
             options.AftertouchVolume = ckAftertouchToNote.IsChecked.Value;
 
+            //pour éviter que le volume soit à 0 après un click sur aftertouch
+            if (ckAftertouchToNote.IsChecked.Value && options.CC_Volume_Value > 0)
+            { options.CC_Volume_Value = -1; }
+            else if (!ckAftertouchToNote.IsChecked.Value && options.CC_Volume_Value == -1)
+            { options.CC_Volume_Value = 100; }
+
             options.TranspositionOffset = TextParser(tbNoteTransposition.Text);
 
             foreach (var item in cbCCConvert.Items)

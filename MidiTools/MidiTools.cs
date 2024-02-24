@@ -246,8 +246,6 @@ namespace MidiTools
         private int _eventsProcessedINLast = 0;
         private int _eventsProcessedOUTLast = 0;
 
-        private List<Tuple<string, NoteOnMessage, bool>> _pendingATNoteMessages = new List<Tuple<string, NoteOnMessage, bool>>();
-
         public MidiRouting()
         {
             //MidiDevice.OnLogAdded += MidiDevice_OnLogAdded;
@@ -327,21 +325,6 @@ namespace MidiTools
 
         private void DeviceIn_OnMidiEvent(bool bIn, MidiDevice.MidiEvent ev)
         {
-            if (ev.Type == TypeEvent.NOTE_OFF)
-            {
-                var noteon = _pendingATNoteMessages.FirstOrDefault(n => n.Item2.Key == ev.GetKey() && n.Item2.Channel == ev.GetChannel() && ev.Device == n.Item1 && n.Item3);
-                if (noteon != null)
-                {
-                    lock (_pendingATNoteMessages) { _pendingATNoteMessages.Remove(noteon); }
-                }
-            }
-
-            if (ev.Type == TypeEvent.NOTE_ON)
-            {
-                lock (_pendingATNoteMessages)
-                { _pendingATNoteMessages.Add(new Tuple<string, NoteOnMessage, bool>(ev.Device, new NoteOnMessage(ev.GetChannel(), ev.GetKey(), ev.Values[1]), false)); }
-            }
-
             _eventsProcessedIN += 1;
             CreateOUTEvent(ev, false);
         }
@@ -391,45 +374,11 @@ namespace MidiTools
                             }
                             else if (item.Options.AftertouchVolume)
                             {
-                                if (ev.Values[0] == 0) //on balance un note off à tous les évènements en attente
-                                {
-                                    lock (_pendingATNoteMessages)
-                                    {
-                                        foreach (var noteon in _pendingATNoteMessages)
-                                        {
-                                            //if (noteon.Item3) //a déjà été déclenché
-                                            //{
-                                            _eventsOUT.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { Tools.GetNoteInt(noteon.Item2.Key), ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
-                                            _eventsOUT.Add(new MidiEvent(TypeEvent.CC, new List<int> { item.DeviceOut.CC_Volume, 0 }, Tools.GetChannel(i), item.DeviceOut.Name));
-                                            //}
-                                        }
-                                    }
-                                }
-                                else //il y a de la pression sur l'AT
-                                {
-                                    for (int ipd = 0; ipd < _pendingATNoteMessages.Count(); ipd++)
-                                    {
-                                        lock (_pendingATNoteMessages)
-                                        {
-                                            if (!_pendingATNoteMessages[ipd].Item3) //n'a pas encore été déclenché
-                                            {
-                                                //réécriture de la valeur pour signifier que la note a déjà été appuyée (pour éviter qu'à chaque modulation de l'AT, ça retrigger une note)
-
-                                                _pendingATNoteMessages[ipd] = new Tuple<string, NoteOnMessage, bool>(_pendingATNoteMessages[ipd].Item1, _pendingATNoteMessages[ipd].Item2, true);
-
-                                                _eventsOUT.Add(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { Tools.GetNoteInt(_pendingATNoteMessages[ipd].Item2.Key), ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
-                                            }
-                                            else //déjà appuyé, on module le volume
-                                            {
-                                                _eventsOUT.Add(new MidiEvent(TypeEvent.CC, new List<int> { item.DeviceOut.CC_Volume, ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
-                                            }
-                                        }
-                                    }
-                                }
+                                _eventsOUT.Add(new MidiEvent(TypeEvent.CC, new List<int> { item.DeviceOut.CC_Volume, ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
                             }
                             break;
                         case MidiDevice.TypeEvent.NOTE_OFF:
-                            if ((!item.Options.AftertouchVolume && item.Options.AllowNotes) || bForce)
+                            if (item.Options.AllowNotes || bForce)
                             {
                                 int iNote = Tools.GetNoteIndex(ev.Values[0], ev.Values[1], item.Options);
                                 var convertedNote = item.Options.Note_Converters.FirstOrDefault(i => i[0] == Tools.GetNoteIndex(ev.Values[0], 0, null));
@@ -437,20 +386,22 @@ namespace MidiTools
 
                                 if (iNote > -1)
                                 {
-                                    _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { iNote, ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
+                                    _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { iNote, item.Options.AftertouchVolume ? 0 : ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
                                 }
                             }
                             break;
                         case MidiDevice.TypeEvent.NOTE_ON:
-                            if ((!item.Options.AftertouchVolume && item.Options.AllowNotes) || bForce)
+                            if (item.Options.AllowNotes || bForce)
                             {
                                 int iNote = Tools.GetNoteIndex(ev.Values[0], ev.Values[1], item.Options);
                                 var convertedNote = item.Options.Note_Converters.FirstOrDefault(i => i[0] == Tools.GetNoteIndex(ev.Values[0], 0, null));
                                 if (convertedNote != null) { iNote = convertedNote[1]; } //TODO DOUTE
 
-                                if (iNote > -1)
+                                if (iNote > -1) //NOTE : il faut systématiquement mettre au moins une véolcité de 1 pour que la note se déclenche
                                 {
-                                    _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { iNote, ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
+                                    int iVelocity = item.Options.AftertouchVolume && ev.Values[1] > 0 ? 1 : ev.Values[1];
+
+                                    _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { iNote, iVelocity }, Tools.GetChannel(i), item.DeviceOut.Name));
                                 }
                             }
                             break;
@@ -1225,7 +1176,7 @@ namespace MidiTools
                     MidiDevice.AddLog(outputDevice.Name, false, 0, "SysEx", ev.SysExData, "", "");
                     break;
                 case MidiDevice.TypeEvent.CC:
-                    if (outputDevice != null && outputDevice.IsOpen)
+                    if (outputDevice != null && outputDevice.IsOpen && ev.Values[1] > -1)
                     {
                         ControlChangeMessage msg = new ControlChangeMessage(ev.Channel, ev.Values[0], ev.Values[1]);
                         outputDevice.Send(msg);
