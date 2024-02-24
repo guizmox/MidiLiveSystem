@@ -375,7 +375,7 @@ namespace PresetBrowser
         {
             try
             {
-                Routing.SendPresetChange(RoutingGuid, mp);
+                Routing.SendProgramChange(RoutingGuid, mp);
             }
             catch (Exception ex) { MessageBox.Show("Unable to open MIDI port : " + ex.Message); }
         }

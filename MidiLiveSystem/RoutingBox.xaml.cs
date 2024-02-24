@@ -114,18 +114,6 @@ namespace MidiLiveSystem
 
         }
 
-        public void LoadMemory(BoxPreset[] mem)
-        {
-            if (mem != null && mem.Length > 0)
-            {
-                TempMemory = mem;
-                if (TempMemory != null && TempMemory.Length > 0)
-                {
-                    FillUI(TempMemory[0], true);
-                }
-            }
-        }
-
         private void Page_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
             // Récupérer le contexte du menu à partir des ressources
@@ -150,6 +138,20 @@ namespace MidiLiveSystem
             OnUIEvent?.Invoke(BoxGuid, menuItem.Tag.ToString(), null);
         }
 
+        private void cbPresetButton_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var item = e.RemovedItems.Count > 0 ? (ComboBoxItem)e.RemovedItems[0] : null;
+
+            if (item != null)
+            {
+                var preset = MemCurrentPreset();
+                if (preset != null)
+                {
+                    TempMemory[Convert.ToInt32(item.Tag)] = preset;
+                }
+            }
+        }
+
         private void tbChoosePreset_Click(object sender, RoutedEventArgs e)
         {
             //charger la liste des presets de l'instrument
@@ -164,6 +166,12 @@ namespace MidiLiveSystem
                     pB.ShowDialog();
                     lbPreset.Text = pB.SelectedPreset[0];
                     lbPreset.Tag = pB.SelectedPreset[1];
+
+                    if (tbPresetName.Text.StartsWith("Preset", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        tbPresetName.Text = pB.SelectedPreset[0];
+                    }
+
                 }
                 else
                 {
@@ -205,22 +213,6 @@ namespace MidiLiveSystem
             {
                 OnUIEvent?.Invoke(BoxGuid, "MUTE", true);
                 tbMute.Background = Brushes.IndianRed;
-            }
-        }
-
-        private void cbPresetButton_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            try
-            {
-                if (((ComboBox)sender).SelectedIndex > -1)
-                {
-                    ComboBoxItem cbIn = (ComboBoxItem)((ComboBox)sender).SelectedItem;
-                    LoadPreset(Convert.ToInt32(cbIn.Tag.ToString()));
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Unable to Save Preset (" + ex.Message + ")");
             }
         }
 
@@ -311,7 +303,8 @@ namespace MidiLiveSystem
         {
             string sNew = ((Button)sender).Tag.ToString();
             cbPresetButton.SelectedValue = sNew;
-
+            LoadPreset(Convert.ToInt32(sNew));
+            OnUIEvent?.Invoke(BoxGuid, "PRESET_CHANGE", GetPreset());
         }
 
         private void btnCopyPreset_Click(object sender, RoutedEventArgs e)
@@ -347,6 +340,18 @@ namespace MidiLiveSystem
             }
         }
 
+        public void LoadMemory(BoxPreset[] mem)
+        {
+            if (mem != null && mem.Length > 0)
+            {
+                TempMemory = mem;
+                if (TempMemory != null && TempMemory.Length > 0)
+                {
+                    FillUI(TempMemory[0], true);
+                }
+            }
+        }
+
         private void LoadPreset(int iNew)
         {
             int iPrec = -1;
@@ -361,15 +366,9 @@ namespace MidiLiveSystem
             else if (btnPreset7.Background == Brushes.IndianRed) { iPrec = 6; }
             else if (btnPreset8.Background == Brushes.IndianRed) { iPrec = 7; }
 
-            TempMemory[iPrec] = MemCurrentPreset();
-
             if (TempMemory[iNew] != null)
             {
                 FillUI(TempMemory[iNew], iNew > 0 ? false : true);
-
-                OnUIEvent?.Invoke(BoxGuid, "PRESET_CHANGE", TempMemory[iNew].MidiOptions);
-
-                OnUIEvent?.Invoke(BoxGuid, "PROGRAM_CHANGE", TempMemory[iNew].MidiPreset);
             }
             else
             {
@@ -505,6 +504,7 @@ namespace MidiLiveSystem
             {
                 int idxOut = Convert.ToInt32(item.Tag.ToString());
                 TempMemory[idxOut] = bp;
+                LoadPreset(idxOut);
             }
         }
 
@@ -765,6 +765,7 @@ namespace MidiLiveSystem
             }
             else { return 999; }
         }
+
     }
 
     [Serializable]

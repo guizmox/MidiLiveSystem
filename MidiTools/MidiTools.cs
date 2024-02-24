@@ -336,14 +336,13 @@ namespace MidiTools
 
         private void CreateOUTEvent(MidiDevice.MidiEvent ev, bool bForce)
         {
+            //attention : c'est bien un message du device IN qui arrive ! ne marche pas si on a envoyé un message issu d'un device out
             var matrix = MidiMatrix.Where(i => i.Active && i.DeviceIn != null && i.DeviceIn.Name == ev.Device && (i.ChannelIn == 0 || Tools.GetChannel(i.ChannelIn) == ev.Channel)).ToList();
 
-            //gestion des évènements du synthé externe : pas un vrai device
-            if (matrix.Count == 0 && MidiMatrix.Count == 1)
+            if (matrix.Count == 0 && bForce) //envoyé pour un device out
             {
-                matrix.Add(MidiMatrix[0]);
+                matrix = MidiMatrix.Where(i => i.Active && i.DeviceOut != null && i.DeviceOut.Name == ev.Device && (i.ChannelOut == 0 || Tools.GetChannel(i.ChannelOut) == ev.Channel)).ToList();
             }
-            //----------------------
 
             foreach (MatrixItem item in matrix)
             {
@@ -553,13 +552,30 @@ namespace MidiTools
             if (newop != null) { routing.Options = newop; }
         }
 
-        private void ChangePreset(MatrixItem routing, MidiPreset newpres)
+        private void SendProgramChange(MatrixItem routing, MidiPreset preset)
+        {
+            if (routing != null)
+            {
+                ControlChangeMessage pc00 = new ControlChangeMessage(Tools.GetChannel(preset.Channel), 0, preset.Msb);
+                ControlChangeMessage pc32 = new ControlChangeMessage(Tools.GetChannel(preset.Channel), 32, preset.Lsb);
+                ProgramChangeMessage prg = new ProgramChangeMessage(Tools.GetChannel(preset.Channel), preset.Prg);
+
+                if (routing.DeviceOut != null)
+                {
+                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { pc00.Control, pc00.Value }, pc00.Channel, routing.DeviceOut.Name), true);
+                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { pc32.Control, pc32.Value }, pc32.Channel, routing.DeviceOut.Name), true);
+                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.PC, new List<int> { prg.Program }, prg.Channel, routing.DeviceOut.Name), true);
+                }
+            }
+        }
+
+        private void ChangeProgram(MatrixItem routing, MidiPreset newpres)
         {
             if (routing.DeviceOut != null)
             {
                 if (newpres.Lsb != routing.Preset.Lsb || newpres.Msb != routing.Preset.Msb || newpres.Prg != routing.Preset.Prg || newpres.Channel != routing.Preset.Channel)
                 {
-                    SendPresetChange(routing.RoutingGuid, newpres);
+                    SendProgramChange(routing, newpres);
                     routing.Preset = newpres;
                 }
                 else
@@ -617,17 +633,6 @@ namespace MidiTools
             else { return Guid.Empty; }
         }
 
-        public bool ModifyRoutingOptions(Guid routingGuid, MidiOptions options)
-        {
-            var routing = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
-            if (routing != null)
-            {
-                ChangeOptions(routing, options);
-                return true;
-            }
-            else { return false; }
-        }
-
         public bool ModifyRouting(Guid routingGuid, string sDeviceIn, string sDeviceOut, int iChIn, int iChOut, MidiOptions options, MidiPreset preset = null)
         {
             var routing = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
@@ -676,7 +681,7 @@ namespace MidiTools
 
                 //hyper important d'être à la fin !
                 ChangeOptions(routing, options);
-                ChangePreset(routing, preset);
+                ChangeProgram(routing, preset);
 
                 return true;
             }
@@ -701,7 +706,7 @@ namespace MidiTools
 
         public void MuteRouting(Guid routingGuid)
         {
-            var routingOn = MidiMatrix.FirstOrDefault(m => m.RoutingGuid != routingGuid);
+            var routingOn = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
             if (routingOn != null)
             {
                 routingOn.Active = false;
@@ -710,7 +715,7 @@ namespace MidiTools
 
         public void UnmuteRouting(Guid routingGuid)
         {
-            var routingOff = MidiMatrix.FirstOrDefault(m => m.RoutingGuid != routingGuid);
+            var routingOff = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
             if (routingOff != null)
             {
                 routingOff.Active = true;
@@ -787,25 +792,6 @@ namespace MidiTools
             else { return false; }
         }
 
-        public void SendPresetChange(Guid routingGuid, MidiPreset preset)
-        {
-            var routing = MidiMatrix.FirstOrDefault(r => r.RoutingGuid == routingGuid);
-
-            if (routing != null)
-            {
-                ControlChangeMessage pc00 = new ControlChangeMessage(Tools.GetChannel(preset.Channel), 0, preset.Msb);
-                ControlChangeMessage pc32 = new ControlChangeMessage(Tools.GetChannel(preset.Channel), 32, preset.Lsb);
-                ProgramChangeMessage prg = new ProgramChangeMessage(Tools.GetChannel(preset.Channel), preset.Prg);
-
-                if (MidiMatrix.Any(d => d.RoutingGuid == routingGuid && d.DeviceOut != null))
-                {
-                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { pc00.Control, pc00.Value }, pc00.Channel, routing.DeviceOut.Name), true);
-                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { pc32.Control, pc32.Value }, pc32.Channel, routing.DeviceOut.Name), true);
-                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.PC, new List<int> { prg.Program }, prg.Channel, routing.DeviceOut.Name), true);
-                }
-            }
-        }
-
         public void SendCC(Guid routingGuid, int iCC, int iValue, int iChannel, string sDevice)
         {
             if (MidiMatrix.Any(d => d.RoutingGuid == routingGuid && d.DeviceOut != null))
@@ -832,6 +818,14 @@ namespace MidiTools
             }
         }
 
+        public void SendProgramChange(Guid routingGuid, MidiPreset mp)
+        {
+            var routing = MidiMatrix.FirstOrDefault(d => d.RoutingGuid == routingGuid && d.DeviceOut != null);
+            if (routing != null)
+            {
+                ChangeProgram(routing, mp);
+            }
+        }
         public void StopLog()
         {
             MidiDevice.OnLogAdded -= MidiDevice_OnLogAdded;
@@ -867,6 +861,7 @@ namespace MidiTools
                 dev.OnMidiEvent -= DeviceOut_OnMidiEvent;
             }
         }
+
 
         #endregion
 

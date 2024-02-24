@@ -54,7 +54,7 @@ namespace MidiLiveSystem
 
             Clock = new System.Timers.Timer();
             Clock.Elapsed += Clock_Elapsed;
-            Clock.Interval = 10000;
+            Clock.Interval = 5000;
             Clock.Start();
 
             RecordedSequence.SequenceFinished += Routing_SequenceFinished;
@@ -294,7 +294,7 @@ namespace MidiLiveSystem
                             }
                         }
                         break;
-                    case "MUTE:":
+                    case "MUTE":
                         if (box.RoutingGuid != Guid.Empty)
                         {
                             if ((bool)sValue)
@@ -307,16 +307,16 @@ namespace MidiLiveSystem
                             }
                         }
                         break;
-                    case "PROGRAM_CHANGE":
-                        if (box.RoutingGuid != Guid.Empty)
-                        {
-                            Routing.SendPresetChange(box.RoutingGuid, (MidiPreset)sValue);
-                        }
-                        break;
                     case "PRESET_CHANGE":
                         if (box.RoutingGuid != Guid.Empty)
                         {
-                            Routing.ModifyRoutingOptions(box.RoutingGuid, (MidiOptions)sValue);
+                            string sDevIn = box.cbMidiIn.SelectedItem != null ? ((ComboBoxItem)box.cbMidiIn.SelectedItem).Tag.ToString() : "";
+                            string sDevOut = box.cbMidiOut.SelectedItem != null ? ((ComboBoxItem)box.cbMidiOut.SelectedItem).Tag.ToString() : "";
+
+                            Routing.ModifyRouting(box.RoutingGuid, sDevIn, sDevOut,
+                                                   Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
+                                                   Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
+                                                   box.LoadOptions(), box.GetPreset());
                         }
                         break;
                     case "COPY_PRESET":
