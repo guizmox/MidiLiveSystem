@@ -182,7 +182,7 @@ namespace MidiLiveSystem
                 {
                     System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() =>
                     {
-                        PresetBrowser pb = new PresetBrowser(instr, true);
+                        PresetBrowser pb = new PresetBrowser(instr);
                         pb.ShowDialog();
                     }));
                 }

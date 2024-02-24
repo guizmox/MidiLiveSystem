@@ -107,6 +107,18 @@
                     </StackPanel>
                 </Button>
 
+                <Button Name="btnSwitchView" Width="110" Height="60" Grid.Column="8" Background="YellowGreen" Click="btnSwitchView_Click" >
+                    <StackPanel>
+                        <TextBlock HorizontalAlignment="Center">
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="ToggleSwitch" />
+                        </TextBlock>
+                        <TextBlock Text="Switch View" />
+                    </StackPanel>
+                </Button>
+
                 <Button Name="btnRecordSequence" Background="DarkGray" Width="80" Height="60" Grid.Column="10" Click="btnRecordSequence_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">

@@ -64,6 +64,8 @@ namespace MidiLiveSystem
 
         BoxPreset[] TempMemory;
 
+        PresetBrowser InstrumentPresets = null;
+
 
         public RoutingBox(ProjectConfiguration conf, List<IMidiInputDeviceInfo> inputDevices, List<IMidiOutputDeviceInfo> outputDevices, int gridPosition)
         {
@@ -95,14 +97,11 @@ namespace MidiLiveSystem
             {
                 cbChannelMidiIn.Items.Add(new ComboBoxItem() { Tag = i, Content = i == 0 ? "ALL" : ("Ch." + i.ToString()) });
                 cbChannelMidiOut.Items.Add(new ComboBoxItem() { Tag = i, Content = i == 0 ? "ALL" : ("Ch." + i.ToString()) });
-                if (i > 0)
-                {
-                    cbChannelPreset.Items.Add(new ComboBoxItem() { Tag = i, Content = i == 0 ? "ALL" : ("Ch." + i.ToString()) });
-                }
+                cbChannelPreset.Items.Add(new ComboBoxItem() { Tag = i, Content = i == 0 ? "ALL" : ("Ch." + i.ToString()) });
             }
             cbChannelMidiIn.SelectedIndex = 1;
             cbChannelMidiOut.SelectedIndex = 1;
-            cbChannelPreset.SelectedIndex = 0;
+            cbChannelPreset.SelectedIndex = 1;
 
             for (int i = 1; i <= 8; i++)
             {
@@ -159,33 +158,63 @@ namespace MidiLiveSystem
             {
                 string sDevice = ((ComboBoxItem)cbMidiOut.SelectedItem).Tag.ToString();
 
+                var bgsolo = tbSolo.Background;
+
+                //passage en mode solo pour écoute
+                tbSolo.Background = Brushes.IndianRed;
+                OnUIEvent?.Invoke(BoxGuid, "SOLO", true);
+  
                 if (CubaseInstrumentData.Instruments != null && CubaseInstrumentData.Instruments.Count > 0 && CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(sDevice)) != null)
                 {
                     var instr = CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(sDevice));
-                    PresetBrowser pB = new PresetBrowser(instr, false);
-                    pB.ShowDialog();
-                    lbPreset.Text = pB.SelectedPreset[0];
-                    lbPreset.Tag = pB.SelectedPreset[1];
 
-                    if (tbPresetName.Text.StartsWith("Preset", StringComparison.InvariantCultureIgnoreCase))
+                    if (InstrumentPresets != null)
                     {
-                        tbPresetName.Text = pB.SelectedPreset[0];
+                        InstrumentPresets.OnPresetChanged -= PresetBrowser_OnPresetChanged;
                     }
+                    InstrumentPresets = new PresetBrowser(instr);
+                    InstrumentPresets.OnPresetChanged += PresetBrowser_OnPresetChanged;
 
+                    InstrumentPresets.ShowDialog();
                 }
                 else
                 {
                     MessageBox.Show("No Instrument Data. It can be created from 'Configuration' Menu. You can manually set Preset data instead (MSB + LSB + PRG)");
-                    PresetBrowser pB = new PresetBrowser(null, false);
-                    pB.ShowDialog();
-                    lbPreset.Text = pB.SelectedPreset[0];
-                    lbPreset.Tag = pB.SelectedPreset[1];
+
+                    if (InstrumentPresets != null)
+                    {
+                        InstrumentPresets.OnPresetChanged -= PresetBrowser_OnPresetChanged;
+                    }
+
+                    InstrumentPresets = new PresetBrowser(null);
+                    InstrumentPresets.OnPresetChanged += PresetBrowser_OnPresetChanged;
+                    InstrumentPresets.ShowDialog();
                 }
+
+                //repasse à l'état précédent
+                tbSolo.Background = bgsolo;
+                if (bgsolo == Brushes.DarkGray)
+                {
+                    OnUIEvent?.Invoke(BoxGuid, "SOLO", false);
+                }
+
             }
             else
             {
                 MessageBox.Show("Please choose a OUT Device first.");
             }
+        }
+
+        private void PresetBrowser_OnPresetChanged(MidiPreset mp)
+        {
+            lbPreset.Text = mp.PresetName;
+            lbPreset.Tag = mp.Tag;
+
+            if (tbPresetName.Text.StartsWith("Preset", StringComparison.InvariantCultureIgnoreCase))
+            {
+                tbPresetName.Text = mp.PresetName;
+            }
+            OnUIEvent?.Invoke(BoxGuid, "PRESET_CHANGE", GetPreset());
         }
 
         private void tbSolo_Click(object sender, RoutedEventArgs e)
@@ -221,6 +250,8 @@ namespace MidiLiveSystem
             if (cbChannelMidiOut.SelectedIndex > -1)
             {
                 ComboBoxItem cbOut = (ComboBoxItem)cbChannelMidiOut.SelectedItem;
+                cbChannelPreset.SelectedValue = cbOut.Tag;
+                
                 OnUIEvent?.Invoke(BoxGuid, "CHECK_OUT_CHANNEL", Convert.ToInt32(cbOut.Tag.ToString()));
             }
         }

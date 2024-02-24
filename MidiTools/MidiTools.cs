@@ -227,14 +227,13 @@ namespace MidiTools
         {
             get
             {
-                string sMessage = "MIDI Average Processing Messages / Cycle : ";
-                sMessage = string.Concat(sMessage, " [IN] : " + (_eventsProcessedIN / _iCyclesIN).ToString());
-                sMessage = string.Concat(sMessage, " / [OUT] : " + (_eventsProcessedOUT / _iCyclesOUT).ToString());
+                string sMessage = "MIDI Average Processing Messages / Sec. : ";
+                sMessage = string.Concat(sMessage, " [IN] : " + (_eventsProcessedINLast).ToString());
+                sMessage = string.Concat(sMessage, " / [OUT] : " + (_eventsProcessedOUTLast).ToString());
 
                 return sMessage;
             }
         }
-
 
         private List<MatrixItem> MidiMatrix = new List<MatrixItem>();
         private List<MidiDevice> UsedDevicesIN = new List<MidiDevice>();
@@ -242,12 +241,12 @@ namespace MidiTools
 
         private System.Timers.Timer Clock;
 
-        private Int64 _eventsProcessedIN = 0;
-        private Int64 _iCyclesIN = 1;
+        private int _eventsProcessedIN = 0;
+        private int _eventsProcessedOUT = 0;
+        private int _eventsProcessedINLast = 0;
+        private int _eventsProcessedOUTLast = 0;
 
         private List<Tuple<string, NoteOnMessage, bool>> _pendingATNoteMessages = new List<Tuple<string, NoteOnMessage, bool>>();
-        private Int64 _eventsProcessedOUT = 0;
-        private Int64 _iCyclesOUT = 1;
 
         public MidiRouting()
         {
@@ -263,8 +262,25 @@ namespace MidiTools
 
         private void QueueProcessor_OnEvent(object sender, ElapsedEventArgs e)
         {
-            _iCyclesIN += 1;
-            _iCyclesOUT += 1;
+            _eventsProcessedINLast = _eventsProcessedIN;
+            _eventsProcessedOUTLast = _eventsProcessedOUT;
+            _eventsProcessedIN = 0;
+            _eventsProcessedOUT = 0;
+        }
+        
+        public int AdjustUIRefreshRate()
+        {
+            int iAdjust = 1000; //1sec par défaut
+            int iEvents = (_eventsProcessedINLast + _eventsProcessedOUTLast);
+
+            iAdjust = ((iEvents * 2) / 10);
+
+            if (iAdjust < 2)
+            {
+                iAdjust = 2;
+            }
+
+            return iAdjust;
         }
 
         private void CheckAndCloseUnusedDevices()
@@ -326,6 +342,7 @@ namespace MidiTools
                 { _pendingATNoteMessages.Add(new Tuple<string, NoteOnMessage, bool>(ev.Device, new NoteOnMessage(ev.GetChannel(), ev.GetKey(), ev.Values[1]), false)); }
             }
 
+            _eventsProcessedIN += 1;
             CreateOUTEvent(ev, false);
         }
 
@@ -826,6 +843,7 @@ namespace MidiTools
                 ChangeProgram(routing, mp);
             }
         }
+
         public void StopLog()
         {
             MidiDevice.OnLogAdded -= MidiDevice_OnLogAdded;
@@ -1648,7 +1666,10 @@ namespace MidiTools
                     if (events[i].Type == TypeEvent.NOTE_OFF) { iPendingNotes--; }
 
                     device.SendMidiEvent(events[i]);
-                    Thread.Sleep((int)waitingTime);
+                    if (waitingTime > 0)
+                    {
+                        Thread.Sleep((int)waitingTime);
+                    }
                 }
             }
 

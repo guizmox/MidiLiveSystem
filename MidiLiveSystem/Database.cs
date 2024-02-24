@@ -135,6 +135,15 @@ namespace MidiLiveSystem
             string sProjectName = Project.ProjectName;
             string sSequence = "";
 
+            if (Project.BoxNames == null)
+            {
+                Project.BoxNames = new List<string[]>();
+                foreach (var box in Boxes)
+                {
+                    Project.BoxNames.Add(new string[] { box.BoxName, box.BoxGuid.ToString(), box.GridPosition.ToString() });
+                }
+            }
+
             XmlSerializer serializerConfig = new XmlSerializer(typeof(ProjectConfiguration));
             using (StringWriter textWriter = new StringWriter())
             {
@@ -288,7 +297,7 @@ namespace MidiLiveSystem
                 if (sSequence.Length > 0)
                 {
                     XmlSerializer serializerSequence = new XmlSerializer(typeof(MidiSequence));
-                    using (StringReader stream = new StringReader(sRouting))
+                    using (StringReader stream = new StringReader(sSequence))
                     {
                         sequence = (MidiSequence)serializerSequence.Deserialize(stream);
                     }

@@ -19,15 +19,16 @@ namespace MidiLiveSystem
     /// </summary>
     public partial class PresetBrowser : Window
     {
-        private InstrumentData Instrument;
-        public string[] SelectedPreset = new string[2] { "", "" };
-        private bool FromConfigScreen = false;
 
-        public PresetBrowser(InstrumentData instr, bool bFromConfig)
+        public delegate void BrowserPresetChanged(MidiPreset mp);
+        public event BrowserPresetChanged OnPresetChanged;
+
+        private InstrumentData Instrument;
+
+        public PresetBrowser(InstrumentData instr)
         {
             InitializeComponent();
 
-            FromConfigScreen = bFromConfig;
             Instrument = instr;
 
             if (instr != null)
@@ -35,41 +36,7 @@ namespace MidiLiveSystem
                 PopulateHierarchyTree();
             }
 
-            if (bFromConfig)
-            {
-                lblCaption.Content = "Preset Browser";
-            }
-            else
-            {
-                lblCaption.Content = "Select a Preset";
-            }
-        }
-
-        private void Window_Closed(object sender, EventArgs e)
-        {
-            if (!FromConfigScreen)
-            {
-                if (SelectedPreset[0].Length == 0)
-                {
-                    try
-                    {
-                        int iPrg = Convert.ToInt32(tbPrg.Text.Trim());
-                        int iMsb = Convert.ToInt32(tbMsb.Text.Trim());
-                        int iLsb = Convert.ToInt32(tbLsb.Text.Trim());
-                        if (iPrg < 0 || iPrg > 127) { throw new Exception("Prg Invalid"); }
-                        if (iMsb < 0 || iMsb > 127) { throw new Exception("Msb Invalid"); }
-                        if (iLsb < 0 || iLsb > 127) { throw new Exception("iLsb Invalid"); }
-
-                        string sTechName = string.Concat(iPrg.ToString(), "-", iMsb.ToString(), "-", iLsb.ToString());
-                        SelectedPreset = new string[2] { tbName.Text.Trim(), sTechName };
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("Invalid Preset Data. Using Default Values (" + ex.Message + ")");
-                        SelectedPreset = new string[2] { "Invalid Preset", "0-0-0" };
-                    }
-                }
-            }
+            lblCaption.Content = "Preset Browser";
         }
 
         private void tvPresets_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
@@ -166,17 +133,12 @@ namespace MidiLiveSystem
             if (idx.Length > 0)
             {
                 MidiPreset mp = Instrument.GetPreset(idx);
-                SelectedPreset = new string[2] { mp.PresetName, mp.Tag };
                 lblPresetInfo.Content = Path.GetFileName(Instrument.CubaseFile);
                 tbMsb.Text = mp.Msb.ToString();
                 tbLsb.Text = mp.Lsb.ToString();
                 tbPrg.Text = mp.Prg.ToString();
                 tbName.Text = mp.PresetName.ToString();
-
-                if (!FromConfigScreen)
-                {
-                    Close();
-                }
+                OnPresetChanged?.Invoke(mp);
             }
         }
 

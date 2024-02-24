@@ -32,12 +32,14 @@ namespace MidiLiveSystem
         private static int DefaultHorizontal = 4;
         private static int DefaultVertical = 4;
 
-        private System.Timers.Timer Clock;
+        private System.Timers.Timer UIRefreshRate;
+        private int RefreshCounter = 0;
 
         private MidiConfiguration ConfigWindow;
         private MidiLog LogWindow;
         private Keyboard KeysWindow;
         private List<DetachedBox> DetachedWindows = new List<DetachedBox>();
+        private bool ViewOnConfig = true;
 
         private MidiRouting Routing = new MidiRouting();
         private List<RoutingBox> Boxes = new List<RoutingBox>();
@@ -52,10 +54,10 @@ namespace MidiLiveSystem
             InitializeComponent();
             InitFrames(DefaultHorizontal, DefaultVertical);
 
-            Clock = new System.Timers.Timer();
-            Clock.Elapsed += Clock_Elapsed;
-            Clock.Interval = 5000;
-            Clock.Start();
+            UIRefreshRate = new System.Timers.Timer();
+            UIRefreshRate.Elapsed += UIRefreshRate_Elapsed;
+            UIRefreshRate.Interval = 1000;
+            UIRefreshRate.Start();
 
             RecordedSequence.SequenceFinished += Routing_SequenceFinished;
 
@@ -338,14 +340,21 @@ namespace MidiLiveSystem
             }
         }
 
-        private void Clock_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        private void UIRefreshRate_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
             Dispatcher.Invoke(() =>
             {
-                this.Title = string.Concat("Midi Live System [", Routing.CyclesInfo, "]");
+                RefreshCounter += 1;
+                int i = Routing.AdjustUIRefreshRate(); //renvoit une quantité en ms
 
-                //sauvegarde temporaire
-                SaveTemplate();
+                this.Title = string.Concat("Midi Live System [", Routing.CyclesInfo, " - UI Refresh Rate : ", i, " Sec.]");
+
+                if (RefreshCounter >= i)
+                {
+                    //sauvegarde temporaire
+                    SaveTemplate();
+                    RefreshCounter = 0;
+                }
             });
 
 
@@ -562,6 +571,27 @@ namespace MidiLiveSystem
             }
         }
 
+        private void btnSwitchView_Click(object sender, RoutedEventArgs e)
+        {
+            if (ViewOnConfig)
+            {
+                foreach (var box in Boxes)
+                {
+                    box.tabSwitch.SelectedIndex = 0;
+                }
+                ViewOnConfig = false;
+            }
+            else
+            {
+                foreach (var box in Boxes)
+                {
+                    box.tabSwitch.SelectedIndex = 1;
+                }
+                ViewOnConfig = true;
+            }
+
+        }
+
         private void AddRoutingBoxToFrame(RoutingBox rtb, bool bCreate)
         {
             var frame = GridFrames.FirstOrDefault(g => g.Tag.ToString().Equals(""));
@@ -616,7 +646,7 @@ namespace MidiLiveSystem
 
             foreach (var box in Boxes.OrderBy(b => b.GridPosition))
             {
-                AddRoutingBoxToFrame(box, false);
+                AddRoutingBoxToFrame(box, true);
             }
         }
 
@@ -626,6 +656,7 @@ namespace MidiLiveSystem
             {
                 foreach (var box in Boxes)
                 {
+                    box.OnUIEvent -= RoutingBox_UIEvent;
                     var frame = GridFrames.FirstOrDefault(frame => frame.Tag.ToString().Equals(box.BoxGuid.ToString()));
                     if (frame != null)
                     {
@@ -682,12 +713,15 @@ namespace MidiLiveSystem
             IEnumerable<Guid> distinctValues = AllPresets.Select(arr => arr.BoxGuid).Distinct();
             List<RoutingBox> boxes = new List<RoutingBox>();
 
+            int iGridPosition = -1;
+
             foreach (var g in distinctValues)
             {
                 var presetsample = AllPresets.FirstOrDefault(p => p.BoxGuid == g);
                 if (presetsample != null)
                 {
-                    var box = new RoutingBox(project, MidiTools.MidiRouting.InputDevices, MidiTools.MidiRouting.OutputDevices, Convert.ToInt32(project.BoxNames[2]));
+                    try { iGridPosition = Convert.ToInt32(project.BoxNames.FirstOrDefault(b => b[1].Equals(g.ToString()))[2]); } catch { iGridPosition++; }
+                    var box = new RoutingBox(project, MidiTools.MidiRouting.InputDevices, MidiTools.MidiRouting.OutputDevices, iGridPosition);
                     box.BoxGuid = g;
                     box.LoadMemory(AllPresets.Where(p => p.BoxGuid == g).ToArray());
                     boxes.Add(box);

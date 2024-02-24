@@ -98,7 +98,7 @@
             </Grid>
         </Grid>
 
-        <TabControl ItemContainerStyle="{StaticResource TabControlHeaderStyle}" Padding="2" Grid.Column="0" Grid.RowSpan="2">
+        <TabControl Name="tabSwitch" ItemContainerStyle="{StaticResource TabControlHeaderStyle}" Padding="2" Grid.Column="0" Grid.RowSpan="2">
             <TabItem>
                 <TabItem.Header>
                     <StackPanel>
@@ -199,7 +199,7 @@
                         <ComboBox Name="cbChannelMidiIn" MinWidth="40" Grid.Column="4" Grid.Row="1" SelectedValuePath="Tag"  />
                         <ComboBox Name="cbChannelMidiOut" MinWidth="40" Grid.Column="4" Grid.Row="2" SelectedValuePath="Tag" SelectionChanged="cbChannelMidiOut_SelectionChanged" />
                         <TextBlock Grid.Column="0" Grid.Row="3" Text="PROGRAM"/>
-                        <ComboBox Name="cbChannelPreset" MinWidth="40" Grid.Column="4" Grid.Row="3" SelectedValuePath="Tag"/>
+                        <ComboBox Name="cbChannelPreset" MinWidth="40" Grid.Column="4" Grid.Row="3" SelectedValuePath="Tag" Visibility="Hidden"/>
                         <StackPanel Grid.Column="1" Grid.Row="3" Grid.ColumnSpan="3">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -209,7 +209,7 @@
                                 <Viewbox>
                                     <Button Name="tbChoosePreset" FontSize="9" Grid.Column="0" Height="20" Width="100" Click="tbChoosePreset_Click" Content="Sel. Program" />
                                 </Viewbox>
-                                <TextBlock Name="lbPreset" Grid.Column="1" Tag="0-0-0" Text="" VerticalAlignment="Center"/>
+                                <TextBlock Name="lbPreset" Grid.Column="1" Tag="0-0-0" Text="" VerticalAlignment="Center" />
                             </Grid>
                         </StackPanel>
                         <TextBlock Grid.Column="0" Grid.Row="4" Text="NOTE RANGE"/>
