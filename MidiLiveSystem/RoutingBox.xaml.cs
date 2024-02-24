@@ -210,10 +210,8 @@ namespace MidiLiveSystem
             lbPreset.Text = mp.PresetName;
             lbPreset.Tag = mp.Tag;
 
-            if (tbPresetName.Text.StartsWith("Preset", StringComparison.InvariantCultureIgnoreCase))
-            {
-                tbPresetName.Text = mp.PresetName;
-            }
+            tbPresetName.Text = mp.PresetName;
+
             OnUIEvent?.Invoke(BoxGuid, "PRESET_CHANGE", GetPreset());
         }
 

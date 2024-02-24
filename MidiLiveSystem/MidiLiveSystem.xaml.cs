@@ -39,7 +39,7 @@ namespace MidiLiveSystem
         private MidiLog LogWindow;
         private Keyboard KeysWindow;
         private List<DetachedBox> DetachedWindows = new List<DetachedBox>();
-        private bool ViewOnConfig = true;
+        private bool ViewOnConfig = false;
 
         private MidiRouting Routing = new MidiRouting();
         private List<RoutingBox> Boxes = new List<RoutingBox>();
@@ -573,23 +573,25 @@ namespace MidiLiveSystem
 
         private void btnSwitchView_Click(object sender, RoutedEventArgs e)
         {
-            if (ViewOnConfig)
+            if (Boxes.Count > 0)
             {
-                foreach (var box in Boxes)
+                if (ViewOnConfig)
                 {
-                    box.tabSwitch.SelectedIndex = 0;
+                    foreach (var box in Boxes)
+                    {
+                        box.tabSwitch.SelectedIndex = 0;
+                    }
+                    ViewOnConfig = false;
                 }
-                ViewOnConfig = false;
-            }
-            else
-            {
-                foreach (var box in Boxes)
+                else
                 {
-                    box.tabSwitch.SelectedIndex = 1;
+                    foreach (var box in Boxes)
+                    {
+                        box.tabSwitch.SelectedIndex = 1;
+                    }
+                    ViewOnConfig = true;
                 }
-                ViewOnConfig = true;
             }
-
         }
 
         private void AddRoutingBoxToFrame(RoutingBox rtb, bool bCreate)
