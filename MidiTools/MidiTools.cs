@@ -192,7 +192,7 @@ namespace MidiTools
 
     public class MidiRouting
     {
-        private static double CLOCK_INTERVAL = 20;
+        private static double CLOCK_INTERVAL = 1000;
 
         public static List<RtMidi.Core.Devices.Infos.IMidiInputDeviceInfo> InputDevices
         {
@@ -242,7 +242,6 @@ namespace MidiTools
 
         private System.Timers.Timer Clock;
 
-        private List<MidiDevice.MidiEvent> _eventsIN = new List<MidiDevice.MidiEvent>();
         private Int64 _eventsProcessedIN = 0;
         private Int64 _iCyclesIN = 1;
 
@@ -264,32 +263,8 @@ namespace MidiTools
 
         private void QueueProcessor_OnEvent(object sender, ElapsedEventArgs e)
         {
-            MidiDevice.MidiEvent[] evTmp = null;
-            lock (_eventsIN)
-            {
-                evTmp = new MidiDevice.MidiEvent[_eventsIN.Count];
-                _eventsIN.CopyTo(evTmp);
-                _eventsIN.Clear();
-            }
-
-            StoreNoteOnMessage(_eventsIN.Where(ev => ev.Type == MidiDevice.TypeEvent.NOTE_ON).ToList());
-            ReleaseNoteOffMessage(_eventsIN.Where(ev => ev.Type == MidiDevice.TypeEvent.NOTE_OFF).ToList());
-
-            if (evTmp != null)
-            {
-                _iCyclesOUT++;
-                for (int i = 0; i < evTmp.Length; i++)
-                {
-                    //ajouter l'évènement entrant à la liste des évènements sortants à traiter
-                    CreateOUTEvent(evTmp[i], false);
-                }
-
-                if (evTmp.Length > 0)
-                {
-                    _iCyclesIN++;
-                    _eventsProcessedIN += evTmp.Length;
-                }
-            }
+            _iCyclesIN += 1;
+            _iCyclesOUT += 1;
         }
 
         private void CheckAndCloseUnusedDevices()
@@ -329,23 +304,6 @@ namespace MidiTools
             }
         }
 
-        private void ReleaseNoteOffMessage(List<MidiDevice.MidiEvent> events)
-        {
-            foreach (var ev in events)
-            {
-                var noteon = _pendingATNoteMessages.FirstOrDefault(n => n.Item2.Key == ev.GetKey() && n.Item2.Channel == ev.GetChannel() && ev.Device == n.Item1 && n.Item3);
-                lock (_pendingATNoteMessages) { _pendingATNoteMessages.Remove(noteon); }
-            }
-        }
-
-        private void StoreNoteOnMessage(List<MidiDevice.MidiEvent> events)
-        {
-            foreach (var ev in events)
-            {
-                lock (_pendingATNoteMessages) { _pendingATNoteMessages.Add(new Tuple<string, NoteOnMessage, bool>(ev.Device, new NoteOnMessage(ev.GetChannel(), ev.GetKey(), ev.Values[1]), false)); }
-            }
-        }
-
         private void DeviceOut_OnMidiEvent(bool bIn, MidiDevice.MidiEvent ev)
         {
             //lock (_eventsOUT) { _eventsOUT.Add(ev); }
@@ -353,7 +311,22 @@ namespace MidiTools
 
         private void DeviceIn_OnMidiEvent(bool bIn, MidiDevice.MidiEvent ev)
         {
-            lock (_eventsIN) { _eventsIN.Add(ev); }
+            if (ev.Type == TypeEvent.NOTE_OFF)
+            {
+                var noteon = _pendingATNoteMessages.FirstOrDefault(n => n.Item2.Key == ev.GetKey() && n.Item2.Channel == ev.GetChannel() && ev.Device == n.Item1 && n.Item3);
+                if (noteon != null)
+                {
+                    lock (_pendingATNoteMessages) { _pendingATNoteMessages.Remove(noteon); }
+                }
+            }
+
+            if (ev.Type == TypeEvent.NOTE_ON)
+            {
+                lock (_pendingATNoteMessages) 
+                { _pendingATNoteMessages.Add(new Tuple<string, NoteOnMessage, bool>(ev.Device, new NoteOnMessage(ev.GetChannel(), ev.GetKey(), ev.Values[1]), false)); }
+            }
+
+            CreateOUTEvent(ev, false);
         }
 
         private void MidiDevice_OnLogAdded(string sDevice, bool bIn, string sLog)
@@ -1555,7 +1528,7 @@ namespace MidiTools
 
             foreach (var s in devices)
             {
-                sbInfo.AppendLine(s + "[Ch : ");
+                string sChannels = " [Ch : ";
                 for (int i = 1; i <= 16; i++)
                 {
                     if (_events.Count(e => e.Device.Equals(s) && e.Channel == Tools.GetChannel(i)) > 0)
@@ -1565,10 +1538,11 @@ namespace MidiTools
                         break;
                     }
                 }
-                sbInfo.Append("]");
+                sChannels = string.Concat(sChannels.Substring(0, sChannels.Length - 2), "]");
+                sbInfo.AppendLine(sChannels);
             }
             sbInfo.AppendLine(Environment.NewLine);
-            sbInfo.AppendLine("Tracks : " + iTracks.ToString());
+            sbInfo.AppendLine(string.Concat("Tracks : ", iTracks.ToString(), " (", Events.Count, " event(s))"));
             return sbInfo.ToString();
         }
 

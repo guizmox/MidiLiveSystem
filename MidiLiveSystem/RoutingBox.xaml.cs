@@ -157,9 +157,9 @@ namespace MidiLiveSystem
             {
                 string sDevice = ((ComboBoxItem)cbMidiOut.SelectedItem).Tag.ToString();
 
-                if (Project != null && Project.Instruments != null && Project.Instruments.Count > 0 && Project.Instruments.FirstOrDefault(i => i.Device.Equals(sDevice)) != null)
+                if (CubaseInstrumentData.Instruments != null && CubaseInstrumentData.Instruments.Count > 0 && CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(sDevice)) != null)
                 {
-                    var instr = Project.Instruments.FirstOrDefault(i => i.Device.Equals(sDevice));
+                    var instr = CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(sDevice));
                     PresetBrowser pB = new PresetBrowser(instr, false);
                     pB.ShowDialog();
                     lbPreset.Text = pB.SelectedPreset[0];

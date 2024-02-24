@@ -7,9 +7,10 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Windows.Controls;
 using System.Xml.Linq;
+using System.Xml.Schema;
 using System.Xml.Serialization;
 using Microsoft.Data.Sqlite;
-
+using MidiTools;
 
 namespace MidiLiveSystem
 {
@@ -47,31 +48,139 @@ namespace MidiLiveSystem
                     ProjectName TEXT NOT NULL,
                     Config TEXT NOT NULL,
                     Routing TEXT NOT NULL,
+                    Sequence TEXT,
                     DateProject TEXT NOT NULL,
                     Author TEXT,
                     Active INT NOT NULL)";
                 createTableCommand.ExecuteNonQuery();
+
+                createTableCommand = connection.CreateCommand();
+                createTableCommand.CommandText = @"
+                CREATE TABLE IF NOT EXISTS Instruments (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    DeviceName TEXT NOT NULL,
+                    InstrumentData TEXT NOT NULL)";
+                createTableCommand.ExecuteNonQuery();
             }
         }
 
-        public void SaveProject(string guid, string projectname, string xmlconfig, string xmlrouting, string author)
+        public void SaveInstruments(List<InstrumentData> instruments)
         {
             using (var connection = new SqliteConnection(connectionString))
             {
                 connection.Open();
 
+                var deleteCommand = connection.CreateCommand();
+                deleteCommand.CommandText = "DELETE FROM Instruments;";
+                deleteCommand.ExecuteNonQuery();
+            }
+
+            using (var connection = new SqliteConnection(connectionString))
+            {
+                connection.Open();
+
+                foreach (InstrumentData instr in instruments)
+                {
+                    string sData = "";
+                    string sDevice = instr.Device;
+                    XmlSerializer serializerConfig = new XmlSerializer(typeof(InstrumentData));
+                    using (StringWriter textWriter = new StringWriter())
+                    {
+                        serializerConfig.Serialize(textWriter, instr);
+                        sData = textWriter.ToString();
+                    }
+
+                    var insertCommand = connection.CreateCommand();
+                    insertCommand.CommandText = "INSERT INTO Instruments (DeviceName, InstrumentData) VALUES (@devicename, @instrumentdata)";
+                    insertCommand.Parameters.AddWithValue("@devicename", sDevice);
+                    insertCommand.Parameters.AddWithValue("@instrumentdata", sData);
+                    insertCommand.ExecuteNonQuery();
+                }
+            }
+        }
+
+        public List<InstrumentData> LoadInstruments()
+        {
+            List<InstrumentData> instruments = new List<InstrumentData>();
+
+            using (var connection = new SqliteConnection(connectionString))
+            {
+                connection.Open();
+
+                var selectCommand = connection.CreateCommand();
+                selectCommand.CommandText = "SELECT Id, DeviceName, InstrumentData FROM Instruments;";
+
+                using (var reader = selectCommand.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+
+                        XmlSerializer serializerConfig = new XmlSerializer(typeof(InstrumentData));
+                        using (StringReader stream = new StringReader(reader.GetString(2)))
+                        {
+                            instruments.Add((InstrumentData)serializerConfig.Deserialize(stream));
+                        }
+                    }
+                }
+            }
+
+            return instruments;
+        }
+
+        public void SaveProject(List<RoutingBox> Boxes, ProjectConfiguration Project, MidiSequence RecordedSequence)
+        {
+            string sId = Project.ProjectId.ToString();
+            string sProjectConfig = "";
+            string sRoutingConfig = "";
+            string sProjectName = Project.ProjectName;
+            string sSequence = "";
+
+            XmlSerializer serializerConfig = new XmlSerializer(typeof(ProjectConfiguration));
+            using (StringWriter textWriter = new StringWriter())
+            {
+                serializerConfig.Serialize(textWriter, Project);
+                sProjectConfig = textWriter.ToString();
+            }
+
+
+            List<BoxPreset> allpresets = new List<BoxPreset>();
+            //sauvegarde des box
+            foreach (RoutingBox box in Boxes)
+            {
+                allpresets.AddRange(box.GetRoutingBoxMemory());
+            }
+
+            XmlSerializer serializerRouting = new XmlSerializer(typeof(RoutingBoxes));
+            using (StringWriter textWriter = new StringWriter())
+            {
+                serializerRouting.Serialize(textWriter, new RoutingBoxes() { AllPresets = allpresets.ToArray() });
+                sRoutingConfig = textWriter.ToString();
+            }
+
+            XmlSerializer serializerSequence = new XmlSerializer(typeof(MidiSequence));
+            using (StringWriter textWriter = new StringWriter())
+            {
+                serializerSequence.Serialize(textWriter, RecordedSequence);
+                sSequence = textWriter.ToString();
+            }
+
+            using (var connection = new SqliteConnection(connectionString))
+            {
+                connection.Open();
+
                 var updateCommand = connection.CreateCommand();
-                updateCommand.CommandText = "UPDATE Projects SET Active = 0 WHERE ProjectGuid = '" + guid + "';";
+                updateCommand.CommandText = "UPDATE Projects SET Active = 0 WHERE ProjectGuid = '" + sId + "';";
                 updateCommand.ExecuteNonQuery();    
 
                 var insertCommand = connection.CreateCommand();
-                insertCommand.CommandText = "INSERT INTO Projects (ProjectGuid, ProjectName, Config, Routing, DateProject, Author, Active) VALUES (@projectid, @projectname, @config, @routing, @dateproject, @author, @active)";
-                insertCommand.Parameters.AddWithValue("@projectid", guid);
-                insertCommand.Parameters.AddWithValue("@projectname", projectname);
-                insertCommand.Parameters.AddWithValue("@config", xmlconfig);
-                insertCommand.Parameters.AddWithValue("@routing", xmlrouting);
+                insertCommand.CommandText = "INSERT INTO Projects (ProjectGuid, ProjectName, Config, Routing, Sequence, DateProject, Author, Active) VALUES (@projectid, @projectname, @config, @routing, @sequence, @dateproject, @author, @active)";
+                insertCommand.Parameters.AddWithValue("@projectid", sId);
+                insertCommand.Parameters.AddWithValue("@projectname", sProjectName);
+                insertCommand.Parameters.AddWithValue("@config", sProjectConfig);
+                insertCommand.Parameters.AddWithValue("@routing", sRoutingConfig);
+                insertCommand.Parameters.AddWithValue("@sequence", sSequence);
                 insertCommand.Parameters.AddWithValue("@dateproject", DateTime.Now.ToString());
-                insertCommand.Parameters.AddWithValue("@author", author);
+                insertCommand.Parameters.AddWithValue("@author", Environment.UserName);
                 insertCommand.Parameters.AddWithValue("@active", "1");
                 insertCommand.ExecuteNonQuery();
             }
@@ -122,7 +231,7 @@ namespace MidiLiveSystem
             }
         }
 
-        public Tuple<Guid, ProjectConfiguration, RoutingBoxes> ReadProject(string idDb)
+        public Tuple<Guid, ProjectConfiguration, RoutingBoxes, MidiSequence> ReadProject(string idDb)
         {
             string sId = "";
             string sProjectGuid = "";
@@ -131,6 +240,7 @@ namespace MidiLiveSystem
             string sName = "";
             string sDate = "";
             string sAuthor = "";
+            string sSequence = "";
 
             string sDbID = idDb.IndexOf('|') > 0 ? idDb.Split('|')[1] : idDb;
 
@@ -139,7 +249,7 @@ namespace MidiLiveSystem
                 connection.Open();
 
                 var selectCommand = connection.CreateCommand();
-                selectCommand.CommandText = "SELECT Id, ProjectGuid, ProjectName, Config, Routing, DateProject, Author, Active FROM Projects WHERE Id = '" + sDbID + "' AND Active = 1;";
+                selectCommand.CommandText = "SELECT Id, ProjectGuid, ProjectName, Config, Routing, Sequence, DateProject, Author, Active FROM Projects WHERE Id = '" + sDbID + "' AND Active = 1;";
 
                 using (var reader = selectCommand.ExecuteReader())
                 {
@@ -150,8 +260,9 @@ namespace MidiLiveSystem
                         sName = reader.GetString(2);
                         sConfig = reader.GetString(3);
                         sRouting = reader.GetString(4);
-                        sDate = reader.GetString(5);
-                        sAuthor = reader.GetString(6);
+                        sSequence = reader.GetString(5); 
+                        sDate = reader.GetString(6);
+                        sAuthor = reader.GetString(7);
                     }
                 }
             }
@@ -160,6 +271,7 @@ namespace MidiLiveSystem
             {
                 ProjectConfiguration project;
                 RoutingBoxes presets;
+                MidiSequence sequence = null;
 
                 XmlSerializer serializerConfig = new XmlSerializer(typeof(ProjectConfiguration));
                 using (StringReader stream = new StringReader(sConfig))
@@ -173,8 +285,16 @@ namespace MidiLiveSystem
                     presets = (RoutingBoxes)serializerRouting.Deserialize(stream);
                 }
 
-                return new Tuple<Guid, ProjectConfiguration, RoutingBoxes>(Guid.Parse(sProjectGuid), project, presets);
+                if (sSequence.Length > 0)
+                {
+                    XmlSerializer serializerSequence = new XmlSerializer(typeof(MidiSequence));
+                    using (StringReader stream = new StringReader(sRouting))
+                    {
+                        sequence = (MidiSequence)serializerSequence.Deserialize(stream);
+                    }
+                }
 
+                return new Tuple<Guid, ProjectConfiguration, RoutingBoxes, MidiSequence>(Guid.Parse(sProjectGuid), project, presets, sequence);
             }
 
             return null;

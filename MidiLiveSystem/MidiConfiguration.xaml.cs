@@ -17,6 +17,11 @@ using System.Windows.Media.Imaging;
 
 namespace MidiLiveSystem
 {
+    public static class CubaseInstrumentData
+    {
+        public static List<InstrumentData> Instruments = new List<InstrumentData>();
+    }
+
     public partial class MidiConfiguration : Window
     {
         public ProjectConfiguration Configuration = new ProjectConfiguration();
@@ -112,7 +117,7 @@ namespace MidiLiveSystem
             if (cbMidiOut.SelectedIndex >= 0)
             {
                 string sPort = ((ComboBoxItem)cbMidiOut.SelectedItem).Tag.ToString();
-                var instr = Configuration.Instruments.FirstOrDefault(i => i.Device.Equals(sPort));
+                var instr = CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(sPort));
                 if (instr != null)
                 {
                     var confirm = MessageBox.Show("There's already a Preset List for that Device. Are you sure ?", "Overwrite ?", MessageBoxButton.YesNo);
@@ -140,9 +145,9 @@ namespace MidiLiveSystem
 
                             if (instr != null)
                             {
-                                Configuration.Instruments.Remove(instr);
+                                CubaseInstrumentData.Instruments.Remove(instr);
                             }
-                            Configuration.Instruments.Add(data);
+                            CubaseInstrumentData.Instruments.Add(data);
                         }
                         else
                         {
@@ -167,7 +172,7 @@ namespace MidiLiveSystem
             var device = cbMidiOut.SelectedItem;
             if (device != null)
             {
-                var instr = Configuration.Instruments.FirstOrDefault(i => i.Device.Equals(((ComboBoxItem)device).Tag.ToString()));
+                var instr = CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(((ComboBoxItem)device).Tag.ToString()));
 
                 if (instr == null)
                 {
@@ -246,7 +251,6 @@ namespace MidiLiveSystem
             ProjectConfiguration pc = new ProjectConfiguration();
             pc.BoxNames = boxnames;
             pc.ProjectName = projectName;
-            pc.Instruments = Configuration.Instruments;
             pc.DevicesIN = sDevicesIn;
             pc.DevicesOUT = sDevicesOut;
             pc.HorizontalGrid = ihorizontal;
@@ -305,9 +309,9 @@ namespace MidiLiveSystem
             }
         }
 
-        public List<string[]> BoxNames = null;
+        public MidiSequence RecordedSequence;
 
-        public List<InstrumentData> Instruments = new List<InstrumentData>();
+        public List<string[]> BoxNames = null;
 
         public int HorizontalGrid = 4;
         public int VerticalGrid = 3;

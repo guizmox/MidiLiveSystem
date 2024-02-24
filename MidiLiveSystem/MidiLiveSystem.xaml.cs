@@ -45,7 +45,7 @@ namespace MidiLiveSystem
         public static BoxPreset CopiedPreset = new BoxPreset();
         public ProjectConfiguration Project;
         public SQLiteDatabaseManager Database = new SQLiteDatabaseManager();
-        public MidiSequence SequenceRecorder = new MidiSequence();
+        public MidiSequence RecordedSequence = new MidiSequence();
 
         public MainWindow()
         {
@@ -56,6 +56,11 @@ namespace MidiLiveSystem
             Clock.Elapsed += Clock_Elapsed;
             Clock.Interval = 10000;
             Clock.Start();
+
+            RecordedSequence.SequenceFinished += Routing_SequenceFinished;
+
+            //chargement des template instruments
+            CubaseInstrumentData.Instruments = Database.LoadInstruments();
 
             Routing.Debug();
         }
@@ -131,6 +136,9 @@ namespace MidiLiveSystem
 
         private void Window_Closed(object sender, EventArgs e)
         {
+            Database.SaveInstruments(CubaseInstrumentData.Instruments);
+            //Database.SaveProject(Boxes, Project, RecordedSequence);
+
             if (LogWindow != null)
             {
                 LogWindow.Close();
@@ -392,36 +400,10 @@ namespace MidiLiveSystem
                 Project = new ProjectConfiguration(); //config par défaut
             }
 
-            string sId = Project.ProjectId.ToString();
-            string sProjectConfig = "";
-            string sRoutingConfig = "";
-            string sProjectName = Project.ProjectName;
-
-            XmlSerializer serializerConfig = new XmlSerializer(typeof(ProjectConfiguration));
-            using (StringWriter textWriter = new StringWriter())
-            {
-                serializerConfig.Serialize(textWriter, Project);
-                sProjectConfig = textWriter.ToString();
-            }
-
-
-            List<BoxPreset> allpresets = new List<BoxPreset>();
-            //sauvegarde des box
-            foreach (RoutingBox box in Boxes)
-            {
-                allpresets.AddRange(box.GetRoutingBoxMemory());
-            }
-
-            XmlSerializer serializerRouting = new XmlSerializer(typeof(RoutingBoxes));
-            using (StringWriter textWriter = new StringWriter())
-            {
-                serializerRouting.Serialize(textWriter, new RoutingBoxes() { AllPresets = allpresets.ToArray() });
-                sRoutingConfig = textWriter.ToString();
-            }
-
             try
             {
-                Database.SaveProject(sId, sProjectName, sProjectConfig, sRoutingConfig, Environment.UserName);
+                Database.SaveProject(Boxes, Project, RecordedSequence);
+                Database.SaveInstruments(CubaseInstrumentData.Instruments);
             }
             catch (Exception ex)
             {
@@ -445,6 +427,8 @@ namespace MidiLiveSystem
                         Project = project.Item2;
 
                         Boxes = project.Item3.GetBoxes(Project);
+
+                        RecordedSequence = project.Item4;
 
                         if (Boxes != null)
                         {
@@ -522,21 +506,26 @@ namespace MidiLiveSystem
                 if (btnRecordSequence.Background == Brushes.Red)
                 {
                     btnRecordSequence.Background = Brushes.DarkGray;
-                    SequenceRecorder.StopRecording(true, true);
-                    MessageBox.Show(SequenceRecorder.GetSequenceInfo());
+                    RecordedSequence.StopRecording(true, true);
+                    if (Project == null)
+                    {
+                        Project = new ProjectConfiguration();
+                    }
+                    Project.RecordedSequence = RecordedSequence;
+                    MessageBox.Show(RecordedSequence.GetSequenceInfo());
                 }
                 else
                 {
                     btnRecordSequence.Background = Brushes.Red;
 
-                    if (SequenceRecorder.Events.Count > 0)
+                    if (RecordedSequence.Events.Count > 0)
                     {
                         var confirm = MessageBox.Show("Would you like to erase the last recording ?", "Erase ?", MessageBoxButton.YesNo);
                         if (confirm == MessageBoxResult.Yes)
                         {
-                            SequenceRecorder.StopRecording(true, true);
-                            SequenceRecorder.Clear();
-                            SequenceRecorder.StartRecording(false, true);
+                            RecordedSequence.StopRecording(true, true);
+                            RecordedSequence.Clear();
+                            RecordedSequence.StartRecording(false, true);
                         }
                         else
                         {
@@ -545,7 +534,7 @@ namespace MidiLiveSystem
                     }
                     else
                     {
-                        SequenceRecorder.StartRecording(false, true);
+                        RecordedSequence.StartRecording(false, true);
                     }
                 }
             }
@@ -553,19 +542,18 @@ namespace MidiLiveSystem
 
         private void btnPlaySequence_Click(object sender, RoutedEventArgs e)
         {
-            if (SequenceRecorder.Events.Count > 0)
+            if (RecordedSequence.Events.Count > 0)
             {
                 if (btnPlaySequence.Background == Brushes.Green)
                 {
                     btnPlaySequence.Background = Brushes.DarkGray;
-                    SequenceRecorder.StopSequence(); //risque très important de NOTE OFF pending
+                    RecordedSequence.StopSequence(); //risque très important de NOTE OFF pending
                 }
                 else
                 {
                     btnPlaySequence.Background = Brushes.Green;
                     Routing.CloseUsedPorts();
-                    SequenceRecorder.PlaySequenceAsync(SequenceRecorder.Events);
-                    SequenceRecorder.SequenceFinished += Routing_SequenceFinished;
+                    RecordedSequence.PlaySequenceAsync(RecordedSequence.Events);
                 }
             }
             else
