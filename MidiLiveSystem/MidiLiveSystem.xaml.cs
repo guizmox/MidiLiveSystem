@@ -213,6 +213,7 @@ namespace MidiLiveSystem
                 MessageBox.Show(sInfo);
                 btnPlaySequence.Background = Brushes.DarkGray;
             });
+            Routing.OpenUsedPorts();
         }
 
         private void RoutingBox_UIEvent(Guid gBox, string sControl, object sValue)
@@ -242,6 +243,7 @@ namespace MidiLiveSystem
                         AddAllRoutingBoxes();
                         break;
                     case "REMOVE":
+                        Routing.DeleteRouting(box.RoutingGuid);
                         Boxes.Remove(box);
                         AddAllRoutingBoxes();
                         break;
@@ -561,6 +563,7 @@ namespace MidiLiveSystem
                 else
                 {
                     btnPlaySequence.Background = Brushes.Green;
+                    Routing.CloseUsedPorts();
                     SequenceRecorder.PlaySequenceAsync(SequenceRecorder.Events);
                     SequenceRecorder.SequenceFinished += Routing_SequenceFinished;
                 }
