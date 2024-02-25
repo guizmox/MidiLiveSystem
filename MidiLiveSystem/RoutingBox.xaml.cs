@@ -149,14 +149,18 @@ namespace MidiLiveSystem
             {
                 if (item.Tag.Equals(Tools.INTERNAL_GENERATOR))
                 {
-                    Grid.SetColumnSpan(cbMidiIn, 1);
-                    cbChannelMidiIn.Visibility = Visibility.Hidden;
+                    tbVelocityRangeLabel.Visibility = Visibility.Hidden;
+                    tbNoteRangeLabel.Visibility = Visibility.Hidden;
+                    pnlNoteRange.Visibility = Visibility.Hidden;
+                    pnlVelocityRange.Visibility = Visibility.Hidden;
                     pnlInternalGenerator.Visibility = Visibility.Visible;
                 }
                 else
                 {
-                    Grid.SetColumnSpan(cbMidiIn, 2);
-                    cbChannelMidiIn.Visibility = Visibility.Visible;
+                    tbVelocityRangeLabel.Visibility = Visibility.Visible;
+                    tbNoteRangeLabel.Visibility = Visibility.Visible;
+                    pnlNoteRange.Visibility = Visibility.Visible;
+                    pnlVelocityRange.Visibility = Visibility.Visible;
                     pnlInternalGenerator.Visibility = Visibility.Hidden;
                 }
             }
@@ -165,16 +169,33 @@ namespace MidiLiveSystem
 
         private void cbPresetButton_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            var item = e.RemovedItems.Count > 0 ? (ComboBoxItem)e.RemovedItems[0] : null;
+            var itemOLD = e.RemovedItems.Count > 0 ? (ComboBoxItem)e.RemovedItems[0] : null;
+            var itemNEW = e.AddedItems.Count > 0 ? (ComboBoxItem)e.AddedItems[0] : null;
 
-            if (item != null)
+            if (itemOLD != null)
             {
                 var preset = MemCurrentPreset();
-                if (preset != null)
-                {
-                    TempMemory[Convert.ToInt32(item.Tag)] = preset;
-                }
+                int iPreset = Convert.ToInt32(itemOLD.Tag);
+                TempMemory[Convert.ToInt32(iPreset)] = preset;
             }
+
+            if (itemNEW != null)
+            {
+                int iPreset = Convert.ToInt32(itemNEW.Tag);
+                LoadPreset(Convert.ToInt32(iPreset));
+            }
+        }
+
+        private void ckInternalGeneratorLowestKey_Checked(object sender, RoutedEventArgs e)
+        {
+            tbInternalGeneratorKeyLabel.Visibility = Visibility.Hidden;
+            tbInternalGeneratorKey.Visibility = Visibility.Hidden;
+        }
+
+        private void ckInternalGeneratorLowestKey_Unchecked(object sender, RoutedEventArgs e)
+        {
+            tbInternalGeneratorKeyLabel.Visibility = Visibility.Visible;
+            tbInternalGeneratorKey.Visibility = Visibility.Visible;
         }
 
         private void tbChoosePreset_Click(object sender, RoutedEventArgs e)
@@ -576,14 +597,14 @@ namespace MidiLiveSystem
             try
             {
                 //mémorisation des données en cours
-                var options = GetOptions();
-                var preset = GetPreset();
                 var presetname = tbPresetName.Text.Trim();
                 var routingname = tbRoutingName.Text.Trim();
                 string sDeviceIn = cbMidiIn.SelectedItem == null ? "" : ((ComboBoxItem)cbMidiIn.SelectedItem).Tag.ToString();
                 string sDeviceOut = cbMidiOut.SelectedItem == null ? "" : ((ComboBoxItem)cbMidiOut.SelectedItem).Tag.ToString();
                 int iChannelIn = cbChannelMidiIn.SelectedItem == null ? 1 : Convert.ToInt32(((ComboBoxItem)cbChannelMidiIn.SelectedItem).Tag.ToString());
                 int iChannelOut = cbChannelMidiOut.SelectedItem == null ? 1 : Convert.ToInt32(((ComboBoxItem)cbChannelMidiOut.SelectedItem).Tag.ToString());
+                var options = GetOptions();
+                var preset = GetPreset();
 
                 var bp = new BoxPreset(RoutingGuid, BoxGuid, routingname, presetname, options, preset, sDeviceIn, sDeviceOut, iChannelIn, iChannelOut);
 
@@ -619,6 +640,7 @@ namespace MidiLiveSystem
                 tbInternalGeneratorVelocity.Text = bp.MidiOptions.PlayNote.Velocity.ToString();
                 tbInternalGeneratorLength.Text = bp.MidiOptions.PlayNote.Length.ToString();
             }
+            ckInternalGeneratorLowestKey.IsChecked = bp.MidiOptions.PlayNote_LowestNote;
 
             if (bIsFirst)
             {
@@ -733,23 +755,51 @@ namespace MidiLiveSystem
             NumberStyles style = NumberStyles.AllowDecimalPoint | NumberStyles.AllowThousands;
             CultureInfo culture = CultureInfo.InvariantCulture; // ou utilisez la culture appropriée selon vos besoins
 
-            int.TryParse(tbInternalGeneratorKey.Text, out iNoteGen);
-            int.TryParse(tbInternalGeneratorVelocity.Text, out iVeloGen);
-            int.TryParse(cbChannelMidiOut.SelectedValue.ToString(), out iChannel);
-            decimal.TryParse(tbInternalGeneratorLength.Text, style, culture, out dLength);
-            options.PlayNote = new NoteGenerator(iChannel, 0, iNoteGen, iVeloGen, dLength);
+            var midiin = cbMidiIn.SelectedValue;
 
-            options.NoteFilterHigh = TextParser(tbFilterHighNote.Text);
-            tbFilterHighNote.Text = options.NoteFilterHigh.ToString();
+            if (midiin != null && midiin.ToString().Equals(Tools.INTERNAL_GENERATOR))
+            {
+                int.TryParse(tbInternalGeneratorKey.Text, out iNoteGen);
+                int.TryParse(tbInternalGeneratorVelocity.Text, out iVeloGen);
+                int.TryParse(cbChannelMidiOut.SelectedValue.ToString(), out iChannel);
+                decimal.TryParse(tbInternalGeneratorLength.Text, style, culture, out dLength);
+                options.PlayNote = new NoteGenerator(iChannel, 0, iNoteGen, iVeloGen, dLength);
+                options.PlayNote_LowestNote = ckInternalGeneratorLowestKey.IsChecked.Value;
+            }
+            else
+            {
+                options.PlayNote = null;
+                options.PlayNote_LowestNote = false;
+            }
 
-            options.NoteFilterLow = TextParser(tbFilterLowNote.Text);
-            tbFilterLowNote.Text = options.NoteFilterLow.ToString();
+            if (options.PlayNote != null)
+            {
+                options.NoteFilterHigh = 127;
+                tbFilterHighNote.Text = options.NoteFilterHigh.ToString();
 
-            options.VelocityFilterHigh = TextParser(tbFilterHighVelo.Text);
-            tbFilterHighVelo.Text = options.VelocityFilterHigh.ToString();
+                options.NoteFilterLow = 0;
+                tbFilterLowNote.Text = options.NoteFilterLow.ToString();
 
-            options.VelocityFilterLow = TextParser(tbFilterLowVelo.Text);
-            tbFilterLowVelo.Text = options.VelocityFilterLow.ToString();
+                options.VelocityFilterHigh = 127;
+                tbFilterHighVelo.Text = options.VelocityFilterHigh.ToString();
+
+                options.VelocityFilterLow = 0;
+                tbFilterLowVelo.Text = options.VelocityFilterLow.ToString();
+            }
+            else
+            {
+                options.NoteFilterHigh = TextParser(tbFilterHighNote.Text);
+                tbFilterHighNote.Text = options.NoteFilterHigh.ToString();
+
+                options.NoteFilterLow = TextParser(tbFilterLowNote.Text);
+                tbFilterLowNote.Text = options.NoteFilterLow.ToString();
+
+                options.VelocityFilterHigh = TextParser(tbFilterHighVelo.Text);
+                tbFilterHighVelo.Text = options.VelocityFilterHigh.ToString();
+
+                options.VelocityFilterLow = TextParser(tbFilterLowVelo.Text);
+                tbFilterLowVelo.Text = options.VelocityFilterLow.ToString();
+            }
 
             options.AllowAftertouch = ckAllowAftertouch.IsChecked.Value;
             options.AllowAllCC = ckAllowAllCC.IsChecked.Value;

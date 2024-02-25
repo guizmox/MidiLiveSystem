@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -134,6 +135,7 @@ namespace MidiTools
         }
 
         public NoteGenerator PlayNote;
+        public bool PlayNote_LowestNote = false;
 
         public int TranspositionOffset
         {
@@ -237,6 +239,7 @@ namespace MidiTools
                 return sMessage;
             }
         }
+        public int LowestNoteRunning { get { return _lowestNotePlayed; } }
 
         private List<MatrixItem> MidiMatrix = new List<MatrixItem>();
         private List<MidiDevice> UsedDevicesIN = new List<MidiDevice>();
@@ -248,6 +251,8 @@ namespace MidiTools
         private int _eventsProcessedOUT = 0;
         private int _eventsProcessedINLast = 0;
         private int _eventsProcessedOUTLast = 0;
+
+        private int _lowestNotePlayed = -1;
 
         private List<MidiEvent> _notesentforpanic = new List<MidiEvent>();
 
@@ -364,6 +369,12 @@ namespace MidiTools
         private void DeviceIn_OnMidiEvent(bool bIn, MidiDevice.MidiEvent ev)
         {
             _eventsProcessedIN += 1;
+
+            //mémorisation de la note pressée la plus grave
+            if (ev.Type == TypeEvent.NOTE_ON && ev.Values[0] < _lowestNotePlayed && ev.Values[1] > 0) { _lowestNotePlayed = ev.Values[0]; }
+            else if (ev.Type == TypeEvent.NOTE_OFF && ev.Values[0] == _lowestNotePlayed) { _lowestNotePlayed = -1; }
+            else if (ev.Type == TypeEvent.NOTE_ON && ev.Values[0] == _lowestNotePlayed && ev.Values[1] == 0) { _lowestNotePlayed = -1; }
+
             CreateOUTEvent(ev, false);
         }
 
@@ -868,9 +879,15 @@ namespace MidiTools
             {
                 Task.Factory.StartNew(() =>
                 {
-                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.NOTE_ON, new List<int> { note.Note, note.Velocity }, Tools.GetChannel(note.Channel), routing.DeviceOut.Name), true);
+                    int iNote = note.Note;
+                    if (routing.Options.PlayNote_LowestNote)
+                    {
+                        iNote = LowestNoteRunning;
+                    }
+
+                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.NOTE_ON, new List<int> { iNote, note.Velocity }, Tools.GetChannel(note.Channel), routing.DeviceOut.Name), true);
                     Thread.Sleep((int)(note.Length * 1000));
-                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.NOTE_OFF, new List<int> { note.Note, note.Velocity }, Tools.GetChannel(note.Channel), routing.DeviceOut.Name), false);
+                    CreateOUTEvent(new MidiDevice.MidiEvent(MidiDevice.TypeEvent.NOTE_OFF, new List<int> { iNote, note.Velocity }, Tools.GetChannel(note.Channel), routing.DeviceOut.Name), false);
                 });
             }
         }
@@ -1683,36 +1700,78 @@ namespace MidiTools
         {
             int iPendingNotes = 0;
 
-
+            Stopwatch stopwatch = new Stopwatch(); // Créer un chronomètre
 
             for (int i = 0; i < events.Count; i++)
             {
-                //pour éviter des notes non relâchées
+                MidiEvent eventtoplay = new MidiEvent(events[i].Type, events[i].Values, events[i].Channel, events[i].Device);
+
                 if (StopSequenceRequested && iPendingNotes == 0)
-                { break; }
+                {
+                    break; // Sortir de la boucle si l'arrêt est demandé et toutes les notes sont relâchées
+                }
 
                 var device = devices.FirstOrDefault(d => d.Name.Equals(events[i].Device));
 
+                long elapsedTicks = 0;
                 double waitingTime = 0;
 
                 if (i < events.Count - 1)
                 {
-                    TimeSpan diff = events[i + 1].EventDate - events[i].EventDate;
-                    waitingTime = diff.TotalMilliseconds;
+                    elapsedTicks = events[i + 1].EventDate.Ticks - events[i].EventDate.Ticks;
+                    waitingTime = elapsedTicks / (double)TimeSpan.TicksPerMillisecond;
+                }
+
+                if (waitingTime > 0)
+                {
+                    // Utiliser le chronomètre pour attendre avec une précision supérieure à une milliseconde
+                    stopwatch.Restart(); // Redémarrer le chronomètre
+                    while (stopwatch.ElapsedTicks < elapsedTicks)
+                    {
+                        // Attente active jusqu'à ce que le temps écoulé soit égal au temps à attendre
+                    }
+                    stopwatch.Stop(); // Arrêter le chronomètre
                 }
 
                 if (device != null)
                 {
-                    if (events[i].Type == TypeEvent.NOTE_ON) { iPendingNotes--; }
-                    if (events[i].Type == TypeEvent.NOTE_OFF) { iPendingNotes--; }
+                    if (eventtoplay.Type == TypeEvent.NOTE_ON) { iPendingNotes--; }
+                    if (eventtoplay.Type == TypeEvent.NOTE_OFF) { iPendingNotes--; }
 
-                    device.SendMidiEvent(events[i]);
-                    if (waitingTime > 0)
-                    {
-                        Thread.Sleep((int)waitingTime);
-                    }
+                    //Task.Factory.StartNew(() => { device.SendMidiEvent(eventtoplay); });
+                    device.SendMidiEvent(eventtoplay);
                 }
             }
+
+            //for (int i = 0; i < events.Count; i++)
+            //{
+            //    //pour éviter des notes non relâchées
+            //    if (StopSequenceRequested && iPendingNotes == 0)
+            //    { break; }
+
+            //    var device = devices.FirstOrDefault(d => d.Name.Equals(events[i].Device));
+
+            //    double waitingTime = 0;
+
+            //    if (i < events.Count - 1)
+            //    {
+            //        long elapsedTicks = events[i + 1].EventDate.Ticks - events[i].EventDate.Ticks;
+            //        waitingTime = elapsedTicks / (double)TimeSpan.TicksPerMillisecond;
+            //    }
+
+            //    if (device != null)
+            //    {
+            //        if (events[i].Type == TypeEvent.NOTE_ON) { iPendingNotes--; }
+            //        if (events[i].Type == TypeEvent.NOTE_OFF) { iPendingNotes--; }
+
+            //        Task.Factory.StartNew(() => { device.SendMidiEvent(events[i]); });
+
+            //        if (waitingTime > 0)
+            //        {
+            //            Thread.Sleep((int)waitingTime);
+            //        }
+            //    }
+            //}
 
             foreach (var dev in devices)
             {
@@ -1862,7 +1921,7 @@ namespace MidiTools
         public string Raw = "";
         public List<MidiPreset> Presets { get; set; } = new List<MidiPreset>();
 
-        internal PresetHierarchy(int iIndex, string sRaw, string sCategory, int iLevel)
+        public PresetHierarchy(int iIndex, string sRaw, string sCategory, int iLevel)
         {
             this.Category = sCategory;
             this.Level = iLevel;
@@ -1870,7 +1929,7 @@ namespace MidiTools
             this.IndexInFile = iIndex;
         }
 
-        internal PresetHierarchy()
+        public PresetHierarchy()
         {
 
         }
@@ -1881,7 +1940,7 @@ namespace MidiTools
     {
         public List<PresetHierarchy> Categories { get; } = new List<PresetHierarchy>();
         public string Device { get; set; } = "";
-        public string CubaseFile { get; } = "";
+        public string CubaseFile { get; set; } = "";
         public bool SortedByBank = false;
 
         public InstrumentData()
@@ -2034,10 +2093,10 @@ namespace MidiTools
     public class NoteGenerator
     {
         public int Velocity = 64;
-        public int Note  = 64;
-        public int Octave  = 3;
-        public int Channel  = 1;
-        public decimal Length  = 1;
+        public int Note = 64;
+        public int Octave = 3;
+        public int Channel = 1;
+        public decimal Length = 1;
 
         public NoteGenerator(int iChannel, int iOctave, int iNote, int iVelocity, decimal dLength)
         {

@@ -313,6 +313,13 @@ namespace MidiLiveSystem
                     case "PLAY_NOTE":
                         if (box.RoutingGuid != Guid.Empty)
                         {
+                            string sDevIn = box.cbMidiIn.SelectedItem != null ? ((ComboBoxItem)box.cbMidiIn.SelectedItem).Tag.ToString() : "";
+                            string sDevOut = box.cbMidiOut.SelectedItem != null ? ((ComboBoxItem)box.cbMidiOut.SelectedItem).Tag.ToString() : "";
+
+                            Routing.ModifyRouting(box.RoutingGuid, sDevIn, sDevOut,
+                                                   Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
+                                                   Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
+                                                   box.GetOptions(), box.GetPreset());
                             Routing.SendNote(box.RoutingGuid, ((MidiOptions)sValue).PlayNote);
                         }
                         break;

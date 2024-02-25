@@ -21,12 +21,26 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="5*" />
-            <RowDefinition Height="85*" />
+            <RowDefinition Height="5*" />
+            <RowDefinition Height="80*" />
             <RowDefinition Height="10*" />
         </Grid.RowDefinitions>
-        <TreeView x:Name="tvPresets" Grid.Row="1" SelectedItemChanged="tvPresets_SelectedItemChanged"/>
+
+        <StackPanel Grid.Row="1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="10*"/>
+                    <ColumnDefinition Width="90*"/>
+                </Grid.ColumnDefinitions>
+                <Label Grid.Column="0" Content="Filter :"/>
+                <TextBox x:Name="tbFilterTextBox" Grid.Column="1" Text="" TextChanged="FilterTextBox_TextChanged" />
+            </Grid>
+
+        </StackPanel>
+        
+        <TreeView x:Name="tvPresets" Grid.Row="2" SelectedItemChanged="tvPresets_SelectedItemChanged"/>
         <Label Name="lblCaption"  Grid.Row="0" Content="Select a Preset" FontWeight="Bold" Foreground="Red"/>
-        <StackPanel Grid.Column="0" Grid.Row="2" Background="LightGray" >
+        <StackPanel Grid.Column="0" Grid.Row="3" Background="LightGray" >
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="15*" />
