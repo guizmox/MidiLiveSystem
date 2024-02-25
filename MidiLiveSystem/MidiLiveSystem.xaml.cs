@@ -456,6 +456,12 @@ namespace MidiLiveSystem
                         if (Boxes != null)
                         {
                             AddAllRoutingBoxes();
+                            SaveTemplate();
+                            //init des box
+                            //foreach (var box in Boxes)
+                            //{
+                            //    Routing.InitRouting(box.RoutingGuid, box.GetOptions(), box.GetPreset());
+                            //}
                         }
                     }
                     else
@@ -739,6 +745,7 @@ namespace MidiLiveSystem
                     try { iGridPosition = Convert.ToInt32(project.BoxNames.FirstOrDefault(b => b[1].Equals(g.ToString()))[2]); } catch { iGridPosition++; }
                     var box = new RoutingBox(project, MidiTools.MidiRouting.InputDevices, MidiTools.MidiRouting.OutputDevices, iGridPosition);
                     box.BoxGuid = g;
+                    //box.RoutingGuid = presetsample.RoutingGuid;
                     box.LoadMemory(AllPresets.Where(p => p.BoxGuid == g).ToArray());
                     boxes.Add(box);
                 }

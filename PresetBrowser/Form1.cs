@@ -339,10 +339,6 @@ namespace PresetBrowser
                     {
                         MessageBox.Show("Wrong Routing ! Expecting 1-16 values.");
                     }
-                    else
-                    {
-                        Routing.InitRouting(RoutingGuid, new MidiOptions());
-                    }
                 }
                 catch (Exception ex)
                 {
