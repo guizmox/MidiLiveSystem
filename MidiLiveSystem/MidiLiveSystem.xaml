@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:MidiLiveSystem"      
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
-        Title="MIDI Live System" Height="1000" Width="1600" Closed="Window_Closed" SizeToContent="WidthAndHeight" WindowStartupLocation="CenterScreen">
+        Title="MIDI Live System" Height="800" Width="1300" Closed="Window_Closed" SizeToContent="Width" WindowStartupLocation="CenterScreen" >
     <Grid Grid.Column="1" Margin="5,5,5,5">
         <Grid.RowDefinitions>
             <RowDefinition Height="92*" />

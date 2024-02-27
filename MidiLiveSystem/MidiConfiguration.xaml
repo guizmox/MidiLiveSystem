@@ -100,7 +100,7 @@
                     </Grid>
                 </StackPanel>
                 
-                <Label Grid.Column="0" Grid.Row="7" Content="GRID"/>
+                <Label Grid.Column="0" Grid.Row="7" Content="FORCE GRID CONFIG."/>
                 <StackPanel Grid.Column="1" Grid.Row="7" VerticalAlignment="Center">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -110,9 +110,9 @@
                             <ColumnDefinition Width="10*"/>
                         </Grid.ColumnDefinitions>
                         <Label Grid.Column="0" Content="HORIZONTAL"/>
-                        <TextBox Name="tbHorizontalItems" Grid.Column="1" Text="4" MaxLength="1" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                        <TextBox Name="tbHorizontalItems" Grid.Column="1" Text="-1" MaxLength="1" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
                         <Label Grid.Column="2" Content="VERTICAL"/>
-                        <TextBox Name="tbVerticalItems" Grid.Column="3" Text="3" MaxLength="1" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                        <TextBox Name="tbVerticalItems" Grid.Column="3" Text="-1" MaxLength="1" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
                     </Grid>
                 </StackPanel>
 

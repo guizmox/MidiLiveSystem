@@ -2,6 +2,7 @@
 using MidiTools;
 using RtMidi.Core.Devices;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -34,15 +35,11 @@ namespace MidiLiveSystem
             InitPage(false, null);
         }
 
-        public MidiConfiguration(List<RoutingBox> boxes)
-        {
-            InitializeComponent();
-            InitPage(false, boxes);
-        }
-
         public MidiConfiguration(ProjectConfiguration pc, List<RoutingBox> boxes)
         {
             Configuration = pc;
+            Configuration = (ProjectConfiguration)this.Configuration.Clone();
+
             InitializeComponent();
             InitPage(true, boxes);
         }
@@ -53,8 +50,12 @@ namespace MidiLiveSystem
             if (bFromSave)
             {
                 tbProjectName.Text = Configuration.ProjectName;
-                tbHorizontalItems.Text = Configuration.HorizontalGrid.ToString();
-                tbVerticalItems.Text = Configuration.VerticalGrid.ToString();
+
+                if (Configuration.HorizontalGrid > -1)
+                {
+                    tbHorizontalItems.Text = Configuration.HorizontalGrid.ToString();
+                    tbVerticalItems.Text = Configuration.VerticalGrid.ToString();
+                }
 
                 if (Configuration.DevicesIN == null)
                 {
@@ -122,8 +123,8 @@ namespace MidiLiveSystem
                 ckActivateClock.IsChecked = false;
 
                 tbProjectName.Text = "My Project";
-                tbHorizontalItems.Text = "4";
-                tbVerticalItems.Text = "3";
+                tbHorizontalItems.Text = "-1";
+                tbVerticalItems.Text = "-1";
 
                 cbMidiInClock.Items.Add(new ComboBoxItem() { Tag = Tools.INTERNAL_GENERATOR, Content = Tools.INTERNAL_GENERATOR });
                 foreach (var s in MidiTools.MidiRouting.InputDevices)
@@ -299,20 +300,26 @@ namespace MidiLiveSystem
                 MessageBox.Show("Invalid Vertical Grid value. Set to 6");
                 ivertical = 6;
             }
-            if (ivertical < 1)
+            if (ivertical != -1)
             {
-                MessageBox.Show("Invalid Vertical Grid value. Set to 0");
-                ivertical = 1;
+                if (ivertical < 1)
+                {
+                    MessageBox.Show("Invalid Vertical Grid value. Set to 1");
+                    ivertical = 1;
+                }
             }
             if (ihorizontal > 6)
             {
                 MessageBox.Show("Invalid Horizontal Grid value. Set to 6");
                 ihorizontal = 6;
             }
-            if (ihorizontal < 1)
+            if (ihorizontal != -1)
             {
-                MessageBox.Show("Invalid Horizontal Grid value. Set to 0");
-                ihorizontal = 1;
+                if (ihorizontal < 1)
+                {
+                    MessageBox.Show("Invalid Horizontal Grid value. Set to 1");
+                    ihorizontal = 1;
+                }
             }
 
             List<string> sDevicesIn = new List<string>();
@@ -405,8 +412,8 @@ namespace MidiLiveSystem
 
         public List<string[]> BoxNames = null;
 
-        public int HorizontalGrid = 4;
-        public int VerticalGrid = 4;
+        public int HorizontalGrid = -1;
+        public int VerticalGrid = -1;
         internal string ClockDevice = "";
         internal int BPM = 120;
         internal bool ClockActivated = false;
@@ -414,6 +421,11 @@ namespace MidiLiveSystem
         public ProjectConfiguration()
         {
 
+        }
+
+        internal ProjectConfiguration Clone()
+        {
+            return (ProjectConfiguration)this.MemberwiseClone();
         }
     }
 }

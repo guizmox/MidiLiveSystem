@@ -33,6 +33,9 @@ namespace MidiLiveSystem
         private System.Timers.Timer UIRefreshRate;
         private int RefreshCounter = 0;
 
+        private int CurrentVerticalGrid = 0;
+        private int CurrentHorizontalGrid = 0;
+
         private MidiConfiguration ConfigWindow;
         private MidiLog LogWindow;
         private Keyboard KeysWindow;
@@ -115,11 +118,8 @@ namespace MidiLiveSystem
 
             if (iRows == 1 && iCols == 1) //option de maximisation
             {
-                gridBoxes.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(80, GridUnitType.Star) });
-                gridBoxes.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(20, GridUnitType.Star) });
-
-                gridBoxes.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(80, GridUnitType.Star) });
-                gridBoxes.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(20, GridUnitType.Star) });
+                gridBoxes.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(100, GridUnitType.Star) });
+                gridBoxes.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(100, GridUnitType.Star) });
             }
             else
             {
@@ -197,7 +197,23 @@ namespace MidiLiveSystem
             var config = ConfigWindow.Configuration;
             if (config != null)
             {
+                if (config.VerticalGrid > -1)
+                {
+                    CurrentVerticalGrid = config.VerticalGrid;
+                }
+                if (config.HorizontalGrid > -1) 
+                {
+                    CurrentHorizontalGrid = config.HorizontalGrid;
+                }
+
+                //réinit de la fenêtre
+                if (Project.VerticalGrid != CurrentVerticalGrid || Project.HorizontalGrid != CurrentHorizontalGrid)
+                {
+                     Project = config;
+                     AddAllRoutingBoxes();
+                }
                 Project = config;
+
                 //rename des box
                 if (config.BoxNames != null)
                 {
@@ -407,25 +423,23 @@ namespace MidiLiveSystem
 
         private void btnSettings_Click(object sender, RoutedEventArgs e)
         {
-            if (ConfigWindow != null && !ConfigWindow.IsFocused)
-            {
-                ConfigWindow.Focus();
+            if (ConfigWindow != null)
+            {        
+                if (!ConfigWindow.IsActive)
+                {
+                    ConfigWindow.Closed -= MainConfiguration_Closed;
+                    ConfigWindow = new MidiConfiguration(Project, Boxes);
+                    ConfigWindow.Show();
+                    ConfigWindow.Closed += MainConfiguration_Closed;
+                }
+                else if (!ConfigWindow.IsFocused)
+                {
+                    ConfigWindow.Focus();
+                }
             }
             else
             {
-                if (ConfigWindow != null)
-                {
-                    ConfigWindow.Closed -= MainConfiguration_Closed;
-                }
-
-                if (Project.IsDefaultConfig)
-                {
-                    ConfigWindow = new MidiConfiguration(Boxes);
-                }
-                else
-                {
-                    ConfigWindow = new MidiConfiguration(Project, Boxes);
-                }
+                ConfigWindow = new MidiConfiguration(Project, Boxes);
 
                 ConfigWindow.Show();
                 ConfigWindow.Closed += MainConfiguration_Closed;
@@ -436,6 +450,7 @@ namespace MidiLiveSystem
         {
             RoutingBox rtb = new RoutingBox(Project, MidiRouting.InputDevices, MidiRouting.OutputDevices, Boxes.Count);
             Boxes.Add(rtb);
+
             AddRoutingBoxToFrame(rtb, true);
         }
 
@@ -631,14 +646,30 @@ namespace MidiLiveSystem
 
         private void AddRoutingBoxToFrame(RoutingBox rtb, bool bCreate)
         {
-            var frame = GridFrames.FirstOrDefault(g => g.Tag.ToString().Equals(""));
-
-            if (frame == null)
+            if (!GridFrames.Any(g => g.Tag.ToString().Equals("")))
             {
-                MessageBox.Show("You can't add more Routing Box");
+                if (CurrentVerticalGrid + CurrentHorizontalGrid >= 20)
+                {
+                    MessageBox.Show("You can't add more Routing Boxes.");
+                }
+                else
+                {
+                    if (CurrentHorizontalGrid >= CurrentVerticalGrid)
+                    {
+                        CurrentVerticalGrid += 1;
+                        AddAllRoutingBoxes();
+                    }
+                    else
+                    {
+                        CurrentHorizontalGrid += 1;
+                        AddAllRoutingBoxes();
+                    }
+                }
             }
             else
             {
+                var frame = GridFrames.FirstOrDefault(g => g.Tag.ToString().Equals(""));
+
                 if (rtb.Detached)
                 {
                     var detached = DetachedWindows.FirstOrDefault(d => d.RoutingBox.BoxGuid == rtb.BoxGuid);
@@ -672,7 +703,7 @@ namespace MidiLiveSystem
 
         private void AddAllRoutingBoxes()
         {
-            RemoveAllBoxes(Project.HorizontalGrid, Project.VerticalGrid);
+            RemoveAllBoxes(CurrentHorizontalGrid, CurrentVerticalGrid);
 
             foreach (var box in Boxes.OrderBy(b => b.GridPosition))
             {

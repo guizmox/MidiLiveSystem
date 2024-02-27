@@ -71,21 +71,21 @@ namespace MidiLiveSystem
         public RoutingBox(ProjectConfiguration conf, List<IMidiInputDeviceInfo> inputDevices, List<IMidiOutputDeviceInfo> outputDevices, int gridPosition)
         {
             GridPosition = gridPosition;
+            BoxName = "Routing Box " + (GridPosition + 1).ToString();
 
-            TempMemory = new BoxPreset[8] { new BoxPreset(BoxGuid, "Preset 1"), new BoxPreset(BoxGuid, "Preset 2"), new BoxPreset(BoxGuid, "Preset 3"),
-                                            new BoxPreset(BoxGuid, "Preset 4"), new BoxPreset(BoxGuid, "Preset 5"), new BoxPreset(BoxGuid, "Preset 6"),
-                                            new BoxPreset(BoxGuid, "Preset 7"), new BoxPreset(BoxGuid, "Preset 8") };
+            TempMemory = new BoxPreset[8] { new BoxPreset(BoxGuid, "Preset 1", BoxName), new BoxPreset(BoxGuid, "Preset 2", BoxName), new BoxPreset(BoxGuid, "Preset 3", BoxName),
+                                            new BoxPreset(BoxGuid, "Preset 4", BoxName), new BoxPreset(BoxGuid, "Preset 5", BoxName), new BoxPreset(BoxGuid, "Preset 6", BoxName),
+                                            new BoxPreset(BoxGuid, "Preset 7", BoxName), new BoxPreset(BoxGuid, "Preset 8", BoxName) };
             Project = conf;
 
             InitializeComponent();
+
+            
             InitPage(inputDevices, outputDevices);
-            GridPosition = gridPosition;
         }
 
         private void InitPage(List<IMidiInputDeviceInfo> inputDevices, List<IMidiOutputDeviceInfo> outputDevices)
         {
-            tbRoutingName.Text = "Routing Box " + (GridPosition + 1).ToString();
-
             foreach (var s in inputDevices)
             {
                 cbMidiIn.Items.Add(new ComboBoxItem() { Tag = s.Name, Content = s.Name });
@@ -981,10 +981,11 @@ namespace MidiLiveSystem
 
         }
 
-        public BoxPreset(Guid boxGuid, string sName)
+        public BoxPreset(Guid boxGuid, string sName, string sBoxName)
         {
             BoxGuid = boxGuid;
             PresetName = sName;
+            BoxName = sBoxName;
         }
 
         internal BoxPreset(Guid routingGuid, Guid boxGuid, string boxName, string presetName, MidiOptions midiOptions, MidiPreset midiPreset, string deviceIn, string deviceOut, int channelIn, int channelOut)
