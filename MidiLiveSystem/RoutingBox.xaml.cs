@@ -361,8 +361,7 @@ namespace MidiLiveSystem
         {
             if (cbCCConvert.SelectedItem != null)
             {
-                var cb = cbCCConvert.SelectedValue;
-                cbCCConvert.Items.Remove(cb);
+                cbCCConvert.Items.Remove(cbCCConvert.SelectedItem);
             }
         }
 
@@ -370,8 +369,45 @@ namespace MidiLiveSystem
         {
             if (cbNOTEConvert.SelectedItem != null)
             {
-                var cb = cbNOTEConvert.SelectedValue;
-                cbNOTEConvert.Items.Remove(cb);
+                cbNOTEConvert.Items.Remove(cbNOTEConvert.SelectedItem);
+            }
+        }
+
+        private void btnAddTranslator_Click(object sender, RoutedEventArgs e)
+        {
+            MidiTranslator mt = new MidiTranslator();
+            mt.ShowDialog();
+            string[] sTranslator = mt.GetTranslatorConfiguration();
+            if (sTranslator == null || mt.InvalidData)
+            {
+                MessageBox.Show("There's an issue with the input. Translator info can't be processed. Please try again.");
+            }
+            else
+            {
+                bool bExists = false;
+                string sTag = sTranslator[0];
+                foreach (ComboBoxItem item in cbTranslators.Items)
+                {
+                    if (item.Tag.Equals(sTag))
+                    {
+                        bExists = true;
+                        break;
+                    }
+                }
+                if (!bExists)
+                {
+                    cbTranslators.Items.Add(new ComboBoxItem() { Tag = sTranslator[0], Content = sTranslator[1] });
+                }
+                else { MessageBox.Show("A similar Translation has already been set."); }
+                
+            }
+        }
+
+        private void btnRemoveTranslator_Click(object sender, RoutedEventArgs e)
+        {
+            if (cbTranslators.SelectedItem != null)
+            {
+                cbTranslators.Items.Remove(cbTranslators.SelectedItem);
             }
         }
 
@@ -704,6 +740,7 @@ namespace MidiLiveSystem
                 }
             }
 
+            int iCCConvertIndex = cbCCConvert.SelectedIndex;
             cbCCConvert.Items.Clear();
             foreach (var item in bp.MidiOptions.CC_Converters)
             {
@@ -711,7 +748,9 @@ namespace MidiLiveSystem
                 string sText = string.Concat("FROM ", item[0], " TO ", item[1]);
                 cbCCConvert.Items.Add(new ComboBoxItem { Tag = sTag, Content = sText });
             }
+            cbCCConvert.SelectedIndex = iCCConvertIndex;
 
+            int iNOTEConvertIndex = cbNOTEConvert.SelectedIndex;
             cbNOTEConvert.Items.Clear();
             foreach (var item in bp.MidiOptions.Note_Converters)
             {
@@ -719,6 +758,17 @@ namespace MidiLiveSystem
                 string sText = string.Concat("FROM ", item[0], " TO ", item[1]);
                 cbNOTEConvert.Items.Add(new ComboBoxItem { Tag = sTag, Content = sText });
             }
+            cbNOTEConvert.SelectedIndex = iNOTEConvertIndex;
+
+            int iTranslatorIndex = cbTranslators.SelectedIndex;
+            cbTranslators.Items.Clear();
+            foreach (var item in bp.MidiOptions.Translators)
+            {
+                string sTag = string.Concat(item[0]);
+                string sText = string.Concat(item[1]);
+                cbTranslators.Items.Add(new ComboBoxItem { Tag = sTag, Content = sText });
+            }
+            cbTranslators.SelectedIndex = iTranslatorIndex;
         }
 
         public MidiPreset GetPreset()
@@ -887,6 +937,12 @@ namespace MidiLiveSystem
                 }
             }
 
+            foreach (var item in cbTranslators.Items)
+            {
+                var translator = (ComboBoxItem)item;
+                options.AddTranslator(translator.Tag.ToString(), translator.Content.ToString());
+            }
+
             return options;
         }
 
@@ -904,7 +960,6 @@ namespace MidiLiveSystem
             }
             else { return 999; }
         }
-
     }
 
     [Serializable]

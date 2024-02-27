@@ -53,6 +53,11 @@ namespace MidiLiveSystem
             }
         }
 
+        private void btnClose_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
         private void FilterTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             FilterTreeView(tbFilterTextBox.Text);
@@ -200,5 +205,6 @@ namespace MidiLiveSystem
                 PopulateHierarchyTree(filter);
             }
         }
+
     }
 }

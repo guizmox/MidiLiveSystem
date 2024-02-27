@@ -99,7 +99,7 @@
         </Grid>
 
         <TabControl Name="tabSwitch" ItemContainerStyle="{StaticResource TabControlHeaderStyle}" Padding="2" Grid.Column="0" Grid.RowSpan="2">
-            <TabItem>
+            <TabItem BorderBrush="White" BorderThickness="1">
                 <TabItem.Header>
                     <StackPanel>
                         <Viewbox>
@@ -157,7 +157,7 @@
                 </Grid>
 
             </TabItem>
-            <TabItem>
+            <TabItem BorderBrush="White" BorderThickness="1">
                 <TabItem.Header>
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
@@ -309,7 +309,7 @@
                     </Grid>
                 </Viewbox>
             </TabItem>
-            <TabItem>
+            <TabItem BorderBrush="White" BorderThickness="1">
                 <TabItem.Header>
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
@@ -324,14 +324,16 @@
                     <Grid x:Name="gridSettings2">
                         <!-- Définir une grille de 4x4 cellules -->
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="15*" />
-                            <RowDefinition Height="15*" />
-                            <RowDefinition Height="15*" />
-                            <RowDefinition Height="15*" />
-                            <RowDefinition Height="15*" />
-                            <RowDefinition Height="15*" />
-                            <RowDefinition Height="15*" />
-                            <RowDefinition Height="15*" />
+                            <RowDefinition Height="10*" />
+                            <RowDefinition Height="10*" />
+                            <RowDefinition Height="10*" />
+                            <RowDefinition Height="10*" />
+                            <RowDefinition Height="10*" />
+                            <RowDefinition Height="10*" />
+                            <RowDefinition Height="10*" />
+                            <RowDefinition Height="10*" />
+                            <RowDefinition Height="10*" />
+                            <RowDefinition Height="10*" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="30*" />
@@ -356,7 +358,7 @@
                             <CheckBox Name="ckAllowPitchBend" IsChecked="True" Content="Pitch"/>
                             <CheckBox Name="ckAllowProgramChange" IsChecked="True" Content="Prog. Change"/>
                         </ComboBox>
-                        <TextBlock Grid.Column="0" Grid.Row="2" Text="CC CONVERTERS"/>
+                        <TextBlock Grid.Column="0" Grid.Row="2" Text="CC CONVERT"/>
                         <StackPanel Grid.Column="2" Grid.Row="2" Grid.ColumnSpan="2" Grid.RowSpan="2">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -384,7 +386,7 @@
                             </Grid>
                         </StackPanel>
 
-                        <TextBlock Grid.Column="0" Grid.Row="4" Text="NOTE CONVERTERS"/>
+                        <TextBlock Grid.Column="0" Grid.Row="4" Text="NOTE CONVERT"/>
                         <StackPanel Grid.Column="2" Grid.Row="4" Grid.ColumnSpan="2" Grid.RowSpan="2">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -410,8 +412,10 @@
                                 <TextBox Name="tbNOTEConvertTo" MinWidth="30" Grid.Column="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
                             </Grid>
                         </StackPanel>
-                        <TextBlock Grid.Column="0" Grid.Row="6" Text="SCRIPT (UNSUPPORTED)"/>
-                        <RichTextBox Name="tbScript" Grid.Row="6" Grid.Column="1" Grid.RowSpan="2" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                        <TextBlock Grid.Column="0" Grid.Row="6" Text="TRANSLATORS"/>
+                        <ComboBox Name="cbTranslators" Grid.Column="1" Grid.Row="6" SelectedValuePath="Tag" />
+                        <Button Name="btnAddTranslator" Grid.Row="6" Grid.RowSpan="2" Grid.Column="2" Margin="5,5,5,5" Content="+" Background="DarkOliveGreen" Click="btnAddTranslator_Click" />
+                        <Button Name="btnRemoveTranslator" Grid.Row="6" Grid.RowSpan="2" Grid.Column="3" Margin="5,5,5,5" Content="-" Background="IndianRed" Click="btnRemoveTranslator_Click" />
                     </Grid>
                 </Viewbox>
             </TabItem>

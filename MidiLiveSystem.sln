@@ -9,6 +9,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MidiTools", "MidiTools\Midi
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PresetBrowser", "PresetBrowser\PresetBrowser.csproj", "{57275C66-9FBC-4408-A5B3-FC1AF5FB0906}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RtMidi.Core", "RtMidi.Core\RtMidi.Core.csproj", "{F180B629-5C37-434B-BF4A-9CE9C9E4F028}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{57275C66-9FBC-4408-A5B3-FC1AF5FB0906}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{57275C66-9FBC-4408-A5B3-FC1AF5FB0906}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{57275C66-9FBC-4408-A5B3-FC1AF5FB0906}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F180B629-5C37-434B-BF4A-9CE9C9E4F028}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F180B629-5C37-434B-BF4A-9CE9C9E4F028}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F180B629-5C37-434B-BF4A-9CE9C9E4F028}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F180B629-5C37-434B-BF4A-9CE9C9E4F028}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

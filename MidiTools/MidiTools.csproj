@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="RtMidi.Core" Version="1.0.53" />
+    <ProjectReference Include="..\RtMidi.Core\RtMidi.Core.csproj" />
   </ItemGroup>
 
 </Project>

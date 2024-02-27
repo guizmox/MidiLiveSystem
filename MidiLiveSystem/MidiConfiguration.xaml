@@ -48,6 +48,8 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
+                <Button Name="btnClose" Grid.Row="8" Grid.Column="3" Content="OK" Width="50" Margin="5,0,5,0" HorizontalAlignment="Right" Click="btnClose_Click" />
+                
                 <Label Grid.Column="0" Grid.Row="0" Content="PROJECT NAME"/>
                 <TextBox Name="tbProjectName" Text="My Project" Grid.Column="1" Grid.Row="0" VerticalAlignment="Center"/>
                 
@@ -68,8 +70,38 @@
                     </StackPanel>
                 </Button>
 
-                <Label Grid.Column="0" Grid.Row="5" Content="GRID"/>
-                <StackPanel Grid.Column="1" Grid.Row="5" VerticalAlignment="Center">
+                <Button Name="btnSysExInitializer" Grid.Column="1" Grid.Row="4" Click="btnInitializeSysEx_Click" >
+                    <StackPanel Width="Auto">
+                        <TextBlock Text="Initialize OUT port with SysEx"/>
+                    </StackPanel>
+                </Button>
+
+                <Label Grid.Column="0" Grid.Row="5" Content="MASTER CLOCK"/>
+
+                <StackPanel Grid.Column="1" Grid.Row="5" >
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="75*"/>
+                            <ColumnDefinition Width="25*"/>
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Name="cbMidiInClock" Grid.Column="0" SelectedValuePath="Tag" />
+                        <CheckBox Name="ckActivateClock" Grid.Column="1" Content="Active" VerticalAlignment="Center" />
+                    </Grid>
+                </StackPanel>
+             
+                <StackPanel Grid.Column="3" Grid.Row="5" VerticalAlignment="Center" >
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="50*"/>
+                            <ColumnDefinition Width="50*"/>
+                        </Grid.ColumnDefinitions>
+                        <Label Grid.Column="0" Grid.Row="0" Content="BPM"/>
+                        <TextBox x:Name="tbBPM" Grid.Column="1" MaxLength="3" Text="120" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                    </Grid>
+                </StackPanel>
+                
+                <Label Grid.Column="0" Grid.Row="7" Content="GRID"/>
+                <StackPanel Grid.Column="1" Grid.Row="7" VerticalAlignment="Center">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="40*"/>
@@ -84,8 +116,8 @@
                     </Grid>
                 </StackPanel>
 
-            <Label Grid.Column="0" Grid.Row="6" Content="ROUTING NAMES"/>
-                <ComboBox Name="cbRoutingNames" Grid.Column="1" Grid.Row="6" SelectedValuePath="Tag" />
+            <Label Grid.Column="0" Grid.Row="1" Content="ROUTING BOX NAMES"/>
+                <ComboBox Name="cbRoutingNames" Grid.Column="1" Grid.Row="1" SelectedValuePath="Tag" />
             </Grid>
         </DockPanel>
     </Grid>

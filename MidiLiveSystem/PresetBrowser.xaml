@@ -43,26 +43,28 @@
         <StackPanel Grid.Column="0" Grid.Row="3" Background="LightGray" >
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="15*" />
-                    <ColumnDefinition Width="8*" />
-                    <ColumnDefinition Width="5*" />
-                    <ColumnDefinition Width="8*" />
-                    <ColumnDefinition Width="5*" />
-                    <ColumnDefinition Width="8*" />
-                    <ColumnDefinition Width="5*" />
                     <ColumnDefinition Width="10*" />
+                    <ColumnDefinition Width="6*" />
+                    <ColumnDefinition Width="5*" />
+                    <ColumnDefinition Width="6*" />
+                    <ColumnDefinition Width="5*" />
+                    <ColumnDefinition Width="6*" />
+                    <ColumnDefinition Width="5*" />
+                    <ColumnDefinition Width="8*" />
                     <ColumnDefinition Width="26*" />
-                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="10*" />
                 </Grid.ColumnDefinitions>
-                <Label Name="lblPresetInfo" Grid.Column="0"  Content="Data :" Foreground="Red"/>
-                <Label Grid.Column="1" Content="LSB :"/>
+                <Label Name="lblPresetInfo" Grid.Column="0"  Content="Data :" Foreground="Red" VerticalAlignment="Center"/>
+                <Label Grid.Column="1" Content="LSB :" VerticalAlignment="Center"/>
                 <TextBox Name="tbLsb" Grid.Column="2" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                <Label Grid.Column="3" Content="MSB :"/>
+                <Label Grid.Column="3" Content="MSB :" VerticalAlignment="Center"/>
                 <TextBox Name="tbMsb" Grid.Column="4" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                <Label Grid.Column="5" Content="PRG :"/>
+                <Label Grid.Column="5" Content="PRG :" VerticalAlignment="Center"/>
                 <TextBox Name="tbPrg" Grid.Column="6" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                <Label Grid.Column="7" Content="NAME :"/>
+                <Label Grid.Column="7" Content="NAME :" VerticalAlignment="Center"/>
                 <TextBox Name="tbName" Text="Preset Name" Grid.Column="8" MaxLength="30" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+
+                <Button Name="btnClose" Grid.Row="3" Grid.Column="9" Content="OK" Width="50" Margin="5,0,5,0" HorizontalAlignment="Right" Click="btnClose_Click" />
             </Grid>
         </StackPanel>
     </Grid>

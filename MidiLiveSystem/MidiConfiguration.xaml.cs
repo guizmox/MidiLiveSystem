@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -12,6 +13,7 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -54,15 +56,38 @@ namespace MidiLiveSystem
                 tbHorizontalItems.Text = Configuration.HorizontalGrid.ToString();
                 tbVerticalItems.Text = Configuration.VerticalGrid.ToString();
 
+                if (Configuration.DevicesIN == null)
+                {
+                    var listDevicesIn = new List<string>();
+                    foreach (var v in MidiTools.MidiRouting.InputDevices)
+                    {
+                        listDevicesIn.Add(v.Name);
+                    }
+                    Configuration.DevicesIN = listDevicesIn;
+                }
+
+                if (Configuration.DevicesOUT == null) 
+                {
+                    var listDevicesOut = new List<string>();
+                    foreach (var v in MidiTools.MidiRouting.OutputDevices)
+                    {
+                        listDevicesOut.Add(v.Name);
+                    }
+                    Configuration.DevicesOUT = listDevicesOut;
+                }
+
+                cbMidiInClock.Items.Add(new ComboBoxItem() { Tag = Tools.INTERNAL_GENERATOR, Content = Tools.INTERNAL_GENERATOR });
                 foreach (var d in Configuration.DevicesIN)
                 {
                     if (MidiTools.MidiRouting.InputDevices.Count(dev => dev.Name.Equals(d)) == 0)
                     {
                         cbMidiIn.Items.Add(new ComboBoxItem() { Tag = d, Content = string.Concat(d, " (NOT FOUND !)") });
+                        cbMidiInClock.Items.Add(new ComboBoxItem() { Tag = d, Content = string.Concat(d, " (NOT FOUND !)") });
                     }
                     else
                     {
                         cbMidiIn.Items.Add(new ComboBoxItem() { Tag = d, Content = d });
+                        cbMidiInClock.Items.Add(new ComboBoxItem() { Tag = d, Content = d });
                     }
                 }
 
@@ -77,17 +102,37 @@ namespace MidiLiveSystem
                         cbMidiOut.Items.Add(new ComboBoxItem() { Tag = d, Content = d });
                     }
                 }
+
+                tbBPM.Text = Configuration.BPM.ToString();
+                ckActivateClock.IsChecked = Configuration.ClockActivated;
+                try
+                {
+                    cbMidiInClock.SelectedValue = Configuration.ClockDevice;
+                }
+                catch
+                {
+                    cbMidiInClock.SelectedIndex = 0;
+                    MessageBox.Show("Unable to set Master Clock Device. Set to default");
+                }
             }
             else
             {
+                tbBPM.Text = "120";
+                cbMidiInClock.SelectedIndex = 0;
+                ckActivateClock.IsChecked = false;
+
                 tbProjectName.Text = "My Project";
                 tbHorizontalItems.Text = "4";
                 tbVerticalItems.Text = "3";
 
+                cbMidiInClock.Items.Add(new ComboBoxItem() { Tag = Tools.INTERNAL_GENERATOR, Content = Tools.INTERNAL_GENERATOR });
                 foreach (var s in MidiTools.MidiRouting.InputDevices)
                 {
                     cbMidiIn.Items.Add(new ComboBoxItem() { Tag = s.Name, Content = s.Name });
+                    cbMidiInClock.Items.Add(new ComboBoxItem() { Tag = s.Name, Content = s.Name });
                 }
+                cbMidiInClock.SelectedIndex = 0;
+
                 foreach (var s in MidiTools.MidiRouting.OutputDevices)
                 {
                     cbMidiOut.Items.Add(new ComboBoxItem() { Tag = s.Name, Content = s.Name });
@@ -107,7 +152,12 @@ namespace MidiLiveSystem
 
         private void Window_Closed(object sender, EventArgs e)
         {
-            Configuration = GetConfiguration();
+            GetConfiguration();
+        }
+
+        private void btnClose_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
         }
 
         private void btnLoadPresetFile_Click(object sender, RoutedEventArgs e)
@@ -189,7 +239,44 @@ namespace MidiLiveSystem
             }
         }
 
-        private ProjectConfiguration GetConfiguration()
+        private void btnInitializeSysEx_Click(object sender, RoutedEventArgs e)
+        {
+            if (cbMidiOut.SelectedIndex >= 0)
+            {
+                string sPort = ((ComboBoxItem)cbMidiOut.SelectedItem).Tag.ToString();
+
+                SysExInput sys = new SysExInput();
+                sys.ShowDialog();
+                if (sys.InvalidData)
+                {
+                    MessageBox.Show("Cancelled.");
+                }
+                else
+                {
+                    TextRange textRange = new TextRange(sys.rtbSysEx.Document.ContentStart, sys.rtbSysEx.Document.ContentEnd);
+                    string sSysex = textRange.Text.Replace("-", "").Trim();
+
+                    var instr = CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(sPort));
+                    if (instr != null)
+                    {
+                        instr.SysExInitializer = sSysex;
+                    }
+                    else
+                    {
+                        InstrumentData newInstrument = new InstrumentData();
+                        newInstrument.Device = sPort;
+                        newInstrument.SysExInitializer = sSysex;
+                        CubaseInstrumentData.Instruments.Add(newInstrument);
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("You must select a OUT Port");
+            }
+        }
+
+        private void GetConfiguration()
         {
             string projectName = tbProjectName.Text.Trim();
             string verticalgrid = tbVerticalItems.Text.Trim();
@@ -248,15 +335,34 @@ namespace MidiLiveSystem
                 iPos++;
             }
 
-            ProjectConfiguration pc = new ProjectConfiguration();
-            pc.BoxNames = boxnames;
-            pc.ProjectName = projectName;
-            pc.DevicesIN = sDevicesIn;
-            pc.DevicesOUT = sDevicesOut;
-            pc.HorizontalGrid = ihorizontal;
-            pc.VerticalGrid = ivertical;
+            Configuration.IsDefaultConfig = false;
+            Configuration.BoxNames = boxnames;
+            Configuration.ProjectName = projectName;
+            Configuration.DevicesIN = sDevicesIn;
+            Configuration.DevicesOUT = sDevicesOut;
+            Configuration.HorizontalGrid = ihorizontal;
+            Configuration.VerticalGrid = ivertical;
+            Configuration.ClockDevice = cbMidiInClock.SelectedItem == null ? "" : ((ComboBoxItem)cbMidiInClock.SelectedItem).Tag.ToString();
+            Configuration.ClockActivated = ckActivateClock.IsChecked.Value;
 
-            return pc;
+            int iBpm = 0;
+            if (int.TryParse(tbBPM.Text.Trim(), out iBpm))
+            {
+                if (iBpm >= 40 && iBpm <= 300)
+                {
+                    Configuration.BPM = iBpm;
+                }
+                else
+                {
+                    MessageBox.Show("Invalid BPM Value (range : 40 - 300). Set to default (120).");
+                    Configuration.BPM = 120;
+                }
+            }
+            else
+            {
+                MessageBox.Show("Invalid BPM Value (range : 40 - 300). Set to default (120).");
+                Configuration.BPM = 120;
+            }
         }
     }
 
@@ -273,14 +379,6 @@ namespace MidiLiveSystem
         {
             get
             {
-                if (_listDevicesOut == null)
-                {
-                    _listDevicesOut = new List<string>();
-                    foreach (var v in MidiTools.MidiRouting.OutputDevices)
-                    {
-                        _listDevicesOut.Add(v.Name);
-                    }
-                }
                 return _listDevicesOut;
             }
             set
@@ -293,14 +391,6 @@ namespace MidiLiveSystem
         {
             get
             {
-                if (_listDevicesIn == null)
-                {
-                    _listDevicesIn = new List<string>();
-                    foreach (var v in MidiTools.MidiRouting.InputDevices)
-                    {
-                        _listDevicesIn.Add(v.Name);
-                    }
-                }
                 return _listDevicesIn;
             }
             set
@@ -309,15 +399,21 @@ namespace MidiLiveSystem
             }
         }
 
+        public bool IsDefaultConfig = true;
+
         public MidiSequence RecordedSequence;
 
         public List<string[]> BoxNames = null;
 
         public int HorizontalGrid = 4;
-        public int VerticalGrid = 3;
+        public int VerticalGrid = 4;
+        internal string ClockDevice = "";
+        internal int BPM = 120;
+        internal bool ClockActivated = false;
 
         public ProjectConfiguration()
         {
+
         }
     }
 }

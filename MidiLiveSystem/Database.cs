@@ -129,6 +129,8 @@ namespace MidiLiveSystem
 
         public void SaveProject(List<RoutingBox> Boxes, ProjectConfiguration Project, MidiSequence RecordedSequence)
         {
+            Project.IsDefaultConfig = false; //pour signifier que la config a été chargée, même si on est pas allé dans la menu de configuration du projet (et éviter de générer un nouvel ID à cause de ce flag)
+
             string sId = Project.ProjectId.ToString();
             string sProjectConfig = "";
             string sRoutingConfig = "";

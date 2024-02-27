@@ -1,0 +1,244 @@
+﻿<Window x:Class="MidiLiveSystem.MidiTranslator"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:local="clr-namespace:MidiLiveSystem"
+        mc:Ignorable="d"
+        Title="Midi Translator" Height="300" Width="400" Background="DimGray" WindowStartupLocation="CenterOwner">
+
+    <Window.Resources>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="LightYellow"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="10,10,10,10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="10*"/>
+            <RowDefinition Height="10*"/>
+            <RowDefinition Height="10*"/>
+            <RowDefinition Height="10*"/>
+            <RowDefinition Height="10*"/>
+            <RowDefinition Height="10*"/>
+            <RowDefinition Height="10*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="20*"/>
+            <ColumnDefinition Width="30*"/>
+            <ColumnDefinition Width="25*"/>
+            <ColumnDefinition Width="25*"/>
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Grid.Column="0" Grid.Row="0" Text="EVENT IN"/>
+        <ComboBox Name="cbEventInType" Grid.Column="1" Grid.ColumnSpan="2" SelectionChanged="cbEventInType_SelectionChanged" HorizontalAlignment="Left" Width="209">
+            <ComboBoxItem Content="Note - Single Value" Tag="KEY"/>
+            <ComboBoxItem Content="Note - Range" Tag="KEY_RANGE"/>
+            <ComboBoxItem Content="Control Change - Single Value" Tag="CC"/>
+            <ComboBoxItem Content="Control Change - Range" Tag="CC_RANGE"/>
+            <ComboBoxItem Content="System Exclusive" Tag="SYS"/>
+            <ComboBoxItem Content="Program Change - Single Value" Tag="PC"/>
+            <ComboBoxItem Content="Program Change - Range" Tag="PC_RANGE"/>
+            <ComboBoxItem Content="Aftertouch  - Single Value" Tag="AT"/>
+            <ComboBoxItem Content="Aftertouch  - Range" Tag="AT_RANGE"/>
+        </ComboBox>
+
+        <StackPanel Name="pnlINKEY" Grid.Column="1" Grid.Row="1" Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="30*"/>
+                    <ColumnDefinition Width="15*"/>
+                    <ColumnDefinition Width="5*"/>
+                    <ColumnDefinition Width="30*"/>
+                    <ColumnDefinition Width="15*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="50*"/>
+                    <RowDefinition Height="50*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Column="0" Grid.Row="0" Text="LOW NOTE"/>
+                <TextBox Name="tbINLowKey" Grid.Row="0" Grid.Column="1" Text="0" MaxLength="3" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                <TextBlock Grid.Column="0" Grid.Row="1" Text="HIGH NOTE"/>
+                <TextBox Name="tbINHighKey" Grid.Row="1" Grid.Column="1" Text="127" MaxLength="3" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                <TextBlock Grid.Column="3" Grid.Row="0" Text="LOW VELO"/>
+                <TextBox Name="tbINLowVelo" Grid.Row="0" Grid.Column="4" Text="0" MaxLength="3" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                <TextBlock Grid.Column="3" Grid.Row="1" Text="HIGH VELO"/>
+                <TextBox Name="tbINHighVelo" Grid.Row="1" Grid.Column="4" Text="127" MaxLength="3" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+            </Grid>
+        </StackPanel>
+
+        <StackPanel Name="pnlINCC" Grid.Column="1" Grid.Row="1"  Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="30*"/>
+                    <ColumnDefinition Width="15*"/>
+                    <ColumnDefinition Width="5*"/>
+                    <ColumnDefinition Width="30*"/>
+                    <ColumnDefinition Width="15*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="50*"/>
+                    <RowDefinition Height="50*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Column="0" Grid.Row="0" Text="CONTROLLER"/>
+                <TextBox Name="tbINCC" Grid.Row="0" Grid.Column="1" Text="0" MaxLength="3" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                <TextBlock Grid.Column="3" Grid.Row="0" Text="LOW VALUE"/>
+                <TextBox Name="tbINLowCCValue" Grid.Row="0" Grid.Column="4" Text="0" MaxLength="3" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                <TextBlock Grid.Column="3" Grid.Row="1" Text="HIGH VALUE"/>
+                <TextBox Name="tbINHighCCValue" Grid.Row="1" Grid.Column="4" Text="127" MaxLength="3" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+            </Grid>
+        </StackPanel>
+
+        <StackPanel Name="pnlINPC" Grid.Column="1" Grid.Row="1"  Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="30*"/>
+                    <ColumnDefinition Width="15*"/>
+                    <ColumnDefinition Width="5*"/>
+                    <ColumnDefinition Width="30*"/>
+                    <ColumnDefinition Width="15*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="50*"/>
+                    <RowDefinition Height="50*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Column="0" Grid.Row="0" Text="LOW VALUE"/>
+                <TextBox Name="tbINLowPCValue" Grid.Row="0" Grid.Column="1" Text="0" MaxLength="3" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                <TextBlock Grid.Column="0" Grid.Row="1" Text="HIGH VALUE"/>
+                <TextBox Name="tbINHighPCValue" Grid.Row="1" Grid.Column="1" Text="127" MaxLength="3" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+            </Grid>
+        </StackPanel>
+
+        <StackPanel Name="pnlINAT" Grid.Column="1" Grid.Row="1"  Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="30*"/>
+                    <ColumnDefinition Width="15*"/>
+                    <ColumnDefinition Width="5*"/>
+                    <ColumnDefinition Width="30*"/>
+                    <ColumnDefinition Width="15*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="50*"/>
+                    <RowDefinition Height="50*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Column="0" Grid.Row="0" Text="LOW VALUE"/>
+                <TextBox Name="tbINLowATValue" Grid.Row="0" Grid.Column="1" Text="0" MaxLength="3" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                <TextBlock Grid.Column="0" Grid.Row="1" Text="HIGH VALUE"/>
+                <TextBox Name="tbINHighATValue" Grid.Row="1" Grid.Column="1" Text="127" MaxLength="3" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+            </Grid>
+        </StackPanel>
+
+        <StackPanel Name="pnlINSYS" Grid.Column="1" Grid.Row="1" Grid.ColumnSpan="3" Grid.RowSpan="2" Visibility="Hidden">
+            <RichTextBox Name="rtbINSys" Height="80" Background="Gray" />
+        </StackPanel>
+
+
+        <TextBlock Grid.Column="0" Grid.Row="3" Text="EVENT OUT"/>
+        <ComboBox Name="cbEventOutType" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" SelectionChanged="cbEventOutType_SelectionChanged">
+            <ComboBoxItem Content="Note - Fixed Value" Tag="KEY"/>
+            <ComboBoxItem Content="Note - Follows EVENT IN Value" Tag="KEY_RANGE"/>
+            <ComboBoxItem Content="Control Change - Fixed Value" Tag="CC"/>
+            <ComboBoxItem Content="Control Change - Follows EVENT IN Value" Tag="CC_RANGE"/>
+            <ComboBoxItem Content="System Exclusive" Tag="SYS"/>
+            <ComboBoxItem Content="Program Change - Fixed Value" Tag="PC"/>
+            <ComboBoxItem Content="Program Change - Follows EVENT IN Value" Tag="PC_RANGE"/>
+            <ComboBoxItem Content="Aftertouch  - Single Value" Tag="AT"/>
+            <ComboBoxItem Content="Aftertouch  - Range" Tag="AT_RANGE"/>
+        </ComboBox>
+
+        <StackPanel Name="pnlOUTKEY" Grid.Column="1" Grid.Row="4" Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="30*"/>
+                    <ColumnDefinition Width="15*"/>
+                    <ColumnDefinition Width="5*"/>
+                    <ColumnDefinition Width="30*"/>
+                    <ColumnDefinition Width="15*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="50*"/>
+                    <RowDefinition Height="50*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Column="0" Grid.Row="0" Text="NOTE"/>
+                <TextBox Name="tbOUTKey" Grid.Row="0" Grid.Column="1" Text="0" MaxLength="3" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                <TextBlock Grid.Column="0" Grid.Row="1" Text="VELOCITY"/>
+                <TextBox Name="tbOUTVeloKey" Grid.Row="1" Grid.Column="1" Text="64" MaxLength="3" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                <TextBlock Grid.Column="3" Grid.Row="1" Text="LENGTH (ms)"/>
+                <TextBox Name="tbOUTLengthKey" Grid.Row="1" Grid.Column="4" Text="300" MaxLength="5" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+            </Grid>
+        </StackPanel>
+
+        <StackPanel Name="pnlOUTCC" Grid.Column="1" Grid.Row="4" Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="30*"/>
+                    <ColumnDefinition Width="15*"/>
+                    <ColumnDefinition Width="5*"/>
+                    <ColumnDefinition Width="30*"/>
+                    <ColumnDefinition Width="15*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="50*"/>
+                    <RowDefinition Height="50*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Column="0" Grid.Row="0" Text="CC"/>
+                <TextBox Name="tbOUTCC" Grid.Row="0" Grid.Column="1" Text="0" MaxLength="3" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                <TextBlock Grid.Column="0" Grid.Row="1" Text="VALUE"/>
+                <TextBox Name="tbOUTCCValue" Grid.Row="1" Grid.Column="1" Text="64" MaxLength="3" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+            </Grid>
+        </StackPanel>
+
+        <StackPanel Name="pnlOUTPC" Grid.Column="1" Grid.Row="4" Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="30*"/>
+                    <ColumnDefinition Width="15*"/>
+                    <ColumnDefinition Width="5*"/>
+                    <ColumnDefinition Width="30*"/>
+                    <ColumnDefinition Width="15*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="50*"/>
+                    <RowDefinition Height="50*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Column="0" Grid.Row="0" Text="PROGRAM"/>
+                <TextBox Name="tbOUTPCValue" Grid.Row="0" Grid.Column="1" Text="0" MaxLength="3" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                <TextBlock Grid.Column="0" Grid.Row="1" Text="MSB"/>
+                <TextBox Name="tbOUTMSBValue" Grid.Row="1" Grid.Column="1" Text="0" MaxLength="3" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                <TextBlock Grid.Column="3" Grid.Row="1" Text="LSB"/>
+                <TextBox Name="tbOUTLSBValue" Grid.Row="1" Grid.Column="4" Text="0" MaxLength="3" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+            </Grid>
+        </StackPanel>
+
+        <StackPanel Name="pnlOUTSYS" Grid.Column="1" Grid.Row="4" Grid.ColumnSpan="3" Grid.RowSpan="2" Visibility="Hidden">
+            <RichTextBox Name="rtbOUTSys" Height="80" Background="Gray" />
+        </StackPanel>
+
+        <StackPanel Name="pnlOUTAT" Grid.Column="1" Grid.Row="4" Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="30*"/>
+                    <ColumnDefinition Width="15*"/>
+                    <ColumnDefinition Width="5*"/>
+                    <ColumnDefinition Width="30*"/>
+                    <ColumnDefinition Width="15*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="50*"/>
+                    <RowDefinition Height="50*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Column="0" Grid.Row="0" Text="VALUE"/>
+                <TextBox Name="tbOUTATValue" Grid.Row="0" Grid.Column="1" Text="0" MaxLength="3" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+            </Grid>
+        </StackPanel>
+
+        <TextBlock Grid.Column="0" Grid.Row="7" Text="NAME"/>
+        <TextBox Name="tbTranslatorName" VerticalAlignment="Center" Grid.Row="7" Grid.Column="1" Grid.ColumnSpan="2" Text="My Translation" MaxLength="50" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+
+        <Button Name="btnClose" Grid.Row="6" Grid.Column="3" Content="OK" Width="50" Margin="5,0,5,0" HorizontalAlignment="Right" Click="btnClose_Click" />
+
+    </Grid>
+</Window>

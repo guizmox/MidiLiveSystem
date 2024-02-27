@@ -30,9 +30,6 @@ namespace MidiLiveSystem
     /// </summary>
     public partial class MainWindow : Window
     {
-        private static int DefaultHorizontal = 4;
-        private static int DefaultVertical = 4;
-
         private System.Timers.Timer UIRefreshRate;
         private int RefreshCounter = 0;
 
@@ -46,14 +43,14 @@ namespace MidiLiveSystem
         private List<RoutingBox> Boxes = new List<RoutingBox>();
         private List<Frame> GridFrames = new List<Frame>();
         public static BoxPreset CopiedPreset = new BoxPreset();
-        public ProjectConfiguration Project;
+        public ProjectConfiguration Project = new ProjectConfiguration();
         public SQLiteDatabaseManager Database = new SQLiteDatabaseManager();
         public MidiSequence RecordedSequence = new MidiSequence();
 
         public MainWindow()
         {
             InitializeComponent();
-            InitFrames(DefaultHorizontal, DefaultVertical);
+            InitFrames(Project.HorizontalGrid, Project.VerticalGrid);
 
             UIRefreshRate = new System.Timers.Timer();
             UIRefreshRate.Elapsed += UIRefreshRate_Elapsed;
@@ -70,18 +67,43 @@ namespace MidiLiveSystem
 
         private void Keyboard_KeyPressed(string sKey)
         {
-            if (FocusManager.GetFocusedElement(this) is TextBox textBox)
+            Dispatcher.Invoke(() =>
             {
-                if (sKey.Equals("BACK", StringComparison.OrdinalIgnoreCase))
+                if (FocusManager.GetFocusedElement(this) is TextBox textBox)
                 {
-                    string sNew = textBox.Text.Length == 0 ? "" : textBox.Text.Substring(0, textBox.Text.Length - 1);
-                    textBox.Text = sNew;
+                    if (sKey.Equals("BACK", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string sNew = textBox.Text.Length == 0 ? "" : textBox.Text.Substring(0, textBox.Text.Length - 1);
+                        textBox.Text = sNew;
+                    }
+                    else
+                    {
+                        textBox.Text += sKey;
+                    }
                 }
-                else
+            });
+        }
+
+        private void Routing_IncomingMidiMessage(MidiDevice.MidiEvent ev)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (FocusManager.GetFocusedElement(this) is TextBox textBox)
                 {
-                    textBox.Text += sKey;
+                    switch (ev.Type)
+                    {
+                        case MidiDevice.TypeEvent.NOTE_ON:
+                            textBox.Text = ev.Values[0].ToString();
+                            break;
+                        case MidiDevice.TypeEvent.CC:
+                            textBox.Text = ev.Values[1].ToString();
+                            break;
+                        case MidiDevice.TypeEvent.SYSEX:
+                            textBox.Text = ev.SysExData;
+                            break;
+                    }
                 }
-            }
+            });
         }
 
         private void InitFrames(int iRows, int iCols)
@@ -239,14 +261,7 @@ namespace MidiLiveSystem
                         AddRoutingBoxToFrame(box, false);
                         break;
                     case "MINIMIZE":
-                        if (Project != null)
-                        {
-                            InitFrames(Project.HorizontalGrid, Project.VerticalGrid);
-                        }
-                        else
-                        {
-                            InitFrames(DefaultHorizontal, DefaultVertical);
-                        }
+                        InitFrames(Project.HorizontalGrid, Project.VerticalGrid);
                         AddAllRoutingBoxes();
                         break;
                     case "DETACH":
@@ -356,11 +371,22 @@ namespace MidiLiveSystem
 
         private void UIRefreshRate_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
+            RefreshCounter += 1;
+            int i = Routing.AdjustUIRefreshRate(); //renvoit une quantité en ms
+
+            Routing.IncomingMidiMessage -= Routing_IncomingMidiMessage;
+            if (Routing.Events <= 2) //pour éviter de saturer les process avec des appels UI inutiles
+            {
+                Routing.IncomingMidiMessage += Routing_IncomingMidiMessage;
+            }
+
+            //if (LogWindow != null)
+            //{
+            //    LogWindow.AddLog("UI", true, Routing.Events.ToString());
+            //}
+
             Dispatcher.Invoke(() =>
             {
-                RefreshCounter += 1;
-                int i = Routing.AdjustUIRefreshRate(); //renvoit une quantité en ms
-
                 this.Title = string.Concat("Midi Live System [", Routing.CyclesInfo, " - UI Refresh Rate : ", i, " Sec.]");
 
                 if (RefreshCounter >= i)
@@ -392,13 +418,13 @@ namespace MidiLiveSystem
                     ConfigWindow.Closed -= MainConfiguration_Closed;
                 }
 
-                if (Project != null)
+                if (Project.IsDefaultConfig)
                 {
-                    ConfigWindow = new MidiConfiguration(Project, Boxes);
+                    ConfigWindow = new MidiConfiguration(Boxes);
                 }
                 else
                 {
-                    ConfigWindow = new MidiConfiguration(Boxes);
+                    ConfigWindow = new MidiConfiguration(Project, Boxes);
                 }
 
                 ConfigWindow.Show();
@@ -416,12 +442,6 @@ namespace MidiLiveSystem
         private void btnSaveProject_Click(object sender, RoutedEventArgs e)
         {
             SaveTemplate();
-
-            //sauvegarde de la config
-            if (Project == null)
-            {
-                Project = new ProjectConfiguration(); //config par défaut
-            }
 
             try
             {
@@ -457,11 +477,6 @@ namespace MidiLiveSystem
                         {
                             AddAllRoutingBoxes();
                             SaveTemplate();
-                            //init des box
-                            //foreach (var box in Boxes)
-                            //{
-                            //    Routing.InitRouting(box.RoutingGuid, box.GetOptions(), box.GetPreset());
-                            //}
                         }
                     }
                     else
@@ -657,14 +672,7 @@ namespace MidiLiveSystem
 
         private void AddAllRoutingBoxes()
         {
-            if (Project != null)
-            {
-                RemoveAllBoxes(Project.HorizontalGrid, Project.VerticalGrid);
-            }
-            else
-            {
-                RemoveAllBoxes(DefaultHorizontal, DefaultVertical);
-            }
+            RemoveAllBoxes(Project.HorizontalGrid, Project.VerticalGrid);
 
             foreach (var box in Boxes.OrderBy(b => b.GridPosition))
             {
@@ -704,6 +712,14 @@ namespace MidiLiveSystem
                                        Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
                                        Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
                                        box.GetOptions(), box.GetPreset());
+                    if (sDevOut.Length > 0)
+                    {
+                        var instr = CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(sDevOut));
+                        if (instr != null && instr.SysExInitializer.Length > 0)
+                        {
+                            Routing.SendSysEx(box.RoutingGuid, instr);
+                        }
+                    }
                 }
                 else
                 {
@@ -715,6 +731,7 @@ namespace MidiLiveSystem
                                            Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
                                            box.GetOptions(), box.GetPreset());
                 }
+                Routing.SetClock(Project.ClockActivated, Project.BPM, Project.ClockDevice);
             }
         }
 
