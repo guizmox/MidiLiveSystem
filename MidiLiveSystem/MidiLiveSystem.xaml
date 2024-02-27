@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:MidiLiveSystem"      
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
-        Title="MIDI Live System" Height="800" Width="1300" Closed="Window_Closed" SizeToContent="Width" WindowStartupLocation="CenterScreen" >
+        Title="MIDI Live System" Height="700" Width="1200" Closed="Window_Closed" SizeToContent="Width" WindowStartupLocation="CenterScreen" >
     <Grid Grid.Column="1" Margin="5,5,5,5">
         <Grid.RowDefinitions>
             <RowDefinition Height="92*" />
@@ -35,7 +35,7 @@
                     <ColumnDefinition Width="1*" />
                 </Grid.ColumnDefinitions>
                 
-                <Button Name="btnAddBox" Width="140" Height="60" Grid.Column="1" Click="btnAddBox_Click" >
+                <Button Name="btnAddBox" Width="140" Height="60" Grid.Column="1" Background="BurlyWood" Click="btnAddBox_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -47,7 +47,7 @@
                     </StackPanel>
                 </Button>
                 
-                <Button Name="btnSaveProject" Width="140" Height="60" Grid.Column="2" Click="btnSaveProject_Click" >
+                <Button Name="btnSaveProject" Width="140" Height="60" Grid.Column="3" Click="btnSaveProject_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -59,7 +59,7 @@
                     </StackPanel>
                 </Button>
                 
-                <Button Name="btnOpenProject" Width="140" Height="60" Grid.Column="3" Click="btnOpenProject_Click" >
+                <Button Name="btnOpenProject" Width="140" Height="60" Grid.Column="4" Click="btnOpenProject_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -71,7 +71,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnSettings" Width="140" Height="60" Grid.Column="4" Click="btnSettings_Click" >
+                <Button Name="btnSettings" Width="140" Height="60" Grid.Column="2" Click="btnSettings_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -79,7 +79,7 @@
                                 VerticalAlignment="Center"
                                 Kind="Tools" />
                         </TextBlock>
-                        <TextBlock Text="Configuration" />
+                        <TextBlock Text="Project Settings" />
                     </StackPanel>
                 </Button>
 

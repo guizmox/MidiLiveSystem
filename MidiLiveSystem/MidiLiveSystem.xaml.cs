@@ -33,13 +33,15 @@ namespace MidiLiveSystem
         private System.Timers.Timer UIRefreshRate;
         private int RefreshCounter = 0;
 
-        private int CurrentVerticalGrid = 0;
-        private int CurrentHorizontalGrid = 0;
+        private int CurrentVerticalGrid = 2;
+        private int CurrentHorizontalGrid = 2;
 
         private MidiConfiguration ConfigWindow;
         private MidiLog LogWindow;
         private Keyboard KeysWindow;
         private List<DetachedBox> DetachedWindows = new List<DetachedBox>();
+        public ProgramHelp HelpWindow;
+
         private bool ViewOnConfig = false;
 
         private MidiRouting Routing = new MidiRouting();
@@ -53,7 +55,7 @@ namespace MidiLiveSystem
         public MainWindow()
         {
             InitializeComponent();
-            InitFrames(Project.HorizontalGrid, Project.VerticalGrid);
+            InitFrames(CurrentHorizontalGrid, CurrentVerticalGrid);
 
             UIRefreshRate = new System.Timers.Timer();
             UIRefreshRate.Elapsed += UIRefreshRate_Elapsed;
@@ -176,6 +178,10 @@ namespace MidiLiveSystem
             {
                 ConfigWindow.Close();
             }
+            if (HelpWindow != null)
+            {
+                HelpWindow.Close();
+            }
             foreach (var detached in DetachedWindows)
             {
                 detached.Close();
@@ -272,6 +278,12 @@ namespace MidiLiveSystem
             {
                 switch (sControl)
                 {
+                    case "HELP":
+                        if (HelpWindow != null)
+                        { HelpWindow.Close(); }
+                        HelpWindow = new ProgramHelp();
+                        HelpWindow.Show();
+                        break;
                     case "MAXIMIZE":
                         InitFrames(1, 1);
                         AddRoutingBoxToFrame(box, false);

@@ -17,6 +17,7 @@
             <MenuItem Header="Detach" Tag="DETACH" Click="MenuItem_Click"/>
             <MenuItem Header="Move To Next Slot" Tag="MOVE_NEXT" Click="MenuItem_Click"/>
             <MenuItem Header="Move To Previous Slot" Tag="MOVE_PREVIOUS" Click="MenuItem_Click"/>
+            <MenuItem Header="Help" Tag="HELP" Click="MenuItem_Click"/>
         </ContextMenu>
         <Style x:Key="TabControlHeaderStyle" TargetType="{x:Type TabItem}">
             <Setter Property="Background" Value="Transparent"/>
@@ -43,6 +44,7 @@
                             <materialDesign:PackIcon
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
+                                Foreground="Yellow"
                                 Kind="Menu" />
         </TextBlock>
 
