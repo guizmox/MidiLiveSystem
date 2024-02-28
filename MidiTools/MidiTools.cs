@@ -211,6 +211,8 @@ namespace MidiTools
         private int ClockBPM = 120;
         private string ClockDevice = "";
 
+        private int CurrentATValue = 0;
+
         public static List<RtMidi.Core.Devices.Infos.IMidiInputDeviceInfo> InputDevices
         {
             get
@@ -415,16 +417,16 @@ namespace MidiTools
             NewLog?.Invoke(sDevice, bIn, sLog);
         }
 
-        private void CreateOUTEvent(MidiDevice.MidiEvent ev, bool bForce)
+        private void CreateOUTEvent(MidiDevice.MidiEvent ev, bool bOutEvent)
         {
             //attention : c'est bien un message du device IN qui arrive ! ne marche pas si on a envoyé un message issu d'un device out
             List<MatrixItem> matrix = new List<MatrixItem>();
 
-            if (!bForce)
+            if (!bOutEvent)
             {
                 matrix = MidiMatrix.Where(i => i.DeviceOut != null && i.Active && i.DeviceIn != null && i.DeviceIn.Name == ev.Device && (i.ChannelIn == 0 || Tools.GetChannel(i.ChannelIn) == ev.Channel)).ToList();
             }
-            else if (bForce) //envoyé pour un device out
+            else if (bOutEvent) //envoyé pour un device out
             {
                 matrix = MidiMatrix.Where(i => i.Active && i.DeviceOut != null && i.DeviceOut.Name == ev.Device && (i.ChannelOut == 0 || Tools.GetChannel(i.ChannelOut) == ev.Channel)).ToList();
             }
@@ -432,7 +434,7 @@ namespace MidiTools
             foreach (MatrixItem item in matrix)
             {
                 bool bTranslated = false;
-                if (!bForce) { bTranslated = MidiTranslator(item, ev); } //TRANSLATEUR DE MESSAGES
+                if (!bOutEvent) { bTranslated = MidiTranslator(item, ev); } //TRANSLATEUR DE MESSAGES
 
                 if (!bTranslated)
                 {
@@ -444,7 +446,7 @@ namespace MidiTools
                         switch (ev.Type)
                         {
                             case TypeEvent.CC:
-                                if (item.Options.AllowAllCC || bForce)
+                                if (item.Options.AllowAllCC || bOutEvent)
                                 {
                                     if (item.Options.CC_ToVolume == ev.Values[0])
                                     {
@@ -458,24 +460,28 @@ namespace MidiTools
                                 }
                                 break;
                             case TypeEvent.CH_PRES:
-                                if ((!item.Options.AftertouchVolume && item.Options.AllowAftertouch) || bForce)
+                                if ((!item.Options.AftertouchVolume && item.Options.AllowAftertouch) || bOutEvent)
                                 {
                                     _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
                                 }
                                 else if (item.Options.AftertouchVolume)
                                 {
+                                    CurrentATValue = ev.Values[0];
+
                                     _eventsOUT.Add(new MidiEvent(TypeEvent.CC, new List<int> { item.DeviceOut.CC_Volume, ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
                                 }
                                 break;
                             case TypeEvent.NOTE_OFF:
-                                if (item.Options.AllowNotes || bForce)
+                                if (item.Options.AllowNotes || bOutEvent)
                                 {
                                     int iNote = Tools.GetNoteIndex(ev.Values[0], ev.Values[1], item.Options);
-                                    var convertedNote = item.Options.Note_Converters.FirstOrDefault(i => i[0] == Tools.GetNoteIndex(ev.Values[0], 0, null));
+                                    var convertedNote = item.Options.Note_Converters.FirstOrDefault(i => i[0] == ev.Values[0]);
                                     if (convertedNote != null) { iNote = convertedNote[1]; } //TODO DOUTE
 
                                     if (iNote > -1)
                                     {
+                                        CurrentATValue = 0;
+
                                         var eventout = new MidiEvent(ev.Type, new List<int> { iNote, item.Options.AftertouchVolume ? 0 : ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name);
                                         _eventsOUT.Add(eventout);
 
@@ -491,21 +497,29 @@ namespace MidiTools
                                 }
                                 break;
                             case TypeEvent.NOTE_ON:
-                                if (item.Options.AllowNotes || bForce)
+                                if (item.Options.AllowNotes || bOutEvent)
                                 {
                                     int iNote = Tools.GetNoteIndex(ev.Values[0], ev.Values[1], item.Options);
-                                    var convertedNote = item.Options.Note_Converters.FirstOrDefault(i => i[0] == Tools.GetNoteIndex(ev.Values[0], 0, null));
+                                    var convertedNote = item.Options.Note_Converters.FirstOrDefault(i => i[0] == ev.Values[0]);
                                     if (convertedNote != null) { iNote = convertedNote[1]; } //TODO DOUTE
 
                                     if (iNote > -1) //NOTE : il faut systématiquement mettre au moins une véolcité de 1 pour que la note se déclenche
                                     {
-                                        int iVelocity = item.Options.AftertouchVolume && ev.Values[1] > 0 ? 1 : ev.Values[1];
+                                        //int iVelocity = item.Options.AftertouchVolume && ev.Values[1] > 0 ? 1 : ev.Values[1];
+                                        int iVelocity = ev.Values[1];
+
+                                        if (item.Options.AftertouchVolume)
+                                        {
+                                            _eventsOUT.Add(new MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { 7, CurrentATValue }, Tools.GetChannel(i), item.DeviceOut.Name));
+                                        }
 
                                         var eventout = new MidiEvent(ev.Type, new List<int> { iNote, iVelocity }, Tools.GetChannel(i), item.DeviceOut.Name);
                                         _eventsOUT.Add(eventout);
 
                                         if (iVelocity == 0) //le genos n'envoie pas de note off mais que des ON à 0
                                         {
+                                            CurrentATValue = 0;
+
                                             lock (_notesentforpanic)
                                             {
                                                 var toremove = _notesentforpanic.FirstOrDefault(n => n.Device == eventout.Device && n.Channel == eventout.Channel && n.Values[0] == eventout.Values[0]);
@@ -526,31 +540,31 @@ namespace MidiTools
                                 }
                                 break;
                             case TypeEvent.NRPN:
-                                if (item.Options.AllowNrpn || bForce)
+                                if (item.Options.AllowNrpn || bOutEvent)
                                 {
                                     _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0], ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
                                 }
                                 break;
                             case TypeEvent.PB:
-                                if (item.Options.AllowPitchBend || bForce)
+                                if (item.Options.AllowPitchBend || bOutEvent)
                                 {
                                     _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
                                 }
                                 break;
                             case TypeEvent.PC:
-                                if (item.Options.AllowProgramChange || bForce)
+                                if (item.Options.AllowProgramChange || bOutEvent)
                                 {
                                     _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
                                 }
                                 break;
                             case TypeEvent.POLY_PRES:
-                                if (item.Options.AllowAftertouch || bForce)
+                                if (item.Options.AllowAftertouch || bOutEvent)
                                 {
                                     _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0], ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
                                 }
                                 break;
                             case TypeEvent.SYSEX:
-                                if (item.Options.AllowSysex || bForce)
+                                if (item.Options.AllowSysex || bOutEvent)
                                 {
                                     _eventsOUT.Add(new MidiEvent(ev.Type, SysExTranscoder(ev.SysExData), item.DeviceOut.Name));
                                 }
@@ -1347,6 +1361,11 @@ namespace MidiTools
             ClockRunning = bActivated;
             ClockBPM = iBPM;
             ClockDevice = sDevice;
+        }
+
+        internal void SendGenericMidiEvent(MidiEvent ev)
+        {
+            CreateOUTEvent(ev, false);
         }
 
         #endregion
@@ -2151,46 +2170,23 @@ namespace MidiTools
         }
 
 
-        public async void PlaySequenceAsync(List<MidiEvent> events)
+        public async void PlaySequenceAsync(List<MidiEvent> events, MidiRouting routing)
         {
             StopSequenceRequested = false;
-            bool bPlay = true;
 
-            //ouvrir tous les devices
-            List<MidiDevice> devicesPlay = new List<MidiDevice>();
-            var devices = events.Select(e => e.Device).Distinct().ToList();
-            foreach (var dev in devices)
+            await Task.Factory.StartNew(() =>
             {
-                try
-                {
-                    devicesPlay.Add(new MidiDevice(MidiRouting.OutputDevices.FirstOrDefault(d => d.Name.Equals(dev))));
-                }
-                catch
-                {
-                    bPlay = false;
-                    SequenceFinished?.Invoke("Missing MIDI Device [" + dev + "]. Can't Play Sequence.");
-                }
-            }
-
-            if (bPlay)
-            {
-                foreach (var dev in devicesPlay)
-                {
-                    dev.OpenDevice();
-                }
-
-                await Task.Factory.StartNew(() =>
-                {
-                    PlaySequence(events, devicesPlay);
-                });
-            }
+                PlaySequence(events, routing);
+            });
         }
 
-        private void PlaySequence(List<MidiEvent> events, List<MidiDevice> devices)
+        private void PlaySequence(List<MidiEvent> events, MidiRouting routing)
         {
             int iPendingNotes = 0;
 
             Stopwatch stopwatch = new Stopwatch(); // Créer un chronomètre
+
+            routing.OpenUsedPorts();
 
             for (int i = 0; i < events.Count; i++)
             {
@@ -2201,14 +2197,12 @@ namespace MidiTools
                     break; // Sortir de la boucle si l'arrêt est demandé et toutes les notes sont relâchées
                 }
 
-                var device = devices.FirstOrDefault(d => d.Name.Equals(events[i].Device));
-
                 long elapsedTicks = 0;
                 double waitingTime = 0;
 
-                if (i < events.Count - 1)
+                if (i > 0)
                 {
-                    elapsedTicks = events[i + 1].EventDate.Ticks - events[i].EventDate.Ticks;
+                    elapsedTicks = events[i].EventDate.Ticks - events[i - 1].EventDate.Ticks;
                     waitingTime = elapsedTicks / (double)TimeSpan.TicksPerMillisecond;
                 }
 
@@ -2223,15 +2217,15 @@ namespace MidiTools
                     stopwatch.Stop(); // Arrêter le chronomètre
                 }
 
-                if (device != null)
-                {
-                    if (eventtoplay.Type == TypeEvent.NOTE_ON) { iPendingNotes--; }
-                    if (eventtoplay.Type == TypeEvent.NOTE_OFF) { iPendingNotes--; }
+                if (eventtoplay.Type == TypeEvent.NOTE_ON) { iPendingNotes++; }
+                else if (eventtoplay.Type == TypeEvent.NOTE_OFF || (eventtoplay.Type == TypeEvent.NOTE_ON && eventtoplay.Values[1] == 0)) { iPendingNotes--; }
 
-                    //Task.Factory.StartNew(() => { device.SendMidiEvent(eventtoplay); });
-                    device.SendMidiEvent(eventtoplay);
-                }
+                routing.SendGenericMidiEvent(eventtoplay);
             }
+
+            Thread.Sleep(2500);
+
+            routing.CloseUsedPorts();
 
             //for (int i = 0; i < events.Count; i++)
             //{
@@ -2262,11 +2256,6 @@ namespace MidiTools
             //        }
             //    }
             //}
-
-            foreach (var dev in devices)
-            {
-                dev.CloseDevice();
-            }
 
             SequenceFinished?.Invoke(events.Count.ToString() + " event(s) have been played.");
         }

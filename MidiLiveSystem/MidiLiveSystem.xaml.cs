@@ -34,7 +34,7 @@ namespace MidiLiveSystem
         private int RefreshCounter = 0;
 
         private int CurrentVerticalGrid = 0;
-        private int CurrentHorizontalGrid = 0;
+        private int CurrentHorizontalGrid = 1;
 
         private MidiConfiguration ConfigWindow;
         private MidiLog LogWindow;
@@ -605,7 +605,7 @@ namespace MidiLiveSystem
                         {
                             RecordedSequence.StopRecording(true, true);
                             RecordedSequence.Clear();
-                            RecordedSequence.StartRecording(false, true);
+                            RecordedSequence.StartRecording(true, false);
                         }
                         else
                         {
@@ -614,7 +614,7 @@ namespace MidiLiveSystem
                     }
                     else
                     {
-                        RecordedSequence.StartRecording(false, true);
+                        RecordedSequence.StartRecording(true, false);
                     }
                 }
             }
@@ -633,7 +633,7 @@ namespace MidiLiveSystem
                 {
                     btnPlaySequence.Background = Brushes.Green;
                     Routing.CloseUsedPorts();
-                    RecordedSequence.PlaySequenceAsync(RecordedSequence.Events);
+                    RecordedSequence.PlaySequenceAsync(RecordedSequence.Events, Routing);
                 }
             }
             else

@@ -80,7 +80,7 @@ namespace MidiLiveSystem
 
             InitializeComponent();
 
-            
+
             InitPage(inputDevices, outputDevices);
         }
 
@@ -221,8 +221,8 @@ namespace MidiLiveSystem
                     }
                     InstrumentPresets = new PresetBrowser(instr);
                     InstrumentPresets.OnPresetChanged += PresetBrowser_OnPresetChanged;
-
                     InstrumentPresets.ShowDialog();
+                    InstrumentPresets.GetPreset();
                 }
                 else
                 {
@@ -236,6 +236,7 @@ namespace MidiLiveSystem
                     InstrumentPresets = new PresetBrowser(null);
                     InstrumentPresets.OnPresetChanged += PresetBrowser_OnPresetChanged;
                     InstrumentPresets.ShowDialog();
+                    InstrumentPresets.GetPreset();
                 }
 
                 //repasse à l'état précédent
@@ -254,12 +255,15 @@ namespace MidiLiveSystem
 
         private void PresetBrowser_OnPresetChanged(MidiPreset mp)
         {
-            lbPreset.Text = mp.PresetName;
-            lbPreset.Tag = mp.Tag;
+            if (!mp.PresetName.Equals("[ERROR]"))
+            {
+                lbPreset.Text = mp.PresetName;
+                lbPreset.Tag = mp.Tag;
 
-            tbPresetName.Text = mp.PresetName;
+                tbPresetName.Text = mp.PresetName;
 
-            OnUIEvent?.Invoke(BoxGuid, "PRESET_CHANGE", GetPreset());
+                OnUIEvent?.Invoke(BoxGuid, "PRESET_CHANGE", GetPreset());
+            }
         }
 
         private void tbSolo_Click(object sender, RoutedEventArgs e)
@@ -399,7 +403,7 @@ namespace MidiLiveSystem
                     cbTranslators.Items.Add(new ComboBoxItem() { Tag = sTranslator[0], Content = sTranslator[1] });
                 }
                 else { MessageBox.Show("A similar Translation has already been set."); }
-                
+
             }
         }
 
@@ -959,6 +963,18 @@ namespace MidiLiveSystem
                 return i;
             }
             else { return 999; }
+        }
+
+        private void Page_KeyUp(object sender, KeyEventArgs e)
+        {
+
+            if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    tabSwitch.Focus();
+                });
+            }
         }
     }
 

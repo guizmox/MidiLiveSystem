@@ -206,5 +206,24 @@ namespace MidiLiveSystem
             }
         }
 
+        internal void GetPreset()
+        {
+            MidiPreset mp = new MidiPreset();
+
+            mp.PresetName = tbName.Text.Trim();
+            try
+            {
+                mp.Msb = Convert.ToInt32(tbMsb.Text.Trim());
+                mp.Lsb = Convert.ToInt32(tbLsb.Text.Trim());
+                mp.Prg = Convert.ToInt32(tbPrg.Text.Trim());
+            }
+            catch
+            {
+                mp.PresetName = "[ERROR]";
+                MessageBox.Show("Unable to parse MSB/LSB/PRG values. Default value will be used.");
+            }
+
+            OnPresetChanged?.Invoke(mp);
+        }
     }
 }
