@@ -502,6 +502,15 @@ namespace MidiLiveSystem
 
                         if (Boxes != null)
                         {
+                            if (Project.VerticalGrid > -1)
+                            {
+                                CurrentVerticalGrid = Project.VerticalGrid;
+                            }
+                            if (Project.HorizontalGrid > -1)
+                            {
+                                CurrentHorizontalGrid = Project.HorizontalGrid;
+                            }
+
                             AddAllRoutingBoxes();
                             SaveTemplate();
                         }
