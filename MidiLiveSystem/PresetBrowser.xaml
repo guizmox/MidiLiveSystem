@@ -33,7 +33,7 @@
                     <ColumnDefinition Width="90*"/>
                 </Grid.ColumnDefinitions>
                 <Label Grid.Column="0" Content="Filter :"/>
-                <TextBox x:Name="tbFilterTextBox" Grid.Column="1" Text="" TextChanged="FilterTextBox_TextChanged" />
+                <TextBox x:Name="tbFilterTextBox" Background="LightGray" Grid.Column="1" Text="" Width="200" HorizontalAlignment="Left" TextChanged="FilterTextBox_TextChanged" />
             </Grid>
 
         </StackPanel>
@@ -56,11 +56,11 @@
                 </Grid.ColumnDefinitions>
                 <Label Name="lblPresetInfo" Grid.Column="0"  Content="Data :" Foreground="Red" VerticalAlignment="Center"/>
                 <Label Grid.Column="1" Content="LSB :" VerticalAlignment="Center"/>
-                <TextBox Name="tbLsb" Grid.Column="2" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                <TextBox Name="tbLsb" Grid.Column="2" MaxLength="3" Text="" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed" SelectionChanged="tbPrg_SelectionChanged" />
                 <Label Grid.Column="3" Content="MSB :" VerticalAlignment="Center"/>
-                <TextBox Name="tbMsb" Grid.Column="4" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                <TextBox Name="tbMsb" Grid.Column="4" MaxLength="3" Text="" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed" SelectionChanged="tbPrg_SelectionChanged" />
                 <Label Grid.Column="5" Content="PRG :" VerticalAlignment="Center"/>
-                <TextBox Name="tbPrg" Grid.Column="6" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                <TextBox Name="tbPrg" Grid.Column="6" MaxLength="3" Text="" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed" SelectionChanged="tbPrg_SelectionChanged" />
                 <Label Grid.Column="7" Content="NAME :" VerticalAlignment="Center"/>
                 <TextBox Name="tbName" Text="Preset Name" Grid.Column="8" MaxLength="30" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
 

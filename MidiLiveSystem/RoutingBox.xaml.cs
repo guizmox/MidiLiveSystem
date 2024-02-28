@@ -325,6 +325,7 @@ namespace MidiLiveSystem
                 if (!bExists)
                 {
                     cbCCConvert.Items.Add(new ComboBoxItem() { Tag = sTag, Content = string.Concat("FROM ", iFrom, " TO ", iTo) });
+                    cbCCConvert.SelectedIndex = cbCCConvert.Items.Count - 1;
                 }
             }
             else
@@ -353,6 +354,7 @@ namespace MidiLiveSystem
                 if (!bExists)
                 {
                     cbNOTEConvert.Items.Add(new ComboBoxItem() { Tag = sTag, Content = string.Concat("FROM ", iFrom, " TO ", iTo) });
+                    cbNOTEConvert.SelectedIndex = cbNOTEConvert.Items.Count - 1;
                 }
             }
             else
@@ -401,6 +403,7 @@ namespace MidiLiveSystem
                 if (!bExists)
                 {
                     cbTranslators.Items.Add(new ComboBoxItem() { Tag = sTranslator[0], Content = sTranslator[1] });
+                    cbTranslators.SelectedIndex = cbTranslators.Items.Count - 1;
                 }
                 else { MessageBox.Show("A similar Translation has already been set."); }
 
@@ -721,9 +724,13 @@ namespace MidiLiveSystem
                         cb.Value = bp.MidiOptions.CC_Chorus_Value.ToString();
                         break;
                     case "tbCC_Pan":
+                        if (bp.MidiOptions.CC_Pan_Value == -1)
+                        { bp.MidiOptions.CC_Pan_Value = 64; }
                         cb.Value = bp.MidiOptions.CC_Pan_Value.ToString();
                         break;
                     case "tbCC_Volume":
+                        if (bp.MidiOptions.CC_Volume_Value == -1)
+                        { bp.MidiOptions.CC_Volume_Value = 100; }
                         cb.Value = bp.MidiOptions.CC_Volume_Value.ToString();
                         break;
                     case "tbCC_Attack":

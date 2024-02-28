@@ -93,19 +93,35 @@ namespace MidiLiveSystem
         {
             Dispatcher.Invoke(() =>
             {
+                if (ev.Type == MidiDevice.TypeEvent.CC)
+                {
+                    tbNoteName.Text = "CC#" + ev.Values[0];
+                }
+                else
+                {
+                    tbNoteName.Text = Tools.MidiNoteNumberToNoteName(ev.Values[0]);
+                }
+
                 if (FocusManager.GetFocusedElement(this) is TextBox textBox)
                 {
-                    switch (ev.Type)
+                    if (textBox.Name.Equals("tbPresetName") || textBox.Name.Equals("tbProjectName"))
                     {
-                        case MidiDevice.TypeEvent.NOTE_ON:
-                            textBox.Text = ev.Values[0].ToString();
-                            break;
-                        case MidiDevice.TypeEvent.CC:
-                            textBox.Text = ev.Values[1].ToString();
-                            break;
-                        case MidiDevice.TypeEvent.SYSEX:
-                            textBox.Text = ev.SysExData;
-                            break;
+
+                    }
+                    else
+                    {
+                        switch (ev.Type)
+                        {
+                            case MidiDevice.TypeEvent.NOTE_ON:
+                                textBox.Text = ev.Values[0].ToString();
+                                break;
+                            case MidiDevice.TypeEvent.CC:
+                                textBox.Text = ev.Values[1].ToString();
+                                break;
+                            case MidiDevice.TypeEvent.SYSEX:
+                                textBox.Text = ev.SysExData;
+                                break;
+                        }
                     }
                 }
             });
@@ -164,6 +180,8 @@ namespace MidiLiveSystem
         private void Window_Closed(object sender, EventArgs e)
         {
             Database.SaveInstruments(CubaseInstrumentData.Instruments);
+            Routing.DeleteAllRouting();
+
             //Database.SaveProject(Boxes, Project, RecordedSequence);
 
             if (LogWindow != null)
@@ -265,10 +283,26 @@ namespace MidiLiveSystem
         {
             Dispatcher.Invoke(() =>
             {
-                MessageBox.Show(sInfo);
+                tbPlay.Text = "PLAY";
                 btnPlaySequence.Background = Brushes.DarkGray;
             });
-            Routing.OpenUsedPorts();
+            Routing.OpenUsedPorts(false);
+        }
+
+        private void RecordedSequence_RecordCounter(string sInfo)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                tbRecord.Text = sInfo;
+            });
+        }
+
+        private void PlayedSequence_RecordCounter(string sInfo)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                tbPlay.Text = sInfo;
+            });
         }
 
         private void RoutingBox_UIEvent(Guid gBox, string sControl, object sValue)
@@ -403,9 +437,16 @@ namespace MidiLiveSystem
             int i = Routing.AdjustUIRefreshRate(); //renvoit une quantité en ms
 
             Routing.IncomingMidiMessage -= Routing_IncomingMidiMessage;
-            if (Routing.Events <= 2) //pour éviter de saturer les process avec des appels UI inutiles
+            if (Routing.Events <= 12) //pour éviter de saturer les process avec des appels UI inutiles
             {
                 Routing.IncomingMidiMessage += Routing_IncomingMidiMessage;
+            }
+            else
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    tbNoteName.Text = "";
+                });
             }
 
             //if (LogWindow != null)
@@ -494,6 +535,8 @@ namespace MidiLiveSystem
                     var project = prj.Project;
                     if (project != null)
                     {
+                        Routing.DeleteAllRouting();
+
                         Project = project.Item2;
 
                         Boxes = project.Item3.GetBoxes(Project);
@@ -512,7 +555,6 @@ namespace MidiLiveSystem
                             }
 
                             AddAllRoutingBoxes();
-                            SaveTemplate();
                         }
                     }
                     else
@@ -577,6 +619,11 @@ namespace MidiLiveSystem
 
         private void btnRecordSequence_Click(object sender, RoutedEventArgs e)
         {
+            RecordedSequence.RecordCounter -= RecordedSequence_RecordCounter;
+            tbRecord.Text = "REC";
+
+            bool bRecord = false;
+
             if (Boxes.Count == 0)
             {
                 MessageBox.Show("Routing must be initialized");
@@ -587,6 +634,7 @@ namespace MidiLiveSystem
                 {
                     btnRecordSequence.Background = Brushes.DarkGray;
                     RecordedSequence.StopRecording(true, true);
+
                     if (Project == null)
                     {
                         Project = new ProjectConfiguration();
@@ -598,14 +646,15 @@ namespace MidiLiveSystem
                 {
                     btnRecordSequence.Background = Brushes.Red;
 
-                    if (RecordedSequence.Events.Count > 0)
+                    if (RecordedSequence.EventsIN.Count > 0)
                     {
                         var confirm = MessageBox.Show("Would you like to erase the last recording ?", "Erase ?", MessageBoxButton.YesNo);
                         if (confirm == MessageBoxResult.Yes)
                         {
                             RecordedSequence.StopRecording(true, true);
                             RecordedSequence.Clear();
-                            RecordedSequence.StartRecording(true, false);
+
+                            bRecord = true;
                         }
                         else
                         {
@@ -614,15 +663,26 @@ namespace MidiLiveSystem
                     }
                     else
                     {
-                        RecordedSequence.StartRecording(true, false);
+                        bRecord = true;
                     }
                 }
+            }
+
+            if (bRecord)
+            {
+                tbRecord.Text = "GO !";
+                RecordedSequence.StartRecording(true, true);
+                RecordedSequence.RecordCounter += RecordedSequence_RecordCounter;
             }
         }
 
         private void btnPlaySequence_Click(object sender, RoutedEventArgs e)
         {
-            if (RecordedSequence.Events.Count > 0)
+            tbPlay.Text = "PLAY";
+
+            RecordedSequence.RecordCounter -= PlayedSequence_RecordCounter;
+
+            if (RecordedSequence.EventsIN.Count > 0)
             {
                 if (btnPlaySequence.Background == Brushes.Green)
                 {
@@ -632,8 +692,9 @@ namespace MidiLiveSystem
                 else
                 {
                     btnPlaySequence.Background = Brushes.Green;
-                    Routing.CloseUsedPorts();
-                    RecordedSequence.PlaySequenceAsync(RecordedSequence.Events, Routing);
+
+                    RecordedSequence.RecordCounter += PlayedSequence_RecordCounter;
+                    RecordedSequence.PlaySequenceAsync(RecordedSequence.EventsIN, Routing);
                 }
             }
             else

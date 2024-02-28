@@ -58,9 +58,17 @@ namespace MidiLiveSystem
             Close();
         }
 
+        private void tbPrg_SelectionChanged(object sender, RoutedEventArgs e)
+        {
+            if (tbPrg != null && tbMsb != null & tbLsb != null && InstrumentPresets != null)
+            {
+                FilterTreeViewByPrg(tbPrg.Text.Trim(), tbMsb.Text.Trim(), tbLsb.Text.Trim());
+            }
+        }
+
         private void FilterTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            FilterTreeView(tbFilterTextBox.Text);
+            FilterTreeViewByString(tbFilterTextBox.Text);
         }
 
         private void PopulateHierarchyTree(InstrumentData instr)
@@ -161,7 +169,47 @@ namespace MidiLiveSystem
             }
         }
 
-        private void FilterTreeView(string filterText)
+        private void FilterTreeViewByPrg(string sPrg, string sMsb, string sLsb)
+        {
+            var filter = new InstrumentData();
+            filter.CubaseFile = InstrumentPresets.CubaseFile;
+            filter.Device = InstrumentPresets.Device;
+            foreach (PresetHierarchy category in InstrumentPresets.Categories)
+            {
+                PresetHierarchy cat = new PresetHierarchy();
+                cat.IndexInFile = category.IndexInFile;
+                cat.Category = category.Category;
+                cat.Level = 1;
+                cat.Raw = category.Raw;
+                cat.Presets = new List<MidiPreset>();
+
+                foreach (var preset in category.Presets)
+                {
+                    if ((preset.Prg.ToString().Equals(sPrg, StringComparison.InvariantCultureIgnoreCase) || sPrg.Length == 0) &&
+                        (preset.Msb.ToString().Equals(sMsb, StringComparison.InvariantCultureIgnoreCase) || sMsb.Length == 0) &&
+                        (preset.Lsb.ToString().Equals(sLsb, StringComparison.InvariantCultureIgnoreCase) || sLsb.Length == 0))
+                    {
+                        MidiPreset p = new MidiPreset();
+                        p.PresetName = preset.PresetName;
+                        p.Prg = preset.Prg;
+                        p.Lsb = preset.Lsb;
+                        p.Msb = preset.Msb;
+                        p.InstrumentGroup = preset.InstrumentGroup;
+                        p.Channel = preset.Channel;
+
+                        cat.Presets.Add(p);
+                    }
+                }
+
+                if (cat.Presets.Count > 0)
+                {
+                    filter.Categories.Add(cat);
+                }
+            }
+            PopulateHierarchyTree(filter);
+        }
+
+        private void FilterTreeViewByString(string filterText)
         {
             if (string.IsNullOrWhiteSpace(filterText))
             {
@@ -192,12 +240,12 @@ namespace MidiLiveSystem
                             p.Msb = preset.Msb;
                             p.InstrumentGroup = preset.InstrumentGroup;
                             p.Channel = preset.Channel;
-                   
+
                             cat.Presets.Add(p);
                         }
                     }
 
-                    if (cat.Presets.Count > 0) 
+                    if (cat.Presets.Count > 0)
                     {
                         filter.Categories.Add(cat);
                     }
@@ -211,13 +259,26 @@ namespace MidiLiveSystem
             MidiPreset mp = new MidiPreset();
 
             mp.PresetName = tbName.Text.Trim();
+
+            int iErrors = 0;
+
             try
             {
                 mp.Msb = Convert.ToInt32(tbMsb.Text.Trim());
+            }
+            catch { mp.Msb = 0; iErrors++; }
+            try
+            {
                 mp.Lsb = Convert.ToInt32(tbLsb.Text.Trim());
+            }
+            catch { mp.Lsb = 0; iErrors++; }
+            try
+            {
                 mp.Prg = Convert.ToInt32(tbPrg.Text.Trim());
             }
-            catch
+            catch { mp.Prg = 0; iErrors++; }
+
+            if (iErrors == 3)
             {
                 mp.PresetName = "[ERROR]";
                 MessageBox.Show("Unable to parse MSB/LSB/PRG values. Default value will be used.");
@@ -225,5 +286,6 @@ namespace MidiLiveSystem
 
             OnPresetChanged?.Invoke(mp);
         }
+
     }
 }

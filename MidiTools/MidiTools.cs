@@ -79,8 +79,8 @@ namespace MidiTools
         private int _NoteFilterLow = 0;
         private int _NoteFilterHigh = 127;
 
-        private int _CC_Pan_Value = 64;
-        private int _CC_Volume_Value = 100;
+        private int _CC_Pan_Value = -1;
+        private int _CC_Volume_Value = -1;
         private int _CC_Reverb_Value = -1;
         private int _CC_Chorus_Value = -1;
         private int _CC_Release_Value = -1;
@@ -514,7 +514,6 @@ namespace MidiTools
                                         }
 
                                         var eventout = new MidiEvent(ev.Type, new List<int> { iNote, iVelocity }, Tools.GetChannel(i), item.DeviceOut.Name);
-                                        _eventsOUT.Add(eventout);
 
                                         if (iVelocity == 0) //le genos n'envoie pas de note off mais que des ON à 0
                                         {
@@ -528,12 +527,25 @@ namespace MidiTools
                                                     _notesentforpanic.Remove(toremove);
                                                 }
                                             }
+
+                                            _eventsOUT.Add(eventout);
                                         }
                                         else
                                         {
-                                            lock (_notesentforpanic)
+                                            //problème : par exemple, le keystep envoie 2 messages IN mais 1 seul message out : on empêche la nouvelle note d'arriver
+                                            var notestuck = _notesentforpanic.FirstOrDefault(n => n.Device == eventout.Device && n.Channel == eventout.Channel && n.Values[0] == eventout.Values[0]);
+                                            if (notestuck != null)
                                             {
-                                                _notesentforpanic.Add(eventout);
+                                                //on n'envoie aucun nouvel évènement
+                                            }
+                                            else
+                                            {
+                                                lock (_notesentforpanic)
+                                                {
+                                                    _notesentforpanic.Add(eventout);
+                                                }
+
+                                                _eventsOUT.Add(eventout);
                                             }
                                         }
                                     }
@@ -1071,10 +1083,15 @@ namespace MidiTools
 
         public bool ModifyRouting(Guid routingGuid, string sDeviceIn, string sDeviceOut, int iChIn, int iChOut, MidiOptions options, MidiPreset preset = null)
         {
+            bool bDeviceOutChanged = false;
+
             var routing = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
 
             if (routing != null)
             {
+                if ((routing.DeviceOut == null && sDeviceOut.Length > 0) || (routing.DeviceOut != null && !routing.DeviceOut.Name.Equals(sDeviceOut)))
+                { bDeviceOutChanged = true; }
+
                 routing.ChannelIn = iChIn;
                 routing.ChannelOut = iChOut;
                 bool bINChanged = routing.CheckDeviceIn(sDeviceIn);
@@ -1119,8 +1136,8 @@ namespace MidiTools
                 }
 
                 //hyper important d'être à la fin !
-                ChangeOptions(routing, options, false);
-                ChangeProgram(routing, preset, false);
+                ChangeOptions(routing, options, bDeviceOutChanged ? true : false);
+                ChangeProgram(routing, preset, bDeviceOutChanged ? true : false);
 
                 return true;
             }
@@ -1301,25 +1318,47 @@ namespace MidiTools
             //MidiTranslator(null, null);
         }
 
-        public void OpenUsedPorts()
+        public void OpenUsedPorts(bool bIn)
         {
             CheckAndCloseUnusedDevices();
 
-            foreach (var dev in UsedDevicesOUT)
+            if (bIn)
             {
-                dev.OpenDevice();
-                dev.OnMidiEvent += DeviceOut_OnMidiEvent;
+                foreach (var dev in UsedDevicesIN)
+                {
+                    dev.OpenDevice();
+                    dev.OnMidiEvent += DeviceIn_OnMidiEvent;
+                }
+            }
+            else
+            {
+                foreach (var dev in UsedDevicesOUT)
+                {
+                    dev.OpenDevice();
+                    dev.OnMidiEvent += DeviceOut_OnMidiEvent;
+                }
             }
         }
 
-        public void CloseUsedPorts()
+        public void CloseUsedPorts(bool bIn)
         {
             CheckAndCloseUnusedDevices();
 
-            foreach (var dev in UsedDevicesOUT)
+            if (bIn)
             {
-                dev.CloseDevice();
-                dev.OnMidiEvent -= DeviceOut_OnMidiEvent;
+                foreach (var dev in UsedDevicesIN)
+                {
+                    dev.CloseDevice();
+                    dev.OnMidiEvent -= DeviceIn_OnMidiEvent;
+                }
+            }
+            else
+            {
+                foreach (var dev in UsedDevicesOUT)
+                {
+                    dev.CloseDevice();
+                    dev.OnMidiEvent -= DeviceOut_OnMidiEvent;
+                }
             }
         }
 
@@ -1366,6 +1405,18 @@ namespace MidiTools
         internal void SendGenericMidiEvent(MidiEvent ev)
         {
             CreateOUTEvent(ev, false);
+        }
+
+        internal void InitRouting()
+        {
+            CloseUsedPorts(false);
+            OpenUsedPorts(false);
+
+            foreach (var item in MidiMatrix)
+            {
+                ChangeOptions(item, item.Options, true);
+                ChangeProgram(item, item.Preset, true);
+            }
         }
 
         #endregion
@@ -1516,6 +1567,7 @@ namespace MidiTools
                     if (MIDI_InputEvents == null)
                     {
                         MIDI_InputEvents = new MidiInputDeviceEvents(Name);
+                        MIDI_InputEvents.OnMidiEvent -= MIDI_InputEvents_OnMidiEvent;
                         MIDI_InputEvents.OnMidiEvent += MIDI_InputEvents_OnMidiEvent;
                     }
                     else
@@ -1533,6 +1585,7 @@ namespace MidiTools
                     if (MIDI_OutputEvents == null)
                     {
                         MIDI_OutputEvents = new MidiOutputDeviceEvents(Name);
+                        MIDI_OutputEvents.OnMidiEvent -= MIDI_OutputEvents_OnMidiEvent;
                         MIDI_OutputEvents.OnMidiEvent += MIDI_OutputEvents_OnMidiEvent;
                     }
                     else
@@ -1992,6 +2045,17 @@ namespace MidiTools
         public static string SYSEX_CHECK = @"^(F0)([A-f0-9]*)(F7)$";
         public static string INTERNAL_GENERATOR = "Internal Generator";
 
+        public static string MidiNoteNumberToNoteName(int noteNumber)
+        {
+            string[] noteNames = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+
+            int octave = (noteNumber / 12) - 1;
+            int noteIndex = noteNumber % 12;
+
+            string noteName = noteNames[noteIndex];
+            return noteName + octave;
+        }
+
         internal static int GetNoteInt(Key key)
         {
             return Convert.ToInt32(key.ToString().Substring(3));
@@ -2085,13 +2149,25 @@ namespace MidiTools
         public delegate void SequenceFinishedHandler(string sInfo);
         public event SequenceFinishedHandler SequenceFinished;
 
+        public delegate void RecorderLengthCounter(string sInfo);
+        public event RecorderLengthCounter RecordCounter;
+
         public bool StopSequenceRequested = false;
+        private int PlayStatus = 0;
 
-        private List<MidiEvent> _events = new List<MidiEvent>();
+        private List<MidiEvent> _eventsIN = new List<MidiEvent>();
+        private List<MidiEvent> _eventsOUT = new List<MidiEvent>();
 
-        public List<MidiEvent> Events { get { return _events; } }
+        public List<MidiEvent> EventsIN { get { return _eventsIN; } }
 
+        public TimeSpan SequenceLength = TimeSpan.Zero;
         public bool IsStopped = true;
+
+        private System.Timers.Timer Recorder;
+        private DateTime RecorderStart;
+
+        private System.Timers.Timer Player;
+        private DateTime PlayerStart;
 
         public MidiSequence()
         {
@@ -2104,25 +2180,27 @@ namespace MidiTools
             StringBuilder sbInfo = new StringBuilder();
             sbInfo.AppendLine("Sequence Status :");
             sbInfo.AppendLine(Environment.NewLine);
-            var devices = _events.Select(e => e.Device).Distinct();
+            var devices = _eventsOUT.Select(e => e.Device).Distinct();
 
             foreach (var s in devices)
             {
                 string sChannels = " [Ch : ";
                 for (int i = 1; i <= 16; i++)
                 {
-                    if (_events.Count(e => e.Device.Equals(s) && e.Channel == Tools.GetChannel(i)) > 0)
+                    if (_eventsOUT.Count(e => e.Device.Equals(s) && e.Channel == Tools.GetChannel(i)) > 0)
                     {
                         iTracks++;
-                        sbInfo.Append(i.ToString() + ", ");
+                        sChannels = string.Concat(sChannels, i.ToString() + ", ");
                         break;
                     }
                 }
-                sChannels = string.Concat(sChannels.Substring(0, sChannels.Length - 2), "]");
-                sbInfo.AppendLine(sChannels);
+                sChannels = string.Concat(sChannels[0..^2], "]");
+                sbInfo.AppendLine(string.Concat(s, " > ", sChannels));
             }
             sbInfo.AppendLine(Environment.NewLine);
-            sbInfo.AppendLine(string.Concat("Tracks : ", iTracks.ToString(), " (", Events.Count, " event(s))"));
+            sbInfo.AppendLine(string.Concat("MIDI IN event(s) : ", _eventsIN.Count));
+            sbInfo.AppendLine(Environment.NewLine);
+            sbInfo.AppendLine(string.Concat("MIDI OUT event(s) : " + _eventsOUT.Count, " (Tracks : ", iTracks.ToString(), ")"));
             return sbInfo.ToString();
         }
 
@@ -2142,6 +2220,8 @@ namespace MidiTools
 
         public void StopRecording(bool bIn, bool bOut)
         {
+            StartStopRecordCounter(false);
+
             if (bIn)
             {
                 OnMidiSequenceEventIN -= MidiEventSequenceHandler_OnMidiEventIN;
@@ -2150,25 +2230,84 @@ namespace MidiTools
             {
                 OnMidiSequenceEventOUT -= MidiEventSequenceHandler_OnMidiEventOUT;
             }
+        }
 
-            IsStopped = true;
+        private void StartStopRecordCounter(bool bStart)
+        {
+            if (bStart)
+            {
+                RecorderStart = DateTime.Now;
+                Recorder = new System.Timers.Timer();
+                Recorder.Elapsed += Recorder_Elapsed;
+                Recorder.Interval = 1000;
+                Recorder.Start();
+            }
+            else
+            {
+                SequenceLength = DateTime.Now - RecorderStart;
+                if (Recorder != null) //si on a enregistré du vide, il est NULL
+                {
+                    Recorder.Stop();
+                    Recorder.Close();
+                    Recorder = null;
+                }
+            }
+        }
+
+        private void StartStopPlayerCounter(bool bStart)
+        {
+            if (bStart)
+            {
+                PlayerStart = DateTime.Now + SequenceLength;
+                Player = new System.Timers.Timer();
+                Player.Elapsed += Player_Elapsed;
+                Player.Interval = 1000;
+                Player.Start();
+            }
+            else
+            {
+                if (Player != null) //si on a enregistré du vide, il est NULL
+                {
+                    Player.Stop();
+                    Player.Close();
+                    Player = null;
+                }
+            }
+        }
+
+        private void Player_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            TimeSpan elapsed = PlayerStart - e.SignalTime;
+            string elapsedTime = elapsed.ToString(@"mm\:ss");
+            RecordCounter?.Invoke(elapsedTime);
+        }
+
+        private void Recorder_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            TimeSpan elapsed = e.SignalTime - RecorderStart;
+            string elapsedTime = elapsed.ToString(@"mm\:ss");
+            RecordCounter?.Invoke(elapsedTime);
         }
 
         private void MidiEventSequenceHandler_OnMidiEventIN(MidiEvent ev)
         {
-            lock (_events) { _events.Add(ev); }
+            if (_eventsIN.Count == 0)
+            {
+                StartStopRecordCounter(true);
+            }
+            lock (_eventsIN) { _eventsIN.Add(ev); }
         }
 
         private void MidiEventSequenceHandler_OnMidiEventOUT(MidiEvent ev)
         {
-            lock (_events) { _events.Add(ev); }
+            lock (_eventsOUT) { _eventsOUT.Add(ev); }
         }
 
         public void Clear()
         {
-            _events.Clear();
+            _eventsIN.Clear();
+            _eventsOUT.Clear();
         }
-
 
         public async void PlaySequenceAsync(List<MidiEvent> events, MidiRouting routing)
         {
@@ -2176,26 +2315,31 @@ namespace MidiTools
 
             await Task.Factory.StartNew(() =>
             {
+                StartStopPlayerCounter(true);
+
+                routing.InitRouting();
+
                 PlaySequence(events, routing);
+
+                Thread.Sleep(2500);
+
+                StartStopPlayerCounter(false);
+
+                SequenceFinished?.Invoke(events.Count.ToString() + " event(s) have been played.");
             });
         }
 
         private void PlaySequence(List<MidiEvent> events, MidiRouting routing)
         {
+            PlayStatus = 1;
+
             int iPendingNotes = 0;
 
             Stopwatch stopwatch = new Stopwatch(); // Créer un chronomètre
-
-            routing.OpenUsedPorts();
-
+         
             for (int i = 0; i < events.Count; i++)
             {
                 MidiEvent eventtoplay = new MidiEvent(events[i].Type, events[i].Values, events[i].Channel, events[i].Device);
-
-                if (StopSequenceRequested && iPendingNotes == 0)
-                {
-                    break; // Sortir de la boucle si l'arrêt est demandé et toutes les notes sont relâchées
-                }
 
                 long elapsedTicks = 0;
                 double waitingTime = 0;
@@ -2221,50 +2365,25 @@ namespace MidiTools
                 else if (eventtoplay.Type == TypeEvent.NOTE_OFF || (eventtoplay.Type == TypeEvent.NOTE_ON && eventtoplay.Values[1] == 0)) { iPendingNotes--; }
 
                 routing.SendGenericMidiEvent(eventtoplay);
+
+                if (StopSequenceRequested && iPendingNotes == 0)
+                {
+                    break; // Sortir de la boucle si l'arrêt est demandé et toutes les notes sont relâchées
+                }
             }
 
-            Thread.Sleep(2500);
-
-            routing.CloseUsedPorts();
-
-            //for (int i = 0; i < events.Count; i++)
-            //{
-            //    //pour éviter des notes non relâchées
-            //    if (StopSequenceRequested && iPendingNotes == 0)
-            //    { break; }
-
-            //    var device = devices.FirstOrDefault(d => d.Name.Equals(events[i].Device));
-
-            //    double waitingTime = 0;
-
-            //    if (i < events.Count - 1)
-            //    {
-            //        long elapsedTicks = events[i + 1].EventDate.Ticks - events[i].EventDate.Ticks;
-            //        waitingTime = elapsedTicks / (double)TimeSpan.TicksPerMillisecond;
-            //    }
-
-            //    if (device != null)
-            //    {
-            //        if (events[i].Type == TypeEvent.NOTE_ON) { iPendingNotes--; }
-            //        if (events[i].Type == TypeEvent.NOTE_OFF) { iPendingNotes--; }
-
-            //        Task.Factory.StartNew(() => { device.SendMidiEvent(events[i]); });
-
-            //        if (waitingTime > 0)
-            //        {
-            //            Thread.Sleep((int)waitingTime);
-            //        }
-            //    }
-            //}
-
-            SequenceFinished?.Invoke(events.Count.ToString() + " event(s) have been played.");
+            PlayStatus = 0;
         }
 
         public void StopSequence()
         {
             StopSequenceRequested = true;
-        }
 
+            while (PlayStatus > 0)
+            {
+                Thread.Sleep(300);
+            }
+        }
     }
 
     internal class MidiDeviceContent

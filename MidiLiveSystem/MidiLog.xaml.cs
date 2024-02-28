@@ -58,7 +58,7 @@ namespace MidiLiveSystem
                         Paragraph paragraph = new Paragraph(new Run(sLog));
                         paragraph.LineHeight = 1;
                         rtbMidiLog.Document.Blocks.Add(paragraph);
-                        if (rtbMidiLog.Document.Blocks.Count > 100)
+                        if (rtbMidiLog.Document.Blocks.Count > 1000)
                         {
                             rtbMidiLog.Document.Blocks.Clear();
                         }
@@ -73,7 +73,7 @@ namespace MidiLiveSystem
                         Paragraph paragraph = new Paragraph(new Run(sLog));
                         paragraph.LineHeight = 1;
                         rtbMidiLog.Document.Blocks.Add(paragraph);
-                        if (rtbMidiLog.Document.Blocks.Count > 100)
+                        if (rtbMidiLog.Document.Blocks.Count > 1000)
                         {
                             rtbMidiLog.Document.Blocks.Clear();
                         }

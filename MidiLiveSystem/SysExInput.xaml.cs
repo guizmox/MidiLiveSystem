@@ -46,7 +46,7 @@ namespace MidiLiveSystem
         {
             if (Routing != null)
             {
-                Routing.CloseUsedPorts();
+                Routing.CloseUsedPorts(true);
                 Routing.DeleteAllRouting();
                 Routing.IncomingMidiMessage -= Routing_IncomingMidiMessage;
                 Routing = null;
