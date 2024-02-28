@@ -107,6 +107,8 @@
                     </StackPanel>
                 </Button>
 
+                <TextBlock Name="tbNoteName" Text="" Foreground="IndianRed" Grid.Column="7" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+
                 <Button Name="btnSwitchView" ToolTip="Switches all routing boxes between the 'Preset' view and the 'Configuration' view" Width="110" Height="60" Grid.Column="8" Background="YellowGreen" Click="btnSwitchView_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
@@ -127,7 +129,7 @@
                                 VerticalAlignment="Center"
                                 Kind="Record" />
                         </TextBlock>
-                        <TextBlock Text="REC" />
+                        <TextBlock x:Name="tbRecord" Text="REC" />
                     </StackPanel>
                 </Button>
 
@@ -139,7 +141,7 @@
                                 VerticalAlignment="Center"
                                 Kind="Play" />
                         </TextBlock>
-                        <TextBlock Text="PLAY" />
+                        <TextBlock Name="tbPlay" Text="PLAY" />
                     </StackPanel>
                 </Button>
                 

@@ -175,9 +175,19 @@ namespace MidiLiveSystem
                 sSequence = textWriter.ToString();
             }
 
+            List<string> sVersionsToDelete = GetOldProjectVersion(sId);
+
             using (var connection = new SqliteConnection(connectionString))
             {
                 connection.Open();
+
+                if (sVersionsToDelete.Count > 0)
+                {
+                    string sDelete = sVersionsToDelete.Count > 1 ? string.Concat(sVersionsToDelete, ",") : sVersionsToDelete[0];
+                    var deleteCommand = connection.CreateCommand();
+                    deleteCommand.CommandText = "DELETE FROM Projects WHERE ProjectGuid = '" + sId + "' AND Id IN (" + sDelete + ");";
+                    deleteCommand.ExecuteNonQuery();
+                }
 
                 var updateCommand = connection.CreateCommand();
                 updateCommand.CommandText = "UPDATE Projects SET Active = 0 WHERE ProjectGuid = '" + sId + "';";
@@ -195,6 +205,36 @@ namespace MidiLiveSystem
                 insertCommand.Parameters.AddWithValue("@active", "1");
                 insertCommand.ExecuteNonQuery();
             }
+        }
+
+        private List<string> GetOldProjectVersion(string sProjectGuid)
+        {
+            List<string> sVersions = new List<string>();
+
+            using (var connection = new SqliteConnection(connectionString))
+            {
+                connection.Open();
+
+                var selectCommand = connection.CreateCommand();
+                selectCommand.CommandText = "SELECT Id FROM Projects WHERE ProjectGuid = '" + sProjectGuid + "' ORDER BY DateProject DESC;";
+
+                using (var reader = selectCommand.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        sVersions.Add(reader.GetString(0));
+                    }
+                }
+            }
+
+            if (sVersions.Count > 3)
+            {
+                sVersions = sVersions.GetRange(3, sVersions.Count - 3);
+            }
+            else { sVersions.Clear(); }
+
+
+            return sVersions;
         }
 
         public List<string[]> GetProjects()
