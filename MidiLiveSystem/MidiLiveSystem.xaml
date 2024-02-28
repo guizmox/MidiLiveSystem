@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:MidiLiveSystem"      
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
-        Title="MIDI Live System" Height="700" Width="1200" Closed="Window_Closed" SizeToContent="Width" WindowStartupLocation="CenterScreen" >
+        Title="MIDI Live System" Height="700" Width="1200" Closed="Window_Closed" SizeToContent="WidthAndHeight" WindowStartupLocation="CenterScreen" >
     <Grid Grid.Column="1" Margin="5,5,5,5">
         <Grid.RowDefinitions>
             <RowDefinition Height="92*" />
@@ -35,7 +35,7 @@
                     <ColumnDefinition Width="1*" />
                 </Grid.ColumnDefinitions>
                 
-                <Button Name="btnAddBox" Width="140" Height="60" Grid.Column="1" Background="BurlyWood" Click="btnAddBox_Click" >
+                <Button Name="btnAddBox" Width="140" Height="60" Grid.Column="1" Background="CadetBlue" Click="btnAddBox_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon

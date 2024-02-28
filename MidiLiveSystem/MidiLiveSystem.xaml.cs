@@ -33,8 +33,8 @@ namespace MidiLiveSystem
         private System.Timers.Timer UIRefreshRate;
         private int RefreshCounter = 0;
 
-        private int CurrentVerticalGrid = 2;
-        private int CurrentHorizontalGrid = 2;
+        private int CurrentVerticalGrid = 0;
+        private int CurrentHorizontalGrid = 0;
 
         private MidiConfiguration ConfigWindow;
         private MidiLog LogWindow;
@@ -660,13 +660,13 @@ namespace MidiLiveSystem
         {
             if (!GridFrames.Any(g => g.Tag.ToString().Equals("")))
             {
-                if (CurrentVerticalGrid + CurrentHorizontalGrid >= 20)
+                if (CurrentVerticalGrid * CurrentHorizontalGrid >= 20)
                 {
                     MessageBox.Show("You can't add more Routing Boxes.");
                 }
                 else
                 {
-                    if (CurrentHorizontalGrid >= CurrentVerticalGrid)
+                    if (CurrentHorizontalGrid + 1 >= CurrentVerticalGrid)
                     {
                         CurrentVerticalGrid += 1;
                         AddAllRoutingBoxes();
