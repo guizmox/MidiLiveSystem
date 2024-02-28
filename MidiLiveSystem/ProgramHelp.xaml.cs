@@ -18,9 +18,40 @@ namespace MidiLiveSystem
     /// </summary>
     public partial class ProgramHelp : Window
     {
+        private int PageNumber = 1;
         public ProgramHelp()
         {
             InitializeComponent();
+        }
+
+        private void btnPreviousScreen_Click(object sender, RoutedEventArgs e)
+        {
+            if (PageNumber > 1)
+            {
+                PageNumber--;
+
+                BitmapImage bitmapImage = new BitmapImage();
+                bitmapImage.BeginInit();
+                bitmapImage.UriSource = new Uri("/MidiLiveSystem;component/assets/" + PageNumber + ".png", UriKind.Relative);
+                bitmapImage.EndInit();
+
+                imgHelp.Source = bitmapImage;
+            }
+        }
+
+        private void btnNextScreen_Click(object sender, RoutedEventArgs e)
+        {
+            if (PageNumber < 3)
+            {
+                PageNumber++;
+
+                BitmapImage bitmapImage = new BitmapImage();
+                bitmapImage.BeginInit();
+                bitmapImage.UriSource = new Uri("/MidiLiveSystem;component/assets/" + PageNumber + ".png", UriKind.Relative);
+                bitmapImage.EndInit();
+
+                imgHelp.Source = bitmapImage;
+            }
         }
 
         private void btnClose_Click(object sender, RoutedEventArgs e)

@@ -9,7 +9,24 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="assets\midi_port_icon_135398.ico" />
+    <None Remove="assets\1.png" />
+    <None Remove="assets\2.png" />
+    <None Remove="assets\3.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="assets\1.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="assets\2.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="assets\3.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="assets\midi_port_icon_135398.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

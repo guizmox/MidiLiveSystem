@@ -6,25 +6,30 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:MidiLiveSystem"
         mc:Ignorable="d"
-        Title="Help / About" Height="600" Width="750" WindowStyle="ToolWindow" ResizeMode="NoResize" WindowStartupLocation="CenterOwner">
+        Title="Help / About" Height="750" Width="950" WindowStyle="ToolWindow" ResizeMode="NoResize" WindowStartupLocation="CenterOwner">
     <Grid Margin="10,10,10,10">
         <Grid.RowDefinitions>
             <RowDefinition Height="15*"/>
-            <RowDefinition Height="70*"/>
+            <RowDefinition Height="72*"/>
+            <RowDefinition Height="7*"/>
             <RowDefinition Height="5*"/>
-            <RowDefinition Height="10*"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="50*"/>
             <ColumnDefinition Width="50*"/>
         </Grid.ColumnDefinitions>
-    <TextBlock Grid.Row="0" Grid.Column="0">
+    <TextBlock Grid.Row="0" Grid.Column="0" TextWrapping="Wrap" Margin="5,5,5,5">
               Concept and Development : Guillaume Tristant
             <LineBreak/>
-            <LineBreak/>
             Inspired by Vangelis System I
+            <LineBreak/>
+            <LineBreak/>
+            Note : The software is mainly meant to be used with hardware devices but with a virtual MIDI cable, you can open standalone virtual instruments (Kontakt, ...) and set its MIDI port to the virtual cable 
         </TextBlock>
-        <TextBlock Grid.Column="1" Grid.Row="0">
+        <TextBlock Grid.Column="1" Grid.Row="0" Margin="5,5,5,5">
+            Ressources : 
+            <LineBreak/>
+            <LineBreak/>
             Contact : 
             <Hyperlink NavigateUri="guizmox@hotmail.com">Mail</Hyperlink>
             <LineBreak/>
@@ -34,12 +39,18 @@
             Download Virtual MIDI Cable : 
             <Hyperlink NavigateUri="https://www.tobias-erichsen.de/software/loopmidi.html">Loop Midi</Hyperlink>
             or <Hyperlink NavigateUri="https://www.nerds.de/en/loopbe1.html">LoopBe</Hyperlink>
+             <LineBreak/>
+            Download Cubase Instrument Files : 
+            <Hyperlink NavigateUri="https://rivetedstudios.com/downloadpage/">Riveted Studios</Hyperlink>
         </TextBlock>
-        <Image Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2">
-            
-        </Image>
+        <StackPanel  Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Center" VerticalAlignment="Center" >
+            <Image Name="imgHelp" Source="/MidiLiveSystem;component/assets/1.png" Visibility="Visible"/>
+        </StackPanel>
 
+        <Button Name="btnNextScreen" Grid.Row="2" Grid.Column="1" Background="Orange" Content="Next" Width="150" Margin="5,0,5,0" HorizontalAlignment="Left" Click="btnNextScreen_Click" />
+        <Button Name="btnPreviousScreen" Grid.Row="2" Background="Orange" Grid.Column="0" Content="Previous" Width="150" Margin="5,0,5,0" HorizontalAlignment="Right" Click="btnPreviousScreen_Click" />
+        
         <Button Name="btnClose" Grid.Row="3" Grid.Column="1" Content="OK" Width="50" Margin="5,0,5,0" HorizontalAlignment="Right" Click="btnClose_Click" />
-        <Button Content="Donate with Paypal to support my work" Grid.Row="3" Grid.Column="0" Click="DonateButton_Click"/>
+        <Button Content="Donate with Paypal if you want to support my work" Grid.Row="3" Grid.Column="0" Click="DonateButton_Click"/>
     </Grid>
 </Window>

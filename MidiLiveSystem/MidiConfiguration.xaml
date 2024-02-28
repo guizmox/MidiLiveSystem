@@ -51,26 +51,26 @@
                 <Button Name="btnClose" Grid.Row="8" Grid.Column="3" Content="OK" Width="50" Margin="5,0,5,0" HorizontalAlignment="Right" Click="btnClose_Click" />
                 
                 <Label Grid.Column="0" Grid.Row="0" Content="PROJECT NAME"/>
-                <TextBox Name="tbProjectName" Text="My Project" Grid.Column="1" Grid.Row="0" VerticalAlignment="Center"/>
+                <TextBox Name="tbProjectName" ToolTip="Name your Project" Text="My Project" Grid.Column="1" Grid.Row="0" VerticalAlignment="Center"/>
                 
                 <Label Grid.Column="0" Grid.Row="2" Content="INPUT PORTS"/>
-                <ComboBox Name="cbMidiIn" Grid.Column="1" Grid.Row="2" SelectedValuePath="Tag" />
+                <ComboBox Name="cbMidiIn" ToolTip="MIDI inputs that are available" Grid.Column="1" Grid.Row="2" SelectedValuePath="Tag" />
 
                 <Label Grid.Column="0" Grid.Row="3" Content="OUTPUT PORTS"/>
-                <ComboBox Name="cbMidiOut" Grid.Column="1" Grid.Row="3" SelectedValuePath="Tag" />
+                <ComboBox Name="cbMidiOut" ToolTip="MIDI outputs that are available" Grid.Column="1" Grid.Row="3" SelectedValuePath="Tag" />
 
-                <Button Name="btnPastePreset" Grid.Column="3" Grid.Row="3" Click="btnLoadPresetFile_Click" >
+                <Button Name="btnPastePreset" ToolTip="This allows you to load a Cubase .txt file that contains instrument information (ie : presets). Very convenient if you want to quickly recall a program change. " Grid.Column="3" Grid.Row="3" Click="btnLoadPresetFile_Click" >
                     <StackPanel Width="Auto">
                         <TextBlock Text="Load Cubase Preset File"/>
                     </StackPanel>
                 </Button>
-                <Button Name="btnShowPresets" Grid.Column="3" Grid.Row="4" Click="btnShowPresets_Click" >
+                <Button Name="btnShowPresets" ToolTip="Opens the presets menu that let you browse the Cubase instrument file content" Grid.Column="3" Grid.Row="4" Click="btnShowPresets_Click" >
                     <StackPanel Width="Auto">
                         <TextBlock Text="Show Presets"/>
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnSysExInitializer" Grid.Column="1" Grid.Row="4" Click="btnInitializeSysEx_Click" >
+                <Button Name="btnSysExInitializer" ToolTip="If using external MIDI devices, you can initialize them with a custom SysEx message if required." Grid.Column="1" Grid.Row="4" Click="btnInitializeSysEx_Click" >
                     <StackPanel Width="Auto">
                         <TextBlock Text="Initialize OUT port with SysEx"/>
                     </StackPanel>
@@ -84,8 +84,8 @@
                             <ColumnDefinition Width="75*"/>
                             <ColumnDefinition Width="25*"/>
                         </Grid.ColumnDefinitions>
-                        <ComboBox Name="cbMidiInClock" Grid.Column="0" SelectedValuePath="Tag" />
-                        <CheckBox Name="ckActivateClock" Grid.Column="1" Content="Active" VerticalAlignment="Center" />
+                        <ComboBox Name="cbMidiInClock" ToolTip="Sets the master clock source" Grid.Column="0" SelectedValuePath="Tag" />
+                        <CheckBox Name="ckActivateClock" ToolTip="Activates the master MIDI clock that will be propagated through all OUT devices" Grid.Column="1" Content="Active" VerticalAlignment="Center" />
                     </Grid>
                 </StackPanel>
              
@@ -96,7 +96,7 @@
                             <ColumnDefinition Width="50*"/>
                         </Grid.ColumnDefinitions>
                         <Label Grid.Column="0" Grid.Row="0" Content="BPM"/>
-                        <TextBox x:Name="tbBPM" Grid.Column="1" MaxLength="3" Text="120" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                        <TextBox x:Name="tbBPM" ToolTip="Project BPM (if needed)" Grid.Column="1" MaxLength="3" Text="120" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
                     </Grid>
                 </StackPanel>
                 
@@ -110,14 +110,14 @@
                             <ColumnDefinition Width="10*"/>
                         </Grid.ColumnDefinitions>
                         <Label Grid.Column="0" Content="HORIZONTAL"/>
-                        <TextBox Name="tbHorizontalItems" Grid.Column="1" Text="-1" MaxLength="1" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                        <TextBox Name="tbHorizontalItems" ToolTip="Main grid configuration. Keep '-1' for automatic behavior" Grid.Column="1" Text="-1" MaxLength="1" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
                         <Label Grid.Column="2" Content="VERTICAL"/>
-                        <TextBox Name="tbVerticalItems" Grid.Column="3" Text="-1" MaxLength="1" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                        <TextBox Name="tbVerticalItems" ToolTip="Main grid configuration. Keep '-1' for automatic behavior" Grid.Column="3" Text="-1" MaxLength="1" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
                     </Grid>
                 </StackPanel>
 
             <Label Grid.Column="0" Grid.Row="1" Content="ROUTING BOX NAMES"/>
-                <ComboBox Name="cbRoutingNames" Grid.Column="1" Grid.Row="1" SelectedValuePath="Tag" />
+                <ComboBox Name="cbRoutingNames" ToolTip="Name the routing boxes to help you recognize the purpose of each of them" Grid.Column="1" Grid.Row="1" SelectedValuePath="Tag" />
             </Grid>
         </DockPanel>
     </Grid>
