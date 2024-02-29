@@ -21,10 +21,11 @@
             <RowDefinition Height="5*"/>
         </Grid.RowDefinitions>
         <Border BorderBrush="Black" BorderThickness="2">
-            <Grid Name="gdButtons" Height="400" Background="LightGoldenrodYellow" >
-                <Ellipse Width="250" Height="100" Fill="DarkGray" Stroke="Gray" StrokeThickness="1" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,340,0,0">
+            <Grid Name="gdButtons" Height="400" Background="White" >
+               
+                <Ellipse Width="250" Height="100" Fill="Black" Stroke="DarkGray" StrokeThickness="1" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,345,0,0">
                     <Ellipse.Effect>
-                        <DropShadowEffect Color="Black" Direction="330" ShadowDepth="5" Opacity="0.5"/>
+                        <DropShadowEffect Color="Gray" Direction="330" ShadowDepth="5" Opacity="0.5"/>
                     </Ellipse.Effect>
                 </Ellipse>
                 <Label Name="lblDataInfo" VerticalAlignment="Bottom" Foreground="LightGoldenrodYellow" HorizontalAlignment="Center" Content=""/>

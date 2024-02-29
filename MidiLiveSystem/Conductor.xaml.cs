@@ -52,6 +52,8 @@ namespace MidiLiveSystem
 
         private void RoutingBoxButton_PreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
+            ((Button)sender).Background = Brushes.DarkOrange;
+
             int iIndex = Convert.ToInt32(((Button)sender).Name.Split('_')[1]);
 
             if (_buttonPosition == null)
@@ -65,6 +67,8 @@ namespace MidiLiveSystem
 
         private void RoutingBoxButton_PreviewMouseUp(object sender, MouseButtonEventArgs e)
         {
+            ((Button)sender).Background = Brushes.DarkBlue;
+
             int iIndex = Convert.ToInt32(((Button)sender).Name.Split('_')[1]);
 
             _currentTT[iIndex] = ((Button)sender).RenderTransform as TranslateTransform;
@@ -205,7 +209,9 @@ namespace MidiLiveSystem
                 Content = new TextBlock() { Foreground = Brushes.Yellow, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Text = NameButtonBox(box, iVol, iPan), FontSize = 9, TextWrapping = TextWrapping.Wrap },
                 Tag = box.BoxGuid.ToString(),
                 VerticalContentAlignment = VerticalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
+                VerticalAlignment = VerticalAlignment.Center,
+                Background = Brushes.DarkBlue
+
             };
             rtbButton.PreviewMouseDown += RoutingBoxButton_PreviewMouseDown;
             rtbButton.PreviewMouseUp += RoutingBoxButton_PreviewMouseUp;
@@ -222,6 +228,7 @@ namespace MidiLiveSystem
 
             gdButtons.Children.Add(rtbButton);
         }
+
 
         private int[] TranscodePanVolumeToGrid(RoutingBox box)
         {

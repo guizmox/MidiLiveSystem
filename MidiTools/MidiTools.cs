@@ -355,9 +355,9 @@ namespace MidiTools
 
             iAdjust = ((iEvents * 2) / 10);
 
-            if (iAdjust < 2)
+            if (iAdjust < 1)
             {
-                iAdjust = 2;
+                iAdjust = 1;
             }
 
             return iAdjust;
@@ -1461,6 +1461,11 @@ namespace MidiTools
             }
         }
 
+        internal MidiRouting Clone()
+        {
+            return (MidiRouting)this.MemberwiseClone();
+        }
+
         #endregion
 
     }
@@ -2189,6 +2194,8 @@ namespace MidiTools
     [Serializable]
     public class MidiSequence
     {
+        public MidiRouting Routing;
+
         public delegate void SequenceFinishedHandler(string sInfo);
         public event SequenceFinishedHandler SequenceFinished;
 
@@ -2211,6 +2218,11 @@ namespace MidiTools
 
         private System.Timers.Timer Player;
         private DateTime PlayerStart;
+
+        public MidiSequence(MidiRouting routing)
+        {
+            Routing = routing.Clone();
+        }
 
         public MidiSequence()
         {
@@ -2352,7 +2364,7 @@ namespace MidiTools
             _eventsOUT.Clear();
         }
 
-        public async void PlaySequenceAsync(List<MidiEvent> events, MidiRouting routing)
+        public async void PlaySequenceAsync()
         {
             StopSequenceRequested = false;
 
@@ -2360,19 +2372,19 @@ namespace MidiTools
             {
                 StartStopPlayerCounter(true);
 
-                routing.InitRouting();
+                Routing.InitRouting();
 
-                PlaySequence(events, routing);
+                PlaySequence(_eventsIN);
 
                 Thread.Sleep(2500);
 
                 StartStopPlayerCounter(false);
 
-                SequenceFinished?.Invoke(events.Count.ToString() + " event(s) have been played.");
+                SequenceFinished?.Invoke(_eventsIN.Count.ToString() + " event(s) have been played.");
             });
         }
 
-        private void PlaySequence(List<MidiEvent> events, MidiRouting routing)
+        private void PlaySequence(List<MidiEvent> events)
         {
             PlayStatus = 1;
 
@@ -2407,7 +2419,7 @@ namespace MidiTools
                 if (eventtoplay.Type == TypeEvent.NOTE_ON) { iPendingNotes++; }
                 else if (eventtoplay.Type == TypeEvent.NOTE_OFF || (eventtoplay.Type == TypeEvent.NOTE_ON && eventtoplay.Values[1] == 0)) { iPendingNotes--; }
 
-                routing.SendGenericMidiEvent(eventtoplay);
+                Routing.SendGenericMidiEvent(eventtoplay);
 
                 if (StopSequenceRequested && iPendingNotes == 0)
                 {

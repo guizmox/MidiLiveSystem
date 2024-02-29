@@ -51,7 +51,7 @@ namespace MidiLiveSystem
         public static BoxPreset CopiedPreset = new BoxPreset();
         public ProjectConfiguration Project = new ProjectConfiguration();
         public SQLiteDatabaseManager Database = new SQLiteDatabaseManager();
-        public MidiSequence RecordedSequence = new MidiSequence();
+        public MidiSequence RecordedSequence;
 
         public MainWindow()
         {
@@ -62,8 +62,6 @@ namespace MidiLiveSystem
             UIRefreshRate.Elapsed += UIRefreshRate_Elapsed;
             UIRefreshRate.Interval = 1000;
             UIRefreshRate.Start();
-
-            RecordedSequence.SequenceFinished += Routing_SequenceFinished;
 
             //chargement des template instruments
             CubaseInstrumentData.Instruments = Database.LoadInstruments();
@@ -654,7 +652,14 @@ namespace MidiLiveSystem
 
         private void btnRecordSequence_Click(object sender, RoutedEventArgs e)
         {
+            if (RecordedSequence == null)
+            {
+                RecordedSequence = new MidiSequence(Routing);
+            }
+
             RecordedSequence.RecordCounter -= RecordedSequence_RecordCounter;
+            RecordedSequence.SequenceFinished -= Routing_SequenceFinished;
+
             tbRecord.Text = "REC";
 
             bool bRecord = false;
@@ -705,36 +710,43 @@ namespace MidiLiveSystem
 
             if (bRecord)
             {
+                RecordedSequence = new MidiSequence(Routing);
                 tbRecord.Text = "GO !";
                 RecordedSequence.StartRecording(true, true);
                 RecordedSequence.RecordCounter += RecordedSequence_RecordCounter;
+                RecordedSequence.SequenceFinished += Routing_SequenceFinished;
             }
         }
 
         private void btnPlaySequence_Click(object sender, RoutedEventArgs e)
         {
-            tbPlay.Text = "PLAY";
-
-            RecordedSequence.RecordCounter -= PlayedSequence_RecordCounter;
-
-            if (RecordedSequence.EventsIN.Count > 0)
+            if (RecordedSequence != null)
             {
-                if (btnPlaySequence.Background == Brushes.Green)
+                tbPlay.Text = "PLAY";
+                RecordedSequence.SequenceFinished -= Routing_SequenceFinished;
+                RecordedSequence.RecordCounter += PlayedSequence_RecordCounter;
+                RecordedSequence.SequenceFinished += Routing_SequenceFinished;
+
+                if (RecordedSequence.EventsIN.Count > 0)
                 {
-                    btnPlaySequence.Background = Brushes.DarkGray;
-                    RecordedSequence.StopSequence(); //risque très important de NOTE OFF pending
+                    if (btnPlaySequence.Background == Brushes.Green)
+                    {
+                        btnPlaySequence.Background = Brushes.DarkGray;
+                        RecordedSequence.StopSequence(); //risque très important de NOTE OFF pending
+                    }
+                    else
+                    {
+                        btnPlaySequence.Background = Brushes.Green;
+
+                        RecordedSequence.RecordCounter += PlayedSequence_RecordCounter;
+                        Routing.CloseUsedPorts(false);
+                        RecordedSequence.PlaySequenceAsync();
+                    }
                 }
                 else
                 {
-                    btnPlaySequence.Background = Brushes.Green;
-
-                    RecordedSequence.RecordCounter += PlayedSequence_RecordCounter;
-                    RecordedSequence.PlaySequenceAsync(RecordedSequence.EventsIN, Routing);
+                    MessageBox.Show("Nothing to Play.");
                 }
-            }
-            else
-            {
-                MessageBox.Show("Nothing to Play.");
             }
         }
 

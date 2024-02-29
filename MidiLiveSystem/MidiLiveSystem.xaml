@@ -117,7 +117,7 @@
                                 VerticalAlignment="Center"
                                 Kind="Pan" />
                         </TextBlock>
-                        <TextBlock Text="Soundscape" />
+                        <TextBlock Text="Sound Stage" />
                     </StackPanel>
                 </Button>
                 
