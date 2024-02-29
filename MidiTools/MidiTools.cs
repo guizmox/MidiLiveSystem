@@ -405,9 +405,9 @@ namespace MidiTools
         private void InstrumentData_OnSysExInitializerChanged(InstrumentData instr)
         {
             var routing = MidiMatrix.FirstOrDefault(m => m.DeviceOut != null && m.DeviceOut.Name.Equals(instr.Device));
-            if (routing != null)
+            if (routing != null && instr.SysExInitializer.Length > 0)
             {
-                SendSysEx(routing.RoutingGuid, instr);
+                SendGenericMidiEvent(new MidiEvent(TypeEvent.SYSEX, instr.SysExInitializer, instr.Device));
             }
         }
 
@@ -1130,7 +1130,7 @@ namespace MidiTools
             }
             if (devOUT != null && UsedDevicesOUT.Count(d => d.Name.Equals(sDeviceOut)) == 0)
             {
-                var device = new MidiDevice(devOUT);
+                var device = new MidiDevice(devOUT, CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(devOUT.Name)));
                 device.OnMidiEvent += DeviceOut_OnMidiEvent;
                 UsedDevicesOUT.Add(device);
             }
@@ -1140,16 +1140,6 @@ namespace MidiTools
             if (iChIn >= 0 && iChIn <= 16 && iChOut >= 0 && iChOut <= 16)
             {
                 MidiMatrix.Add(new MatrixItem(UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDeviceIn)), UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut)), iChIn, iChOut, options, preset));
-
-                //Initialize instrument SYSEX
-                if (devOUT != null)
-                {
-                    var instr = CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(sDeviceOut));
-                    if (instr != null)
-                    {
-                        SendSysEx(MidiMatrix.Last().RoutingGuid, instr);
-                    }
-                }
 
                 CheckAndCloseUnusedDevices();
                 //hyper important d'être à la fin !
@@ -1208,19 +1198,13 @@ namespace MidiTools
 
                     if (sDeviceOut.Length > 0 && UsedDevicesOUT.Count(d => d.Name.Equals(sDeviceOut)) == 0)
                     {
-                        var device = new MidiDevice(OutputDevices.FirstOrDefault(d => d.Name.Equals(sDeviceOut)));
+                        var outdev = OutputDevices.FirstOrDefault(d => d.Name.Equals(sDeviceOut));
+                        var device = new MidiDevice(outdev, CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(outdev.Name)));
                         device.OnMidiEvent += DeviceOut_OnMidiEvent;
                         UsedDevicesOUT.Add(device);
 
                         routing.DeviceOut = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut));
                         routing.Active = active;
-
-                        //Initialize instrument SYSEX
-                        var instr = CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(sDeviceOut));
-                        if (instr != null)
-                        {
-                            SendSysEx(routing.RoutingGuid, instr);
-                        }
                     }
                     else
                     {
@@ -1347,15 +1331,6 @@ namespace MidiTools
                 else { return false; }
             }
             else { return false; }
-        }
-
-        public void SendSysEx(Guid routingGuid, InstrumentData instr)
-        {
-            var matrix = MidiMatrix.FirstOrDefault(d => d.RoutingGuid == routingGuid && d.DeviceOut != null);
-            if (matrix != null && matrix.DeviceOut != null && instr.SysExInitializer.Length > 0)
-            {
-                CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.SYSEX, instr.SysExInitializer, matrix.DeviceOut.Name), true);
-            }
         }
 
         public void SendCC(Guid routingGuid, int iCC, int iValue, int iChannel, string sDevice)
@@ -1612,11 +1587,16 @@ namespace MidiTools
             OpenDevice();
         }
 
-        internal MidiDevice(RtMidi.Core.Devices.Infos.IMidiOutputDeviceInfo outputDevice)
+        internal MidiDevice(RtMidi.Core.Devices.Infos.IMidiOutputDeviceInfo outputDevice, InstrumentData instr)
         {
             MIDI_InOrOut = 2;
             Name = outputDevice.Name;
             OpenDevice();
+
+            if (instr != null)
+            {
+                SendSysExInitializer(instr);
+            }
         }
 
         private void MIDI_InputEvents_OnMidiEvent(MidiEvent ev)
@@ -1745,6 +1725,11 @@ namespace MidiTools
             MIDI_OutputEvents.SendEvent(midiEvent);
         }
 
+        public void SendSysExInitializer(InstrumentData instr)
+        {
+            SendMidiEvent(new MidiEvent(TypeEvent.SYSEX, instr.SysExInitializer, Name));
+        }
+
         internal void DisableClock()
         {
             if (MIDI_InputEvents != null)
@@ -1871,7 +1856,8 @@ namespace MidiTools
                         foreach (var sysex in data)
                         {
                             SysExMessage msg = new SysExMessage(sysex);
-                            outputDevice.Send(msg);
+                            outputDevice.Send(msg); 
+                            Thread.Sleep(SysExWaiter(sysex.Length));
                         }
                     }
                     AddLog(outputDevice.Name, false, 0, "SysEx", ev.SysExData, "", "");
@@ -1902,6 +1888,21 @@ namespace MidiTools
                     break;
             }
             OnMidiEvent?.Invoke(ev);
+        }
+
+        private int SysExWaiter(int length)
+        {
+            // Définir la vitesse de transmission MIDI en kbps
+            double vitesseTransmissionMIDIEnKbps = 31.25 * 1000;
+
+            // Convertir la vitesse de transmission MIDI en octets par seconde
+            double vitesseTransmissionEnOctetsParSeconde = vitesseTransmissionMIDIEnKbps / 8;
+
+            // Calculer le temps de transmission en secondes
+            double tpsMs = (length / vitesseTransmissionEnOctetsParSeconde) * 1500; //je mets 1500 pour temporiser (temps machine, software...)
+
+            int iWait = (int)tpsMs + 100; //temporisateur
+            return iWait;
         }
 
         internal void Stop()
