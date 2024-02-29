@@ -295,6 +295,8 @@ namespace MidiTools
             MidiClock = new System.Timers.Timer();
             MidiClock.Elapsed += MidiClock_OnEvent;
             MidiClock.Interval = 60000.0 / 120; //valeur par défaut
+
+            InstrumentData.OnSysExInitializerChanged += InstrumentData_OnSysExInitializerChanged;
         }
 
         #region PRIVATE
@@ -397,6 +399,15 @@ namespace MidiTools
                 d.CloseDevice();
                 d.OnMidiEvent -= DeviceOut_OnMidiEvent;
                 UsedDevicesOUT.Remove(d);
+            }
+        }
+
+        private void InstrumentData_OnSysExInitializerChanged(InstrumentData instr)
+        {
+            var routing = MidiMatrix.FirstOrDefault(m => m.DeviceOut != null && m.DeviceOut.Name.Equals(instr.Device));
+            if (routing != null)
+            {
+                SendSysEx(routing.RoutingGuid, instr);
             }
         }
 
@@ -1078,6 +1089,29 @@ namespace MidiTools
             return bMustTranslate;
         }
 
+        internal void SendGenericMidiEvent(MidiEvent ev)
+        {
+            CreateOUTEvent(ev, false);
+        }
+
+        internal void InitRouting()
+        {
+            CloseUsedPorts(false);
+            OpenUsedPorts(false);
+
+            foreach (var item in MidiMatrix)
+            {
+                ChangeDefaultCC(CubaseInstrumentData.Instruments);
+                ChangeOptions(item, item.Options, true);
+                ChangeProgram(item, item.Preset, true);
+            }
+        }
+
+        internal MidiRouting Clone()
+        {
+            return (MidiRouting)this.MemberwiseClone();
+        }
+
 
         #endregion
 
@@ -1107,14 +1141,24 @@ namespace MidiTools
             {
                 MidiMatrix.Add(new MatrixItem(UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDeviceIn)), UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut)), iChIn, iChOut, options, preset));
 
+                //Initialize instrument SYSEX
+                if (devOUT != null)
+                {
+                    var instr = CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(sDeviceOut));
+                    if (instr != null)
+                    {
+                        SendSysEx(MidiMatrix.Last().RoutingGuid, instr);
+                    }
+                }
+
                 CheckAndCloseUnusedDevices();
                 //hyper important d'être à la fin !
                 ChangeDefaultCC(CubaseInstrumentData.Instruments);
                 ChangeOptions(MidiMatrix.Last(), options, true);
                 ChangeProgram(MidiMatrix.Last(), preset, true);
-     
 
                 var guid = MidiMatrix.Last().RoutingGuid;
+
                 return guid;
 
             }
@@ -1167,10 +1211,23 @@ namespace MidiTools
                         var device = new MidiDevice(OutputDevices.FirstOrDefault(d => d.Name.Equals(sDeviceOut)));
                         device.OnMidiEvent += DeviceOut_OnMidiEvent;
                         UsedDevicesOUT.Add(device);
-                    }
-                    routing.DeviceOut = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut));
 
-                    routing.Active = active;
+                        routing.DeviceOut = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut));
+                        routing.Active = active;
+
+                        //Initialize instrument SYSEX
+                        var instr = CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(sDeviceOut));
+                        if (instr != null)
+                        {
+                            SendSysEx(routing.RoutingGuid, instr);
+                        }
+                    }
+                    else
+                    {
+                        routing.Active = active;
+                        routing.DeviceOut = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut)); 
+                    }
+
 
                     CheckAndCloseUnusedDevices();
                 }
@@ -1441,29 +1498,6 @@ namespace MidiTools
             ClockRunning = bActivated;
             ClockBPM = iBPM;
             ClockDevice = sDevice;
-        }
-
-        internal void SendGenericMidiEvent(MidiEvent ev)
-        {
-            CreateOUTEvent(ev, false);
-        }
-
-        internal void InitRouting()
-        {
-            CloseUsedPorts(false);
-            OpenUsedPorts(false);
-
-            foreach (var item in MidiMatrix)
-            {
-                ChangeDefaultCC(CubaseInstrumentData.Instruments);
-                ChangeOptions(item, item.Options, true);
-                ChangeProgram(item, item.Preset, true);
-            }
-        }
-
-        internal MidiRouting Clone()
-        {
-            return (MidiRouting)this.MemberwiseClone();
         }
 
         #endregion
@@ -1833,8 +1867,12 @@ namespace MidiTools
                 case TypeEvent.SYSEX:
                     if (outputDevice != null && outputDevice.IsOpen)
                     {
-                        SysExMessage msg = new SysExMessage(Tools.SendSysExData(ev.SysExData));
-                        outputDevice.Send(msg);
+                        var data = Tools.SendSysExData(ev.SysExData);
+                        foreach (var sysex in data)
+                        {
+                            SysExMessage msg = new SysExMessage(sysex);
+                            outputDevice.Send(msg);
+                        }
                     }
                     AddLog(outputDevice.Name, false, 0, "SysEx", ev.SysExData, "", "");
                     break;
@@ -2179,15 +2217,42 @@ namespace MidiTools
             return string.Concat("F0", sysex, "F7");
         }
 
-        internal static byte[] SendSysExData(string sData)
+        internal static List<byte[]> SendSysExData(string sData)
         {
+            List<byte[]> list = new List<byte[]>();
+            List<string> sMessages = new List<string>();
             //F0 ... F7 to byte[]
-            string sbytes = sData[2..^2];
-            var bytes = Enumerable.Range(0, sbytes.Length)
-                         .Where(x => x % 2 == 0)
-                         .Select(x => Convert.ToByte(sbytes.Substring(x, 2), 16))
-                         .ToArray();
-            return bytes;
+            //on va envoyer les différents messages par paquets séparés
+            StringBuilder sbSysEx = new StringBuilder();
+            for (int i = 0; i <= sData.Length - 2; i += 2)
+            {
+                var sys = sData.Substring(i, 2);
+                if (!sys.Equals("F7", StringComparison.OrdinalIgnoreCase))
+                {
+                    sbSysEx.Append(sys);
+                }
+                else
+                {
+                    sMessages.Add(sbSysEx.ToString());
+                    sbSysEx.Clear();
+                }
+            }
+
+            foreach (var sysex in sMessages)
+            {
+                var hex = sysex.Substring(2);
+
+                if (hex.Length > 0)
+                {
+                    var bytes = Enumerable.Range(0, hex.Length / 2)
+                      .Select(x => Convert.ToByte(hex.Substring(x * 2, 2), 16))
+                      .ToArray();
+
+                    list.Add(bytes);
+                }
+            }
+            
+            return list;
         }
     }
 
@@ -2591,6 +2656,9 @@ namespace MidiTools
     [Serializable]
     public class InstrumentData
     {
+        public delegate void SysExInitializerEventHandler(InstrumentData instr);
+        public static event SysExInitializerEventHandler OnSysExInitializerChanged;
+
         public enum CC_Parameters
         {
             CC_Pan = 10,
@@ -2623,8 +2691,16 @@ namespace MidiTools
         public string Device { get; set; } = "";
         public string CubaseFile { get; set; } = "";
         public bool SortedByBank = false;
-        public string SysExInitializer { get; set; } = "";
+        public string SysExInitializer { 
+            get { return _sysexinit; }
+            set { if (!_sysexinit.Equals(value))
+                { OnSysExInitializerChanged?.Invoke(this); }
+                _sysexinit = value;       
+            } 
+        }
         public List<ParamToCC> DefaultCC = new List<ParamToCC>();
+
+        private string _sysexinit = "";
 
         public InstrumentData()
         {

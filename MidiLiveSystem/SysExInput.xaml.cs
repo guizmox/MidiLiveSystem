@@ -31,14 +31,26 @@ namespace MidiLiveSystem
         public SysExInput()
         {
             InitializeComponent();
-            InitPage();
+            InitPage("");
         }
 
-        public void InitPage()
+        public SysExInput(string sData)
+        {
+            InitializeComponent();
+            InitPage(sData);
+        }
+
+        public void InitPage(string sSysex)
         {
             foreach (var d in MidiRouting.InputDevices)
             {
                 cbMidiIn.Items.Add(new ComboBoxItem() { Tag = d.Name, Content = d.Name });
+            }
+
+            if (sSysex.Length > 0)
+            {
+                Paragraph paragraph = new Paragraph(new Run(sSysex));
+                rtbSysEx.Document.Blocks.Add(paragraph);
             }
         }
 

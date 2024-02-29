@@ -871,15 +871,7 @@ namespace MidiLiveSystem
                     box.RoutingGuid = Routing.AddRouting(sDevIn, sDevOut,
                                        Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
                                        Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
-                                       box.GetOptions(), box.GetPreset());
-                    if (sDevOut.Length > 0)
-                    {
-                        var instr = CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(sDevOut));
-                        if (instr != null && instr.SysExInitializer.Length > 0)
-                        {
-                            Routing.SendSysEx(box.RoutingGuid, instr);
-                        }
-                    }
+                                       box.GetOptions(), box.GetPreset());        
                 }
                 else
                 {
@@ -890,6 +882,7 @@ namespace MidiLiveSystem
                                            Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
                                            Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
                                            box.GetOptions(), box.GetPreset());
+
                 }
                 Routing.SetClock(Project.ClockActivated, Project.BPM, Project.ClockDevice);
             }

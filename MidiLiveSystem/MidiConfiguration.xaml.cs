@@ -338,8 +338,18 @@ namespace MidiLiveSystem
             if (cbMidiOut.SelectedIndex >= 0)
             {
                 string sPort = ((ComboBoxItem)cbMidiOut.SelectedItem).Tag.ToString();
+                var instr = CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(sPort));
+                SysExInput sys;
 
-                SysExInput sys = new SysExInput();
+                if (instr == null)
+                {
+                    sys = new SysExInput();
+                }
+                else
+                {
+                    sys = new SysExInput(instr.SysExInitializer);
+                }
+                
                 sys.ShowDialog();
                 if (sys.InvalidData)
                 {
@@ -350,7 +360,7 @@ namespace MidiLiveSystem
                     TextRange textRange = new TextRange(sys.rtbSysEx.Document.ContentStart, sys.rtbSysEx.Document.ContentEnd);
                     string sSysex = textRange.Text.Replace("-", "").Trim();
 
-                    var instr = CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(sPort));
+                    
                     if (instr != null)
                     {
                         instr.SysExInitializer = sSysex;
