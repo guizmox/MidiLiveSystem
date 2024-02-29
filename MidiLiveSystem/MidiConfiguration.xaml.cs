@@ -20,11 +20,6 @@ using System.Windows.Media.Imaging;
 
 namespace MidiLiveSystem
 {
-    public static class CubaseInstrumentData
-    {
-        public static List<InstrumentData> Instruments = new List<InstrumentData>();
-    }
-
     public partial class MidiConfiguration : Window
     {
         public ProjectConfiguration Configuration = new ProjectConfiguration();
@@ -151,11 +146,109 @@ namespace MidiLiveSystem
             }
         }
 
+        private void InitCC(string sDevice)
+        {
+            var device = CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(sDevice));
+
+            if (device != null)
+            {
+                foreach (var item in cbCCDefault.Items)
+                {
+                    ComboBoxCustomItem cb = (ComboBoxCustomItem)item;
+
+                    switch (cb.Id)
+                    {
+                        case "tbCC_Chorus":
+                            cb.Value = device.GetCCParameter(InstrumentData.CC_Parameters.CC_Chorus).ToString();
+                            break;
+                        case "tbCC_Pan":
+                            cb.Value = device.GetCCParameter(InstrumentData.CC_Parameters.CC_Pan).ToString();
+                            break;
+                        case "tbCC_Volume":
+                            cb.Value = device.GetCCParameter(InstrumentData.CC_Parameters.CC_Volume).ToString();
+                            break;
+                        case "tbCC_Attack":
+                            cb.Value = device.GetCCParameter(InstrumentData.CC_Parameters.CC_Attack).ToString();
+                            break;
+                        case "tbCC_Decay":
+                            cb.Value = device.GetCCParameter(InstrumentData.CC_Parameters.CC_Decay).ToString();
+                            break;
+                        case "tbCC_Release":
+                            cb.Value = device.GetCCParameter(InstrumentData.CC_Parameters.CC_Release).ToString();
+                            break;
+                        case "tbCC_Reverb":
+                            cb.Value = device.GetCCParameter(InstrumentData.CC_Parameters.CC_Reverb).ToString();
+                            break;
+                        case "tbCC_Timbre":
+                            cb.Value = device.GetCCParameter(InstrumentData.CC_Parameters.CC_Timbre).ToString();
+                            break;
+                        case "tbCC_CutOff":
+                            cb.Value = device.GetCCParameter(InstrumentData.CC_Parameters.CC_FilterCutOff).ToString();
+                            break;
+                    }
+                }
+            }
+        }
+
         private void Window_Closed(object sender, EventArgs e)
         {
             GetConfiguration();
         }
 
+        private void btnSaveDefaultCC_Click(object sender, RoutedEventArgs e)
+        {
+            if (cbMidiOut.SelectedIndex >= 0)
+            {
+                InstrumentData instr = CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(((ComboBoxItem)cbMidiOut.SelectedItem).Tag.ToString()));
+               
+                if (instr == null) 
+                {
+                    CubaseInstrumentData.Instruments.Add(new InstrumentData() { Device = ((ComboBoxItem)cbMidiOut.SelectedItem).Tag.ToString() });
+                    instr = CubaseInstrumentData.Instruments.Last();
+                }
+
+                foreach (var item in cbCCDefault.Items)
+                {
+                    ComboBoxCustomItem cb = (ComboBoxCustomItem)item;
+
+                    switch (cb.Id)
+                    {
+                        case "tbCC_Chorus":
+                            cb.Value = instr.AddCCParameter(InstrumentData.CC_Parameters.CC_Chorus, cb.Value);
+                            break;
+                        case "tbCC_Pan":
+                            cb.Value = instr.AddCCParameter(InstrumentData.CC_Parameters.CC_Pan, cb.Value);
+                            break;
+                        case "tbCC_Volume":
+                            cb.Value = instr.AddCCParameter(InstrumentData.CC_Parameters.CC_Volume, cb.Value);
+                            break;
+                        case "tbCC_Attack":
+                            cb.Value = instr.AddCCParameter(InstrumentData.CC_Parameters.CC_Attack, cb.Value);
+                            break;
+                        case "tbCC_Decay":
+                            cb.Value = instr.AddCCParameter(InstrumentData.CC_Parameters.CC_Decay, cb.Value);
+                            break;
+                        case "tbCC_Release":
+                            cb.Value = instr.AddCCParameter(InstrumentData.CC_Parameters.CC_Release, cb.Value);
+                            break; ;
+                        case "tbCC_Reverb":
+                            cb.Value = instr.AddCCParameter(InstrumentData.CC_Parameters.CC_Reverb, cb.Value);
+                            break;
+                        case "tbCC_Timbre":
+                            cb.Value = instr.AddCCParameter(InstrumentData.CC_Parameters.CC_Timbre, cb.Value);
+                            break;
+                        case "tbCC_CutOff":
+                            cb.Value = instr.AddCCParameter(InstrumentData.CC_Parameters.CC_FilterCutOff, cb.Value);
+                            break;
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("You must select a OUT Port");
+            }
+        }
+        
         private void btnClose_Click(object sender, RoutedEventArgs e)
         {
             Close();
@@ -369,6 +462,15 @@ namespace MidiLiveSystem
             {
                 MessageBox.Show("Invalid BPM Value (range : 40 - 300). Set to default (120).");
                 Configuration.BPM = 120;
+            }
+        }
+
+        private void cbMidiOut_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+           ComboBoxItem cb = (ComboBoxItem)e.AddedItems[0];
+            if (cb != null)
+            {
+                InitCC(cb.Tag.ToString());
             }
         }
     }

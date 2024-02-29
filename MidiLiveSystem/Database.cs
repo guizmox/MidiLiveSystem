@@ -282,7 +282,7 @@ namespace MidiLiveSystem
             }
         }
 
-        public Tuple<Guid, ProjectConfiguration, RoutingBoxes, MidiSequence> ReadProject(string idDb)
+        public Tuple<Guid, ProjectConfiguration, RoutingBoxes, MidiSequence> GetProject(string idDb)
         {
             string sId = "";
             string sProjectGuid = "";

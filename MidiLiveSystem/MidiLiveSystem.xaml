@@ -27,9 +27,10 @@
                     <ColumnDefinition Width="10*" />
                     <ColumnDefinition Width="10*" />
                     <ColumnDefinition Width="10*" />
+                    <ColumnDefinition Width="10*" />
+                    <ColumnDefinition Width="5*" />
                     <ColumnDefinition Width="8*" />
-                    <ColumnDefinition Width="8*" />
-                    <ColumnDefinition Width="8*" />
+                    <ColumnDefinition Width="5*" />
                     <ColumnDefinition Width="8*" />
                     <ColumnDefinition Width="8*" />
                     <ColumnDefinition Width="1*" />
@@ -107,9 +108,22 @@
                     </StackPanel>
                 </Button>
 
-                <TextBlock Name="tbNoteName" Text="" Foreground="IndianRed" Grid.Column="7" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center"/>
 
-                <Button Name="btnSwitchView" ToolTip="Switches all routing boxes between the 'Preset' view and the 'Configuration' view" Width="110" Height="60" Grid.Column="8" Background="YellowGreen" Click="btnSwitchView_Click" >
+                <Button Name="btnConductor" ToolTip="Set the Routing Boxes position in the sound space." Width="140" Height="60" Grid.Column="7" Background="DarkCyan" Click="btnConductor_Click" >
+                    <StackPanel>
+                        <TextBlock HorizontalAlignment="Center">
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="Pan" />
+                        </TextBlock>
+                        <TextBlock Text="Soundscape" />
+                    </StackPanel>
+                </Button>
+                
+                <TextBlock Name="tbNoteName" Text="" Foreground="IndianRed" Grid.Column="8" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+
+                <Button Name="btnSwitchView" ToolTip="Switches all routing boxes between the 'Preset' view and the 'Configuration' view" Width="110" Height="60" Grid.Column="9" Background="YellowGreen" Click="btnSwitchView_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -121,7 +135,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnRecordSequence" ToolTip="Simple performance recorder. It's a one click operation. Click to record. Click to stop. The performance will be saved with the project." Background="DarkGray" Width="80" Height="60" Grid.Column="10" Click="btnRecordSequence_Click" >
+                <Button Name="btnRecordSequence" ToolTip="Simple performance recorder. It's a one click operation. Click to record. Click to stop. The performance will be saved with the project." Background="DarkGray" Width="80" Height="60" Grid.Column="11" Click="btnRecordSequence_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -133,7 +147,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnPlaySequence" ToolTip="Plays the recorded performance." Background="DarkGray" Width="80" Height="60" Grid.Column="11" Click="btnPlaySequence_Click" >
+                <Button Name="btnPlaySequence" ToolTip="Plays the recorded performance." Background="DarkGray" Width="80" Height="60" Grid.Column="12" Click="btnPlaySequence_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon

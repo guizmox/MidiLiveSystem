@@ -95,7 +95,7 @@ namespace MidiLiveSystem
             if (item != null)
             {
                 string sGuid = ((TreeViewItem)item).Tag.ToString();
-                Tuple<Guid, ProjectConfiguration, RoutingBoxes, MidiSequence> project = Database.ReadProject(sGuid);
+                Tuple<Guid, ProjectConfiguration, RoutingBoxes, MidiSequence> project = Database.GetProject(sGuid);
                 if (project != null)
                 {
                     Project = project;

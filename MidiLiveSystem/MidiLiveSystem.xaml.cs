@@ -41,6 +41,7 @@ namespace MidiLiveSystem
         private Keyboard KeysWindow;
         private List<DetachedBox> DetachedWindows = new List<DetachedBox>();
         public ProgramHelp HelpWindow;
+        public Conductor ConductorWindow;
 
         private bool ViewOnConfig = false;
 
@@ -66,8 +67,6 @@ namespace MidiLiveSystem
 
             //chargement des template instruments
             CubaseInstrumentData.Instruments = Database.LoadInstruments();
-
-            Routing.Debug();
         }
 
         private void Keyboard_KeyPressed(string sKey)
@@ -179,6 +178,8 @@ namespace MidiLiveSystem
 
         private void Window_Closed(object sender, EventArgs e)
         {
+            UIRefreshRate.Elapsed -= UIRefreshRate_Elapsed;
+
             Database.SaveInstruments(CubaseInstrumentData.Instruments);
             Routing.DeleteAllRouting();
 
@@ -200,6 +201,11 @@ namespace MidiLiveSystem
             {
                 HelpWindow.Close();
             }
+            if (ConductorWindow != null)
+            {
+                ConductorWindow.Close();
+            }
+
             foreach (var detached in DetachedWindows)
             {
                 detached.Close();
@@ -506,6 +512,35 @@ namespace MidiLiveSystem
 
             AddRoutingBoxToFrame(rtb, true);
         }
+
+        private void btnConductor_Click(object sender, RoutedEventArgs e)
+        {
+            if (Boxes.Count > 0)
+            {
+                if (ConductorWindow != null)
+                {
+                    if (!ConductorWindow.IsActive)
+                    {
+                        ConductorWindow = new Conductor(Boxes);
+                        ConductorWindow.Show();
+                    }
+                    else if (!ConductorWindow.IsFocused)
+                    {
+                        ConductorWindow.Focus();
+                    }
+                }
+                else
+                {
+                    ConductorWindow = new Conductor(Boxes);
+                    ConductorWindow.Show();
+                }
+            }
+            else
+            {
+                MessageBox.Show("You need to add at least one Routing Box");
+            }
+        }
+
 
         private void btnSaveProject_Click(object sender, RoutedEventArgs e)
         {
@@ -875,6 +910,7 @@ namespace MidiLiveSystem
                     try { iGridPosition = Convert.ToInt32(project.BoxNames.FirstOrDefault(b => b[1].Equals(g.ToString()))[2]); } catch { iGridPosition++; }
                     var box = new RoutingBox(project, MidiTools.MidiRouting.InputDevices, MidiTools.MidiRouting.OutputDevices, iGridPosition);
                     box.BoxGuid = g;
+                    box.BoxName = presetsample.BoxName;
                     //box.RoutingGuid = presetsample.RoutingGuid;
                     box.LoadMemory(AllPresets.Where(p => p.BoxGuid == g).ToArray());
                     boxes.Add(box);

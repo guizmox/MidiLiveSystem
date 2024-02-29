@@ -745,8 +745,11 @@ namespace MidiLiveSystem
                     case "tbCC_Reverb":
                         cb.Value = bp.MidiOptions.CC_Reverb_Value.ToString();
                         break;
-                    case "tbCC_Bright":
-                        cb.Value = bp.MidiOptions.CC_Brightness_Value.ToString();
+                    case "tbCC_Timbre":
+                        cb.Value = bp.MidiOptions.CC_Timbre_Value.ToString();
+                        break;
+                    case "tbCC_CutOff":
+                        cb.Value = bp.MidiOptions.CC_FilterCutOff_Value.ToString();
                         break;
                 }
             }
@@ -903,9 +906,13 @@ namespace MidiLiveSystem
                         options.CC_Reverb_Value = TextParser(cb.Value);
                         cb.Value = options.CC_Reverb_Value.ToString();
                         break;
-                    case "tbCC_Bright":
-                        options.CC_Brightness_Value = TextParser(cb.Value);
-                        cb.Value = options.CC_Brightness_Value.ToString();
+                    case "tbCC_Timbre":
+                        options.CC_Timbre_Value = TextParser(cb.Value);
+                        cb.Value = options.CC_Timbre_Value.ToString();
+                        break;
+                    case "tbCC_CutOff":
+                        options.CC_FilterCutOff_Value = TextParser(cb.Value);
+                        cb.Value = options.CC_FilterCutOff_Value.ToString();
                         break;
                 }
             }

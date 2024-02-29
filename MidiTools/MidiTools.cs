@@ -18,6 +18,11 @@ using static MidiTools.MidiDevice;
 
 namespace MidiTools
 {
+    public static class CubaseInstrumentData
+    {
+        public static List<InstrumentData> Instruments = new List<InstrumentData>();
+    }
+
     internal class MatrixItem
     {
         internal bool Active { get; set; } = true;
@@ -86,7 +91,8 @@ namespace MidiTools
         private int _CC_Release_Value = -1;
         private int _CC_Attack_Value = -1;
         private int _CC_Decay_Value = -1;
-        private int _CC_Brightness_Value = -1;
+        private int _CC_Timbre_Value = -1;
+        private int _CC_FilterCutOff_Value = -1;
 
         public int VelocityFilterLow
         {
@@ -169,7 +175,8 @@ namespace MidiTools
         public int CC_Release_Value { get { return _CC_Release_Value; } set { if (value < -1) { _CC_Release_Value = -1; } else if (value > 127) { _CC_Release_Value = 127; } else { _CC_Release_Value = value; } } }
         public int CC_Attack_Value { get { return _CC_Attack_Value; } set { if (value < -1) { _CC_Attack_Value = -1; } else if (value > 127) { _CC_Attack_Value = 127; } else { _CC_Attack_Value = value; } } }
         public int CC_Decay_Value { get { return _CC_Decay_Value; } set { if (value < -1) { _CC_Decay_Value = -1; } else if (value > 127) { _CC_Decay_Value = 127; } else { _CC_Decay_Value = value; } } }
-        public int CC_Brightness_Value { get { return _CC_Brightness_Value; } set { if (value < -1) { _CC_Brightness_Value = -1; } else if (value > 127) { _CC_Brightness_Value = 127; } else { _CC_Brightness_Value = value; } } }
+        public int CC_Timbre_Value { get { return _CC_Timbre_Value; } set { if (value < -1) { _CC_Timbre_Value = -1; } else if (value > 127) { _CC_Timbre_Value = 127; } else { _CC_Timbre_Value = value; } } }
+        public int CC_FilterCutOff_Value { get { return _CC_FilterCutOff_Value; } set { if (value < -1) { _CC_FilterCutOff_Value = -1; } else if (value > 127) { _CC_FilterCutOff_Value = 127; } else { _CC_FilterCutOff_Value = value; } } }
 
         public List<int[]> CC_Converters { get; private set; } = new List<int[]>();
         public List<int[]> Note_Converters { get; private set; } = new List<int[]>();
@@ -607,9 +614,13 @@ namespace MidiTools
                     {
                         CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Attack, routing.Options.CC_Attack_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
                     }
-                    if (routing.Options.CC_Brightness_Value > -1 || (bInit && routing.Options.CC_Brightness_Value > -1))
+                    if (routing.Options.CC_Timbre_Value > -1 || (bInit && routing.Options.CC_Timbre_Value > -1))
                     {
-                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Brightness, routing.Options.CC_Brightness_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Timbre, routing.Options.CC_Timbre_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                    }
+                    if (routing.Options.CC_FilterCutOff_Value > -1 || (bInit && routing.Options.CC_FilterCutOff_Value > -1))
+                    {
+                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_FilterCutOff, routing.Options.CC_FilterCutOff_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
                     }
                     if (routing.Options.CC_Chorus_Value > -1 || (bInit && routing.Options.CC_Chorus_Value > -1))
                     {
@@ -648,9 +659,13 @@ namespace MidiTools
                     {
                         CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Attack, newop.CC_Attack_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
                     }
-                    if (newop.CC_Brightness_Value != routing.Options.CC_Brightness_Value || (bInit && routing.Options.CC_Brightness_Value > -1))
+                    if (newop.CC_Timbre_Value != routing.Options.CC_Timbre_Value || (bInit && routing.Options.CC_Timbre_Value > -1))
                     {
-                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Brightness, newop.CC_Brightness_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Timbre, newop.CC_Timbre_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                    }
+                    if (newop.CC_FilterCutOff_Value != routing.Options.CC_FilterCutOff_Value || (bInit && routing.Options.CC_FilterCutOff_Value > -1))
+                    {
+                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_FilterCutOff, newop.CC_FilterCutOff_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
                     }
                     if (newop.CC_Chorus_Value != routing.Options.CC_Chorus_Value || (bInit && routing.Options.CC_Chorus_Value > -1))
                     {
@@ -680,6 +695,29 @@ namespace MidiTools
             }
 
             if (newop != null) { routing.Options = newop; }
+        }
+
+        internal void ChangeDefaultCC(List<InstrumentData> instruments)
+        {
+            foreach (var item in MidiMatrix)
+            {
+                if (item.DeviceOut != null)
+                {
+                    var instr = instruments.FirstOrDefault(i => i.Device.Equals(item.DeviceOut.Name));
+                    if (instr != null && instr.DefaultCC.Count > 0)
+                    {
+                        item.DeviceOut.CC_Volume = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Volume);
+                        item.DeviceOut.CC_Attack = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Attack);
+                        item.DeviceOut.CC_Chorus = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Chorus);
+                        item.DeviceOut.CC_Decay = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Decay);
+                        item.DeviceOut.CC_FilterCutOff = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_FilterCutOff);
+                        item.DeviceOut.CC_Pan = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Pan);
+                        item.DeviceOut.CC_Release = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Release);
+                        item.DeviceOut.CC_Reverb = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Reverb);
+                        item.DeviceOut.CC_Timbre = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Timbre);
+                    }
+                }
+            }
         }
 
         private void SendProgramChange(MatrixItem routing, MidiPreset preset)
@@ -1071,8 +1109,10 @@ namespace MidiTools
 
                 CheckAndCloseUnusedDevices();
                 //hyper important d'être à la fin !
+                ChangeDefaultCC(CubaseInstrumentData.Instruments);
                 ChangeOptions(MidiMatrix.Last(), options, true);
                 ChangeProgram(MidiMatrix.Last(), preset, true);
+     
 
                 var guid = MidiMatrix.Last().RoutingGuid;
                 return guid;
@@ -1136,6 +1176,7 @@ namespace MidiTools
                 }
 
                 //hyper important d'être à la fin !
+                ChangeDefaultCC(CubaseInstrumentData.Instruments);
                 ChangeOptions(routing, options, bDeviceOutChanged ? true : false);
                 ChangeProgram(routing, preset, bDeviceOutChanged ? true : false);
 
@@ -1414,6 +1455,7 @@ namespace MidiTools
 
             foreach (var item in MidiMatrix)
             {
+                ChangeDefaultCC(CubaseInstrumentData.Instruments);
                 ChangeOptions(item, item.Options, true);
                 ChangeProgram(item, item.Preset, true);
             }
@@ -1432,7 +1474,8 @@ namespace MidiTools
         public int CC_Release = 72;
         public int CC_Attack = 73;
         public int CC_Decay = 75;
-        public int CC_Brightness = 74;
+        public int CC_Timbre = 71;
+        public int CC_FilterCutOff = 74;
 
         public enum TypeEvent
         {
@@ -2336,7 +2379,7 @@ namespace MidiTools
             int iPendingNotes = 0;
 
             Stopwatch stopwatch = new Stopwatch(); // Créer un chronomètre
-         
+
             for (int i = 0; i < events.Count; i++)
             {
                 MidiEvent eventtoplay = new MidiEvent(events[i].Type, events[i].Values, events[i].Channel, events[i].Device);
@@ -2536,11 +2579,40 @@ namespace MidiTools
     [Serializable]
     public class InstrumentData
     {
+        public enum CC_Parameters
+        {
+            CC_Pan = 10,
+            CC_Volume = 7,
+            CC_Reverb = 91,
+            CC_Chorus = 93,
+            CC_Release = 72,
+            CC_Attack = 73,
+            CC_Decay = 75,
+            CC_Timbre = 71,
+            CC_FilterCutOff = 74
+        }
+
+        public class ParamToCC
+        {
+            public int CC = 0;
+            public CC_Parameters Param;
+
+            public ParamToCC() 
+            { 
+            }
+            public ParamToCC(CC_Parameters cc, int iValue)
+            {
+                Param = cc;
+                CC = iValue;
+            }
+        }
+
         public List<PresetHierarchy> Categories { get; } = new List<PresetHierarchy>();
         public string Device { get; set; } = "";
         public string CubaseFile { get; set; } = "";
         public bool SortedByBank = false;
         public string SysExInitializer { get; set; } = "";
+        public List<ParamToCC> DefaultCC = new List<ParamToCC>();
 
         public InstrumentData()
         {
@@ -2685,6 +2757,52 @@ namespace MidiTools
             {
                 Device = sNewName;
             }
+        }
+
+        public int GetCCParameter(CC_Parameters p)
+        {
+            var param = DefaultCC.FirstOrDefault(cc => cc.Param == p);
+
+            if (param != null)
+            {
+                return ((int)param.CC);
+            }
+            else
+            {
+                return ((int)p);
+            }
+        }
+
+        public string AddCCParameter(CC_Parameters p, string sCC)
+        {
+            int iCC = -1;
+            if (int.TryParse(sCC, out iCC))
+            {
+                if (iCC < 0 && iCC > 127)
+                {
+                    return ((int)p).ToString();
+                }
+                else
+                {
+                    var param = DefaultCC.FirstOrDefault(cc => cc.Param == p);
+                    if (param == null)
+                    {
+                        DefaultCC.Add(new ParamToCC(p, iCC));
+                        return iCC.ToString();
+                    }
+                    else
+                    {
+                        if (param.CC != iCC)
+                        {
+                            param.CC = iCC;
+                            return iCC.ToString();
+                        }
+                        else { return iCC.ToString(); }
+                    }
+               
+                }
+            }
+            else { return ((int)p).ToString(); }
         }
     }
 

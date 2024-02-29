@@ -293,7 +293,8 @@
                             <local:ComboBoxCustomItem Id="tbCC_Release" Description="Release :" Value="-1"/>
                             <local:ComboBoxCustomItem Id="tbCC_Attack" Description="Attack :" Value="-1"/>
                             <local:ComboBoxCustomItem Id="tbCC_Decay" Description="Decay :" Value="-1"/>
-                            <local:ComboBoxCustomItem Id="tbCC_Bright" Description="Bright :" Value="-1"/>
+                            <local:ComboBoxCustomItem Id="tbCC_Timbre" Description="Timbre :" Value="-1"/>
+                            <local:ComboBoxCustomItem Id="tbCC_CutOff" Description="Filter Cut-Off :" Value="-1"/>
                         </ComboBox>
                         <TextBlock Grid.Column="0" Grid.Row="7" Text="TRANSPOSITION"/>
                         <TextBox Name="tbNoteTransposition" Grid.Column="1" Grid.Row="7" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed" />
