@@ -539,7 +539,6 @@ namespace MidiLiveSystem
             }
         }
 
-
         private void btnSaveProject_Click(object sender, RoutedEventArgs e)
         {
             SaveTemplate();
@@ -711,6 +710,7 @@ namespace MidiLiveSystem
             if (bRecord)
             {
                 RecordedSequence = new MidiSequence(Routing);
+
                 tbRecord.Text = "GO !";
                 RecordedSequence.StartRecording(true, true);
                 RecordedSequence.RecordCounter += RecordedSequence_RecordCounter;

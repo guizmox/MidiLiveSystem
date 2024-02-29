@@ -67,7 +67,6 @@ namespace MidiLiveSystem
 
         PresetBrowser InstrumentPresets = null;
 
-
         public RoutingBox(ProjectConfiguration conf, List<IMidiInputDeviceInfo> inputDevices, List<IMidiOutputDeviceInfo> outputDevices, int gridPosition)
         {
             GridPosition = gridPosition;
@@ -714,6 +713,8 @@ namespace MidiLiveSystem
             ckAftertouchToNote.IsChecked = bp.MidiOptions.AftertouchVolume;
             tbNoteTransposition.Text = bp.MidiOptions.TranspositionOffset.ToString();
 
+            tbSmoothCC.Text = bp.MidiOptions.SmoothCCLength.ToString();
+
             foreach (var item in cbCCDefaultValues.Items)
             {
                 ComboBoxCustomItem cb = (ComboBoxCustomItem)item;
@@ -959,6 +960,15 @@ namespace MidiLiveSystem
             {
                 var translator = (ComboBoxItem)item;
                 options.AddTranslator(translator.Tag.ToString(), translator.Content.ToString());
+            }
+
+            int iSmooth = 0;
+            if (int.TryParse(tbSmoothCC.Text.Trim(), out iSmooth))
+            {
+                if (iSmooth >= 0 && iSmooth <= 5000)
+                {
+                    options.SmoothCCLength = iSmooth;
+                }
             }
 
             return options;

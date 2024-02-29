@@ -23,11 +23,37 @@ namespace MidiTools
         public static List<InstrumentData> Instruments = new List<InstrumentData>();
     }
 
+    public class LiveCC
+    {
+        public string Device = "";
+        public Channel Channel;
+        public int CC = -1;
+        public int CCValue = -1;
+        internal bool BlockIncoming = false;
+
+        public LiveCC(string device, Channel channel, int iCC, int ccValue)
+        {
+            Device = device;
+            Channel = channel;
+            CC = iCC;
+            CCValue = ccValue;
+        }
+
+        public LiveCC()
+        {
+
+        }
+    }
+
+    [Serializable]
     internal class MatrixItem
     {
         internal bool Active { get; set; } = true;
         internal int ChannelIn = 1;
         internal int ChannelOut = 1;
+
+        internal List<LiveCC> LiveData = new List<LiveCC>();
+
         internal MidiOptions Options { get; set; } = new MidiOptions();
         internal MidiDevice DeviceIn;
         internal MidiDevice DeviceOut;
@@ -43,6 +69,11 @@ namespace MidiTools
             Options = options;
             RoutingGuid = Guid.NewGuid();
             Preset = preset;
+        }
+
+        public MatrixItem()
+        {
+
         }
 
         internal bool CheckDeviceIn(string sDeviceIn)
@@ -72,11 +103,68 @@ namespace MidiTools
                 else { return false; }
             }
         }
+
+        internal List<MidiEvent> SetCC(int iCC, int iCCValue, Channel channel, string sDevice, bool bSmooth)
+        {
+            //int iChannel = Tools.GetChannelInt(channel);
+            List<MidiEvent> intermediate = new List<MidiEvent>();
+
+            var cc = LiveData.FirstOrDefault(i => i.Device.Equals(sDevice) && i.Channel == channel && i.CC == iCC);
+            if (cc == null)
+            {
+                LiveData.Add(new LiveCC(sDevice, channel, iCC, iCCValue));
+            }
+            else
+            {
+                if (bSmooth)
+                {
+                    if ((cc.CCValue + 16) < iCCValue)
+                    {
+                        for (int i = cc.CCValue; i < iCCValue; i += 2)
+                        {
+                            intermediate.Add(new MidiEvent(TypeEvent.CC, new List<int> { cc.CC,  i }, channel, sDevice));
+                        }
+                        cc.BlockIncoming = true;
+                    }
+                    else if ((cc.CCValue - 16) > iCCValue)
+                    {
+                        for (int i = cc.CCValue; i > iCCValue; i -= 2)
+                        {
+                            intermediate.Add(new MidiEvent(TypeEvent.CC, new List<int> { cc.CC, i }, channel, sDevice));
+                        }
+                        cc.BlockIncoming = true;
+                    }
+                }
+
+                cc.CCValue = iCCValue;
+            }
+
+            return intermediate;
+        }
+
+        internal void UnblockCC(int iCC, int iCCValue, Channel channel, string sDevice)
+        {
+            var cc = LiveData.FirstOrDefault(i => i.Device.Equals(sDevice) && i.Channel == channel && i.CC == iCC);
+            if (cc != null)
+            {
+                cc.BlockIncoming = false;
+            }
+        }
+
+        internal bool IsBlocked(int iCC, int iCCValue, Channel channel, string sDevice)
+        {
+            var cc = LiveData.FirstOrDefault(i => i.Device.Equals(sDevice) && i.Channel == channel && i.CC == iCC);
+            if (cc != null)
+            {
+                return cc.BlockIncoming;
+            }
+            else { return false; }
+        }
     }
 
+    [Serializable]
     public class MidiOptions
     {
-
         private int _TranspositionOffset = 0;
 
         private int _VelocityFilterLow = 0;
@@ -183,6 +271,9 @@ namespace MidiTools
 
         public List<string[]> Translators { get; private set; } = new List<string[]>();
 
+        public bool SmoothCC { get { return SmoothCCLength > 0 ? true : false; } }
+        public int SmoothCCLength = 0;
+
         public bool AddCCConverter(int iFrom, int iTo)
         {
             if (iFrom != iTo && (iFrom >= 0 && iFrom <= 127) && (iTo >= 0 && iTo <= 127))
@@ -210,6 +301,7 @@ namespace MidiTools
         }
     }
 
+    [Serializable]
     public class MidiRouting
     {
         private static double CLOCK_INTERVAL = 1000;
@@ -451,57 +543,107 @@ namespace MidiTools
 
             foreach (MatrixItem item in matrix)
             {
-                bool bTranslated = false;
-                if (!bOutEvent) { bTranslated = MidiTranslator(item, ev); } //TRANSLATEUR DE MESSAGES
+                EventProcessor(item, ev, bOutEvent);
+            }
 
-                if (!bTranslated)
+            //List<Task> tasks = new List<Task>();
+            //foreach (MatrixItem item in matrix)
+            //{
+            //    tasks.Add(Task.Factory.StartNew(() => EventProcessor(item, ev.Clone(), bOutEvent)));
+            //}
+            //while (tasks.Count(t => t.IsCompleted) != tasks.Count)
+            //{
+            //    Thread.Sleep(1);
+            //}
+        }
+
+        private void EventProcessor(MatrixItem item, MidiEvent ev, bool bOutEvent)
+        {
+            bool bTranslated = false;
+            if (!bOutEvent) { bTranslated = MidiTranslator(item, ev); } //TRANSLATEUR DE MESSAGES
+
+            if (!bTranslated)
+            {
+                for (int i = (item.ChannelOut == 0 ? 1 : item.ChannelOut); i <= (item.ChannelOut == 0 ? 16 : item.ChannelOut); i++)
                 {
-                    for (int i = (item.ChannelOut == 0 ? 1 : item.ChannelOut); i <= (item.ChannelOut == 0 ? 16 : item.ChannelOut); i++)
+                    List<MidiDevice.MidiEvent> _eventsOUT = new List<MidiDevice.MidiEvent>();
+
+                    //opérations de filtrage 
+                    switch (ev.Type)
                     {
-                        List<MidiDevice.MidiEvent> _eventsOUT = new List<MidiDevice.MidiEvent>();
-
-                        //opérations de filtrage 
-                        switch (ev.Type)
-                        {
-                            case TypeEvent.CC:
-                                if (item.Options.AllowAllCC || bOutEvent)
+                        case TypeEvent.CC:
+                            if (item.Options.AllowAllCC || bOutEvent)
+                            {
+                                if (item.Options.CC_ToVolume == ev.Values[0])
                                 {
-                                    if (item.Options.CC_ToVolume == ev.Values[0])
+                                    _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { 7, ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
+                                }
+                                else
+                                {
+                                    var convertedCC = item.Options.CC_Converters.FirstOrDefault(i => i[0] == ev.Values[0]);
+                                    _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { convertedCC != null ? convertedCC[1] : ev.Values[0], ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
+                                }
+                            }
+                            break;
+                        case TypeEvent.CH_PRES:
+                            if ((!item.Options.AftertouchVolume && item.Options.AllowAftertouch) || bOutEvent)
+                            {
+                                _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
+                            }
+                            else if (item.Options.AftertouchVolume)
+                            {
+                                CurrentATValue = ev.Values[0];
+
+                                _eventsOUT.Add(new MidiEvent(TypeEvent.CC, new List<int> { item.DeviceOut.CC_Volume, ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
+                            }
+                            break;
+                        case TypeEvent.NOTE_OFF:
+                            if (item.Options.AllowNotes || bOutEvent)
+                            {
+                                int iNote = Tools.GetNoteIndex(ev.Values[0], ev.Values[1], item.Options);
+                                var convertedNote = item.Options.Note_Converters.FirstOrDefault(i => i[0] == ev.Values[0]);
+                                if (convertedNote != null) { iNote = convertedNote[1]; } //TODO DOUTE
+
+                                if (iNote > -1)
+                                {
+                                    CurrentATValue = 0;
+
+                                    var eventout = new MidiEvent(ev.Type, new List<int> { iNote, item.Options.AftertouchVolume ? 0 : ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name);
+                                    _eventsOUT.Add(eventout);
+
+                                    lock (_notesentforpanic)
                                     {
-                                        _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { 7, ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
+                                        var toremove = _notesentforpanic.FirstOrDefault(n => n.Device == eventout.Device && n.Channel == eventout.Channel && n.Values[0] == eventout.Values[0]);
+                                        if (toremove != null)
+                                        {
+                                            _notesentforpanic.Remove(toremove);
+                                        }
                                     }
-                                    else
+                                }
+                            }
+                            break;
+                        case TypeEvent.NOTE_ON:
+                            if (item.Options.AllowNotes || bOutEvent)
+                            {
+                                int iNote = Tools.GetNoteIndex(ev.Values[0], ev.Values[1], item.Options);
+                                var convertedNote = item.Options.Note_Converters.FirstOrDefault(i => i[0] == ev.Values[0]);
+                                if (convertedNote != null) { iNote = convertedNote[1]; } //TODO DOUTE
+
+                                if (iNote > -1) //NOTE : il faut systématiquement mettre au moins une véolcité de 1 pour que la note se déclenche
+                                {
+                                    //int iVelocity = item.Options.AftertouchVolume && ev.Values[1] > 0 ? 1 : ev.Values[1];
+                                    int iVelocity = ev.Values[1];
+
+                                    if (item.Options.AftertouchVolume)
                                     {
-                                        var convertedCC = item.Options.CC_Converters.FirstOrDefault(i => i[0] == ev.Values[0]);
-                                        _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { convertedCC != null ? convertedCC[1] : ev.Values[0], ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
+                                        _eventsOUT.Add(new MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { 7, CurrentATValue }, Tools.GetChannel(i), item.DeviceOut.Name));
                                     }
-                                }
-                                break;
-                            case TypeEvent.CH_PRES:
-                                if ((!item.Options.AftertouchVolume && item.Options.AllowAftertouch) || bOutEvent)
-                                {
-                                    _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
-                                }
-                                else if (item.Options.AftertouchVolume)
-                                {
-                                    CurrentATValue = ev.Values[0];
 
-                                    _eventsOUT.Add(new MidiEvent(TypeEvent.CC, new List<int> { item.DeviceOut.CC_Volume, ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
-                                }
-                                break;
-                            case TypeEvent.NOTE_OFF:
-                                if (item.Options.AllowNotes || bOutEvent)
-                                {
-                                    int iNote = Tools.GetNoteIndex(ev.Values[0], ev.Values[1], item.Options);
-                                    var convertedNote = item.Options.Note_Converters.FirstOrDefault(i => i[0] == ev.Values[0]);
-                                    if (convertedNote != null) { iNote = convertedNote[1]; } //TODO DOUTE
+                                    var eventout = new MidiEvent(ev.Type, new List<int> { iNote, iVelocity }, Tools.GetChannel(i), item.DeviceOut.Name);
 
-                                    if (iNote > -1)
+                                    if (iVelocity == 0) //le genos n'envoie pas de note off mais que des ON à 0
                                     {
                                         CurrentATValue = 0;
-
-                                        var eventout = new MidiEvent(ev.Type, new List<int> { iNote, item.Options.AftertouchVolume ? 0 : ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name);
-                                        _eventsOUT.Add(eventout);
 
                                         lock (_notesentforpanic)
                                         {
@@ -511,105 +653,106 @@ namespace MidiTools
                                                 _notesentforpanic.Remove(toremove);
                                             }
                                         }
+
+                                        _eventsOUT.Add(eventout);
                                     }
-                                }
-                                break;
-                            case TypeEvent.NOTE_ON:
-                                if (item.Options.AllowNotes || bOutEvent)
-                                {
-                                    int iNote = Tools.GetNoteIndex(ev.Values[0], ev.Values[1], item.Options);
-                                    var convertedNote = item.Options.Note_Converters.FirstOrDefault(i => i[0] == ev.Values[0]);
-                                    if (convertedNote != null) { iNote = convertedNote[1]; } //TODO DOUTE
-
-                                    if (iNote > -1) //NOTE : il faut systématiquement mettre au moins une véolcité de 1 pour que la note se déclenche
+                                    else
                                     {
-                                        //int iVelocity = item.Options.AftertouchVolume && ev.Values[1] > 0 ? 1 : ev.Values[1];
-                                        int iVelocity = ev.Values[1];
-
-                                        if (item.Options.AftertouchVolume)
+                                        //problème : par exemple, le keystep envoie 2 messages IN mais 1 seul message out : on empêche la nouvelle note d'arriver
+                                        var notestuck = _notesentforpanic.FirstOrDefault(n => n.Device == eventout.Device && n.Channel == eventout.Channel && n.Values[0] == eventout.Values[0]);
+                                        if (notestuck != null)
                                         {
-                                            _eventsOUT.Add(new MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { 7, CurrentATValue }, Tools.GetChannel(i), item.DeviceOut.Name));
+                                            //on n'envoie aucun nouvel évènement
                                         }
-
-                                        var eventout = new MidiEvent(ev.Type, new List<int> { iNote, iVelocity }, Tools.GetChannel(i), item.DeviceOut.Name);
-
-                                        if (iVelocity == 0) //le genos n'envoie pas de note off mais que des ON à 0
+                                        else
                                         {
-                                            CurrentATValue = 0;
-
                                             lock (_notesentforpanic)
                                             {
-                                                var toremove = _notesentforpanic.FirstOrDefault(n => n.Device == eventout.Device && n.Channel == eventout.Channel && n.Values[0] == eventout.Values[0]);
-                                                if (toremove != null)
-                                                {
-                                                    _notesentforpanic.Remove(toremove);
-                                                }
+                                                _notesentforpanic.Add(eventout);
                                             }
 
                                             _eventsOUT.Add(eventout);
                                         }
-                                        else
-                                        {
-                                            //problème : par exemple, le keystep envoie 2 messages IN mais 1 seul message out : on empêche la nouvelle note d'arriver
-                                            var notestuck = _notesentforpanic.FirstOrDefault(n => n.Device == eventout.Device && n.Channel == eventout.Channel && n.Values[0] == eventout.Values[0]);
-                                            if (notestuck != null)
-                                            {
-                                                //on n'envoie aucun nouvel évènement
-                                            }
-                                            else
-                                            {
-                                                lock (_notesentforpanic)
-                                                {
-                                                    _notesentforpanic.Add(eventout);
-                                                }
-
-                                                _eventsOUT.Add(eventout);
-                                            }
-                                        }
                                     }
                                 }
-                                break;
-                            case TypeEvent.NRPN:
-                                if (item.Options.AllowNrpn || bOutEvent)
-                                {
-                                    _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0], ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
-                                }
-                                break;
-                            case TypeEvent.PB:
-                                if (item.Options.AllowPitchBend || bOutEvent)
-                                {
-                                    _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
-                                }
-                                break;
-                            case TypeEvent.PC:
-                                if (item.Options.AllowProgramChange || bOutEvent)
-                                {
-                                    _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
-                                }
-                                break;
-                            case TypeEvent.POLY_PRES:
-                                if (item.Options.AllowAftertouch || bOutEvent)
-                                {
-                                    _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0], ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
-                                }
-                                break;
-                            case TypeEvent.SYSEX:
-                                if (item.Options.AllowSysex || bOutEvent)
-                                {
-                                    _eventsOUT.Add(new MidiEvent(ev.Type, SysExTranscoder(ev.SysExData), item.DeviceOut.Name));
-                                }
-                                break;
-                        }
+                            }
+                            break;
+                        case TypeEvent.NRPN:
+                            if (item.Options.AllowNrpn || bOutEvent)
+                            {
+                                _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0], ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
+                            }
+                            break;
+                        case TypeEvent.PB:
+                            if (item.Options.AllowPitchBend || bOutEvent)
+                            {
+                                _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
+                            }
+                            break;
+                        case TypeEvent.PC:
+                            if (item.Options.AllowProgramChange || bOutEvent)
+                            {
+                                _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
+                            }
+                            break;
+                        case TypeEvent.POLY_PRES:
+                            if (item.Options.AllowAftertouch || bOutEvent)
+                            {
+                                _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0], ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
+                            }
+                            break;
+                        case TypeEvent.SYSEX:
+                            if (item.Options.AllowSysex || bOutEvent)
+                            {
+                                _eventsOUT.Add(new MidiEvent(ev.Type, SysExTranscoder(ev.SysExData), item.DeviceOut.Name));
+                            }
+                            break;
+                    }
 
-                        if (_eventsOUT.Count > 0)
+                    if (_eventsOUT.Count > 0)
+                    {
+                        for (int iEv = 0; iEv < _eventsOUT.Count; iEv++)
                         {
-                            for (int iEv = 0; iEv < _eventsOUT.Count; iEv++)
+                            bool bAvoidCCToSmooth = false;
+
+                            if (_eventsOUT[iEv].Type == TypeEvent.CC) //mémoire de CC
+                            {
+                                //si l'item est bloqué à cause du smooth, on interdit les nouveaux entrants
+                                if (item.IsBlocked(_eventsOUT[iEv].Values[0], _eventsOUT[iEv].Values[1], _eventsOUT[iEv].Channel, _eventsOUT[iEv].Device))
+                                {
+                                    bAvoidCCToSmooth = true;
+                                }
+                                else
+                                {
+                                    //sinon on enregistre et on crée une liste d'events additionnels
+                                    var newitems = item.SetCC(_eventsOUT[iEv].Values[0], _eventsOUT[iEv].Values[1], _eventsOUT[iEv].Channel, _eventsOUT[iEv].Device, item.Options.SmoothCC);
+                                    int count = newitems.Count;
+                                    if (item.Options.SmoothCC && count > 0)
+                                    {
+                                        bAvoidCCToSmooth = true;
+
+                                        var copiedevent = new MidiEvent(TypeEvent.CC, new List<int> { _eventsOUT[iEv].Values[0], _eventsOUT[iEv].Values[1] }, _eventsOUT[iEv].Channel, _eventsOUT[iEv].Device);
+
+                                        Task.Factory.StartNew(() =>
+                                        {
+                                            foreach (var cc in newitems)
+                                            {
+                                                item.DeviceOut.SendMidiEvent(cc);
+                                                Thread.Sleep((int)(item.Options.SmoothCCLength / count)); //le smoooth doit durer 1sec
+                                            }
+                                            item.UnblockCC(copiedevent.Values[0], copiedevent.Values[1], copiedevent.Channel, copiedevent.Device);
+                                        });
+                                    }
+                                }
+                            }
+
+                            if (!bAvoidCCToSmooth) //ne pas jouer le CC  trop rapide, il a été joué par le Smooth quelques lignes plus haut
                             {
                                 item.DeviceOut.SendMidiEvent(_eventsOUT[iEv]);
                             }
-
-                            _eventsProcessedOUT += _eventsOUT.Count;
                         }
+
+                        _eventsProcessedOUT += _eventsOUT.Count;
                     }
                 }
             }
@@ -1094,7 +1237,7 @@ namespace MidiTools
             CreateOUTEvent(ev, false);
         }
 
-        internal void InitRouting()
+        internal void InitRouting(List<LiveCC> startcc)
         {
             CloseUsedPorts(false);
             OpenUsedPorts(false);
@@ -1104,6 +1247,11 @@ namespace MidiTools
                 ChangeDefaultCC(CubaseInstrumentData.Instruments);
                 ChangeOptions(item, item.Options, true);
                 ChangeProgram(item, item.Preset, true);
+
+                foreach (var cc in startcc)
+                {
+                    SendCC(item.RoutingGuid, cc.CC, cc.CCValue, Tools.GetChannelInt(cc.Channel), cc.Device);
+                }
             }
         }
 
@@ -1475,6 +1623,16 @@ namespace MidiTools
             ClockDevice = sDevice;
         }
 
+        internal List<LiveCC> GetLiveCCData()
+        {
+            List<LiveCC> list = new List<LiveCC>();
+            foreach (var item in MidiMatrix)
+            {
+                list.AddRange(item.LiveData);
+            }
+            return list;
+        }
+
         #endregion
 
     }
@@ -1555,6 +1713,11 @@ namespace MidiTools
                 Channel channelValue;
                 Enum.TryParse<Channel>(string.Concat("Channel", Values[0].ToString()), out channelValue);
                 return channelValue;
+            }
+
+            internal MidiEvent Clone()
+            {
+                return (MidiEvent)this.MemberwiseClone();
             }
         }
 
@@ -2145,7 +2308,12 @@ namespace MidiTools
 
         internal static int GetNoteInt(Key key)
         {
-            return Convert.ToInt32(key.ToString().Substring(3));
+            return Convert.ToInt32(key.ToString()[3..]);
+        }
+
+        internal static int GetChannelInt(Channel ch)
+        {
+            return Convert.ToInt32(ch.ToString()[7..]);
         }
 
         internal static Key GetNote(int iNote)
@@ -2262,6 +2430,8 @@ namespace MidiTools
     {
         public MidiRouting Routing;
 
+        public List<LiveCC> StartCC = new List<LiveCC>();
+
         public delegate void SequenceFinishedHandler(string sInfo);
         public event SequenceFinishedHandler SequenceFinished;
 
@@ -2327,6 +2497,8 @@ namespace MidiTools
 
         public void StartRecording(bool bIn, bool bOut)
         {
+            StartCC = Routing.GetLiveCCData();
+
             if (bIn)
             {
                 OnMidiSequenceEventIN += MidiEventSequenceHandler_OnMidiEventIN;
@@ -2438,7 +2610,7 @@ namespace MidiTools
             {
                 StartStopPlayerCounter(true);
 
-                Routing.InitRouting();
+                Routing.InitRouting(StartCC);
 
                 PlaySequence(_eventsIN);
 

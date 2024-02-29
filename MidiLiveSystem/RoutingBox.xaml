@@ -419,6 +419,9 @@
                         <ComboBox Name="cbTranslators" Grid.Column="1" Grid.Row="6" SelectedValuePath="Tag" />
                         <Button Name="btnAddTranslator" Grid.Row="6" Grid.RowSpan="2" Grid.Column="2" Margin="5,5,5,5" Content="+" Background="DarkOliveGreen" Click="btnAddTranslator_Click" />
                         <Button Name="btnRemoveTranslator" Grid.Row="6" Grid.RowSpan="2" Grid.Column="3" Margin="5,5,5,5" Content="-" Background="IndianRed" Click="btnRemoveTranslator_Click" />
+                        
+                        <TextBlock Grid.Column="0" Grid.Row="8" Text="SMOOTH CC (ms)"/>
+                        <TextBox Name="tbSmoothCC" Grid.Row="8" Width="40" MaxLength="4" Grid.Column="1" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
                     </Grid>
                 </Viewbox>
             </TabItem>
