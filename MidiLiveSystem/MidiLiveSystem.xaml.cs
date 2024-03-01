@@ -289,6 +289,7 @@ namespace MidiLiveSystem
             {
                 tbPlay.Text = "PLAY";
                 btnPlaySequence.Background = Brushes.DarkGray;
+                UIRefreshRate.Start();
             });
             Routing.OpenUsedPorts(false);
         }
@@ -740,6 +741,8 @@ namespace MidiLiveSystem
 
                         RecordedSequence.RecordCounter += PlayedSequence_RecordCounter;
                         Routing.CloseUsedPorts(false);
+
+                        UIRefreshRate.Stop(); //blocage de tout ce qui va potentiellement aller modifier le routing
                         RecordedSequence.PlaySequenceAsync();
                     }
                 }

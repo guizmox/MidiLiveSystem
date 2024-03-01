@@ -177,6 +177,12 @@ namespace MidiLiveSystem
 
             List<string> sVersionsToDelete = GetOldProjectVersion(sId);
 
+            int iExists = GetProjectName(sProjectName.Replace("'", "''"));
+            if (iExists > 0)
+            {
+                sProjectName = string.Concat(sProjectName, " (" + DateTime.Now.ToString("yyyy/MM/dd"), ")");
+            }
+
             using (var connection = new SqliteConnection(connectionString))
             {
                 connection.Open();
@@ -205,6 +211,29 @@ namespace MidiLiveSystem
                 insertCommand.Parameters.AddWithValue("@active", "1");
                 insertCommand.ExecuteNonQuery();
             }
+        }
+
+        private int GetProjectName(string sName)
+        {
+            int iQte = 0;
+
+            using (var connection = new SqliteConnection(connectionString))
+            {
+                connection.Open();
+
+                var selectCommand = connection.CreateCommand();
+                selectCommand.CommandText = "SELECT COUNT(*) FROM Projects WHERE ProjectName LIKE '" + sName + "%';";
+
+                using (var reader = selectCommand.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        iQte = reader.GetInt32(0);
+                    }
+                }
+            }
+
+            return iQte;
         }
 
         private List<string> GetOldProjectVersion(string sProjectGuid)

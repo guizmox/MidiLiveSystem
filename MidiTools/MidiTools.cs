@@ -23,6 +23,22 @@ namespace MidiTools
         public static List<InstrumentData> Instruments = new List<InstrumentData>();
     }
 
+    [Serializable]
+    public class LiveData
+    {
+        public List<LiveCC> StartCC = new List<LiveCC>();
+        public MidiOptions StartOptions;
+        public Channel Channel;
+        public string Device;
+        public Guid RoutingGuid;
+        public int Program;
+        
+        public LiveData()
+        {
+
+        }
+    }
+
     public class LiveCC
     {
         public string Device = "";
@@ -53,6 +69,7 @@ namespace MidiTools
         internal int ChannelOut = 1;
 
         internal List<LiveCC> LiveData = new List<LiveCC>();
+        internal int LiveProgram = 0;
 
         internal MidiOptions Options { get; set; } = new MidiOptions();
         internal MidiDevice DeviceIn;
@@ -122,7 +139,7 @@ namespace MidiTools
                     {
                         for (int i = cc.CCValue; i < iCCValue; i += 2)
                         {
-                            intermediate.Add(new MidiEvent(TypeEvent.CC, new List<int> { cc.CC,  i }, channel, sDevice));
+                            intermediate.Add(new MidiEvent(TypeEvent.CC, new List<int> { cc.CC, i }, channel, sDevice));
                         }
                         cc.BlockIncoming = true;
                     }
@@ -140,6 +157,11 @@ namespace MidiTools
             }
 
             return intermediate;
+        }
+
+        internal void SetProgram(int iProgram)
+        {
+            LiveProgram = iProgram;
         }
 
         internal void UnblockCC(int iCC, int iCCValue, Channel channel, string sDevice)
@@ -298,6 +320,11 @@ namespace MidiTools
         {
             //TODO : réaliser un contrôle supplémentaire de l'UI ?
             Translators.Add(new string[] { sScript, sName });
+        }
+
+        internal MidiOptions Clone()
+        {
+           return (MidiOptions)this.MemberwiseClone();
         }
     }
 
@@ -715,7 +742,11 @@ namespace MidiTools
                         {
                             bool bAvoidCCToSmooth = false;
 
-                            if (_eventsOUT[iEv].Type == TypeEvent.CC) //mémoire de CC
+                            if (_eventsOUT[iEv].Type == TypeEvent.PC) //mémoire de CC
+                            {
+                                item.SetProgram(_eventsOUT[iEv].Values[0]);
+                            }
+                            else if (_eventsOUT[iEv].Type == TypeEvent.CC) //mémoire de CC
                             {
                                 //si l'item est bloqué à cause du smooth, on interdit les nouveaux entrants
                                 if (item.IsBlocked(_eventsOUT[iEv].Values[0], _eventsOUT[iEv].Values[1], _eventsOUT[iEv].Channel, _eventsOUT[iEv].Device))
@@ -1237,20 +1268,34 @@ namespace MidiTools
             CreateOUTEvent(ev, false);
         }
 
-        internal void InitRouting(List<LiveCC> startcc)
+        internal void InitRouting(List<LiveData> data)
         {
             CloseUsedPorts(false);
             OpenUsedPorts(false);
 
-            foreach (var item in MidiMatrix)
+            foreach (var d in data)
             {
-                ChangeDefaultCC(CubaseInstrumentData.Instruments);
-                ChangeOptions(item, item.Options, true);
-                ChangeProgram(item, item.Preset, true);
-
-                foreach (var cc in startcc)
+                foreach (var cc in d.StartCC.Where(c => c.CC != 0 && c.CC != 32))
                 {
-                    SendCC(item.RoutingGuid, cc.CC, cc.CCValue, Tools.GetChannelInt(cc.Channel), cc.Device);
+                    SendCC(d.RoutingGuid, cc.CC, cc.CCValue, Tools.GetChannelInt(cc.Channel), cc.Device);
+                }
+
+                var routing = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == d.RoutingGuid);
+                if (routing != null)
+                {
+                    ChangeOptions(routing, d.StartOptions, true);
+
+                    MidiPreset mp = new MidiPreset();
+                    mp.Channel = Tools.GetChannelInt(d.Channel);
+                    mp.PresetName = "Sequencer";
+                    mp.Prg = d.Program;
+
+                    foreach (var cc in d.StartCC.Where(c => c.CC == 0 || c.CC == 32).OrderBy(c => c.CC))
+                    {
+                        if (cc.CC == 00) { mp.Msb = cc.CCValue; }
+                        else if (cc.CC == 32) { mp.Lsb = cc.CCValue; }
+                    }
+                    ChangeProgram(routing, mp, true);
                 }
             }
         }
@@ -1357,7 +1402,7 @@ namespace MidiTools
                     else
                     {
                         routing.Active = active;
-                        routing.DeviceOut = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut)); 
+                        routing.DeviceOut = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut));
                     }
 
 
@@ -1623,14 +1668,30 @@ namespace MidiTools
             ClockDevice = sDevice;
         }
 
-        internal List<LiveCC> GetLiveCCData()
+        internal List<LiveData> GetLiveCCData()
         {
-            List<LiveCC> list = new List<LiveCC>();
+            List<LiveData> listdata = new List<LiveData>();
+
             foreach (var item in MidiMatrix)
             {
-                list.AddRange(item.LiveData);
+                var CurrentOptions = item.Options.Clone();
+                List<LiveCC> CurrentCC = new List<LiveCC>(); 
+
+                foreach (var cc in item.LiveData)
+                {
+                    CurrentCC.Add(new LiveCC(cc.Device, cc.Channel, cc.CC, cc.CCValue));
+                }
+
+                LiveData CurrentData = new LiveData();
+
+                CurrentData.StartCC = CurrentCC;
+                CurrentData.StartOptions = CurrentOptions;
+                CurrentData.RoutingGuid = item.RoutingGuid;
+                CurrentData.Program = item.LiveProgram;
+
+                listdata.Add(CurrentData);
             }
-            return list;
+            return listdata;
         }
 
         #endregion
@@ -2019,7 +2080,7 @@ namespace MidiTools
                         foreach (var sysex in data)
                         {
                             SysExMessage msg = new SysExMessage(sysex);
-                            outputDevice.Send(msg); 
+                            outputDevice.Send(msg);
                             Thread.Sleep(SysExWaiter(sysex.Length));
                         }
                     }
@@ -2420,7 +2481,7 @@ namespace MidiTools
                     list.Add(bytes);
                 }
             }
-            
+
             return list;
         }
     }
@@ -2430,7 +2491,7 @@ namespace MidiTools
     {
         public MidiRouting Routing;
 
-        public List<LiveCC> StartCC = new List<LiveCC>();
+        public List<LiveData> SequencerDefault = new List<LiveData>();
 
         public delegate void SequenceFinishedHandler(string sInfo);
         public event SequenceFinishedHandler SequenceFinished;
@@ -2497,7 +2558,8 @@ namespace MidiTools
 
         public void StartRecording(bool bIn, bool bOut)
         {
-            StartCC = Routing.GetLiveCCData();
+            //on doit absolument garder les valeurs actuelles des données pour figer tous les paramètres MIDI pour pouvoir reproduire la séquence fidèlement
+            SequencerDefault = Routing.GetLiveCCData();
 
             if (bIn)
             {
@@ -2610,7 +2672,7 @@ namespace MidiTools
             {
                 StartStopPlayerCounter(true);
 
-                Routing.InitRouting(StartCC);
+                Routing.InitRouting(SequencerDefault);
 
                 PlaySequence(_eventsIN);
 
@@ -2850,8 +2912,8 @@ namespace MidiTools
             public int CC = 0;
             public CC_Parameters Param;
 
-            public ParamToCC() 
-            { 
+            public ParamToCC()
+            {
             }
             public ParamToCC(CC_Parameters cc, int iValue)
             {
@@ -2864,12 +2926,15 @@ namespace MidiTools
         public string Device { get; set; } = "";
         public string CubaseFile { get; set; } = "";
         public bool SortedByBank = false;
-        public string SysExInitializer { 
+        public string SysExInitializer
+        {
             get { return _sysexinit; }
-            set { if (!_sysexinit.Equals(value))
+            set
+            {
+                if (!_sysexinit.Equals(value))
                 { OnSysExInitializerChanged?.Invoke(this); }
-                _sysexinit = value;       
-            } 
+                _sysexinit = value;
+            }
         }
         public List<ParamToCC> DefaultCC = new List<ParamToCC>();
 
@@ -3060,7 +3125,7 @@ namespace MidiTools
                         }
                         else { return iCC.ToString(); }
                     }
-               
+
                 }
             }
             else { return ((int)p).ToString(); }
