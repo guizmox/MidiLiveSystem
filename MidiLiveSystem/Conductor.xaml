@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MidiLiveSystem"
         mc:Ignorable="d"
-        Title="Sound Stage" Height="500" Width="800">
+        Title="Sound Stage" Height="600" Width="1000">
 
     <Window.Resources>
         <Style TargetType="TextBlock">
@@ -15,15 +15,15 @@
         </Style>
     </Window.Resources>
     
-    <Grid Width="768">
+    <Grid Width="980">
         <Grid.RowDefinitions>
-            <RowDefinition Height="400"/>
+            <RowDefinition Height="500"/>
             <RowDefinition Height="5*"/>
         </Grid.RowDefinitions>
         <Border BorderBrush="Black" BorderThickness="2">
-            <Grid Name="gdButtons" Height="400" Background="White" >
+            <Grid Name="gdButtons" Height="500" Background="White" >
                
-                <Ellipse Width="250" Height="100" Fill="Black" Stroke="DarkGray" StrokeThickness="1" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,345,0,0">
+                <Ellipse Width="350" Height="100" Fill="Black" Stroke="DarkGray" StrokeThickness="1" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,440,0,0">
                     <Ellipse.Effect>
                         <DropShadowEffect Color="Gray" Direction="330" ShadowDepth="5" Opacity="0.5"/>
                     </Ellipse.Effect>

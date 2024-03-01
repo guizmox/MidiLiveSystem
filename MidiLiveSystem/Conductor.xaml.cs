@@ -9,6 +9,7 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 
@@ -86,21 +87,21 @@ namespace MidiLiveSystem
             var offsetX = (_currentTT == null ? _buttonPosition[iIndex].X : _buttonPosition[iIndex].X - _currentTT[iIndex].X) + deltaX[iIndex] - mousePoint.X;
             var offsetY = (_currentTT == null ? _buttonPosition[iIndex].Y : _buttonPosition[iIndex].Y - _currentTT[iIndex].Y) + deltaY[iIndex] - mousePoint.Y;
 
-            if (offsetX > 330)
+            if (offsetX > 430)
             {
-                offsetX = 330;
+                offsetX = 430;
             }
-            if (offsetX < -330)
+            if (offsetX < -430)
             {
-                offsetX = -330;
+                offsetX = -430;
             }
-            if (offsetY < -130)
+            if (offsetY < -180)
             {
-                offsetY = -130;
+                offsetY = -180;
             }
-            if (offsetY > 170)
+            if (offsetY > 230)
             {
-                offsetY = 170;
+                offsetY = 230;
             }
 
             ((Button)sender).RenderTransform = new TranslateTransform(-offsetX, -offsetY);
@@ -199,7 +200,17 @@ namespace MidiLiveSystem
                         break;
                 }
             }
-            
+
+            var dropShadowEffect = new DropShadowEffect
+            {
+                Color = Colors.Gray,
+                Direction = 0,
+                ShadowDepth = 0,
+                Opacity = 1,
+                BlurRadius = 50
+            };
+
+
             var rtbButton = new Button
             {
                 Name = "btn_" + iIndex,
@@ -210,8 +221,10 @@ namespace MidiLiveSystem
                 Tag = box.BoxGuid.ToString(),
                 VerticalContentAlignment = VerticalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
-                Background = Brushes.DarkBlue
-
+                Background = Brushes.DarkBlue,
+                BorderThickness = new Thickness(1),
+                BorderBrush = Brushes.DarkOrange,
+                Effect = dropShadowEffect
             };
             rtbButton.PreviewMouseDown += RoutingBoxButton_PreviewMouseDown;
             rtbButton.PreviewMouseUp += RoutingBoxButton_PreviewMouseUp;
@@ -240,13 +253,13 @@ namespace MidiLiveSystem
             int volPos = opt.CC_Volume_Value;
             int panPos = opt.CC_Pan_Value;
 
-            double originalMaxV = 300.0;
+            double originalMaxV = 410.0;
             double destinationMaxV = 127.0;
 
             double ratioV = destinationMaxV / originalMaxV;
-            volPos = Convert.ToInt32(((destinationMaxV - volPos) / ratioV) - 130);
+            volPos = Convert.ToInt32(((destinationMaxV - volPos) / ratioV) - 180);
 
-            double originalMaxP = 330.0;
+            double originalMaxP = 430.0;
             double destinationMaxP = 64.0;
 
             double ratioP = destinationMaxP / originalMaxP;
@@ -257,16 +270,16 @@ namespace MidiLiveSystem
 
         private int FromYToVolume(double dVertical)
         {
-            double originalMax = 300.0;
+            double originalMax = 410.0;
             double destinationMax = 127.0;
 
             double ratio = destinationMax / originalMax;
-            return Convert.ToInt32((destinationMax - (dVertical * ratio)) - 55);
+            return Convert.ToInt32((destinationMax - (dVertical * ratio)) - 56);
         }
 
         private int FromXToPan(double dHorizontal)
         {
-            double originalMax = 330.0;
+            double originalMax = 430.0;
             double destinationMax = 64.0;
 
             double ratio = destinationMax / originalMax;

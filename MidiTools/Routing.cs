@@ -17,6 +17,8 @@ namespace MidiTools
     [Serializable]
     internal class MatrixItem
     {
+        private int[] CCToNotBlock = new int[16] { 0, 6, 32, 64, 65, 66, 67, 68, 120, 121, 122, 123, 124, 125, 126, 127 };
+
         internal bool Active { get; set; } = true;
         internal int ChannelIn = 1;
         internal int ChannelOut = 1;
@@ -91,7 +93,7 @@ namespace MidiTools
             }
             else
             {
-                if (bSmooth)
+                if (bSmooth && !CCToNotBlock.Contains(cc.CC))
                 {
                     if ((cc.CCValue + 16) < iCCValue)
                     {
@@ -122,7 +124,7 @@ namespace MidiTools
             LiveProgram = iProgram;
         }
 
-        internal void UnblockCC(int iCC, int iCCValue, Channel channel, string sDevice)
+        internal void UnblockCC(int iCC, Channel channel, string sDevice)
         {
             var cc = LiveData.FirstOrDefault(i => i.Device.Equals(sDevice) && i.Channel == channel && i.CC == iCC);
             if (cc != null)
@@ -139,6 +141,14 @@ namespace MidiTools
                 return cc.BlockIncoming;
             }
             else { return false; }
+        }
+
+        internal void UnblockAllCC()
+        {
+            foreach (var item in LiveData)
+            {
+                item.BlockIncoming = false;
+            }
         }
     }
 
@@ -562,32 +572,42 @@ namespace MidiTools
                             }
                             else if (_eventsOUT[iEv].Type == TypeEvent.CC) //mémoire de CC
                             {
-                                //si l'item est bloqué à cause du smooth, on interdit les nouveaux entrants
-                                if (item.IsBlocked(_eventsOUT[iEv].Values[0], _eventsOUT[iEv].Values[1], _eventsOUT[iEv].Channel, _eventsOUT[iEv].Device))
+                                if (!bOutEvent) //!bOutevent parce qu'on ne veut pas que les évènements forcés (type changement preset) créent un smooth
                                 {
-                                    bAvoidCCToSmooth = true;
-                                }
-                                else
-                                {
-                                    //sinon on enregistre et on crée une liste d'events additionnels
-                                    var newitems = item.SetCC(_eventsOUT[iEv].Values[0], _eventsOUT[iEv].Values[1], _eventsOUT[iEv].Channel, _eventsOUT[iEv].Device, item.Options.SmoothCC);
-                                    int count = newitems.Count;
-                                    if (item.Options.SmoothCC && count > 0)
+                                    //si l'item est bloqué à cause du smooth, on interdit les nouveaux entrants
+                                    if (item.IsBlocked(_eventsOUT[iEv].Values[0], _eventsOUT[iEv].Values[1], _eventsOUT[iEv].Channel, _eventsOUT[iEv].Device))
                                     {
                                         bAvoidCCToSmooth = true;
-
-                                        var copiedevent = new MidiEvent(TypeEvent.CC, new List<int> { _eventsOUT[iEv].Values[0], _eventsOUT[iEv].Values[1] }, _eventsOUT[iEv].Channel, _eventsOUT[iEv].Device);
-
-                                        Task.Factory.StartNew(() =>
-                                        {
-                                            foreach (var cc in newitems)
-                                            {
-                                                item.DeviceOut.SendMidiEvent(cc);
-                                                Thread.Sleep((int)(item.Options.SmoothCCLength / count)); //le smoooth doit durer 1sec
-                                            }
-                                            item.UnblockCC(copiedevent.Values[0], copiedevent.Values[1], copiedevent.Channel, copiedevent.Device);
-                                        });
                                     }
+                                    else
+                                    {
+                                        //sinon on enregistre et on crée une liste d'events additionnels
+                                        var newitems = item.SetCC(_eventsOUT[iEv].Values[0], _eventsOUT[iEv].Values[1], _eventsOUT[iEv].Channel, _eventsOUT[iEv].Device, item.Options.SmoothCC);
+                                        int count = newitems.Count;
+
+                                        if (item.Options.SmoothCC && count > 0)
+                                        {
+                                            bAvoidCCToSmooth = true;
+
+                                            var copiedevent = new MidiEvent(TypeEvent.CC, new List<int> { _eventsOUT[iEv].Values[0], _eventsOUT[iEv].Values[1] }, _eventsOUT[iEv].Channel, _eventsOUT[iEv].Device);
+
+                                            Task.Factory.StartNew(() =>
+                                            {
+                                                foreach (var cc in newitems)
+                                                {
+                                                    item.DeviceOut.SendMidiEvent(cc);
+                                                    Thread.Sleep((int)(item.Options.SmoothCCLength / count)); //le smoooth doit durer 1sec
+                                                }
+                                                item.UnblockCC(copiedevent.Values[0], copiedevent.Channel, copiedevent.Device);
+                                            });
+                                        }
+
+                                    }
+                                }
+                                else //on mémorise juste la valeur et on débloque le CC si il est bloqué
+                                {
+                                    item.SetCC(_eventsOUT[iEv].Values[0], _eventsOUT[iEv].Values[1], _eventsOUT[iEv].Channel, _eventsOUT[iEv].Device, false);
+                                    item.UnblockCC(_eventsOUT[iEv].Values[0], _eventsOUT[iEv].Channel, _eventsOUT[iEv].Device);
                                 }
                             }
 
@@ -605,6 +625,8 @@ namespace MidiTools
 
         private void ChangeOptions(MatrixItem routing, MidiOptions newop, bool bInit)
         {
+            bool bChanges = false;
+
             if (routing.DeviceOut != null)
             {
                 if (newop == null) //tout charger
@@ -612,38 +634,47 @@ namespace MidiTools
                     if (routing.Options.CC_Attack_Value > -1 || (bInit && routing.Options.CC_Attack_Value > -1))
                     {
                         CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Attack, routing.Options.CC_Attack_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        bChanges = true;
                     }
                     if (routing.Options.CC_Timbre_Value > -1 || (bInit && routing.Options.CC_Timbre_Value > -1))
                     {
                         CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Timbre, routing.Options.CC_Timbre_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        bChanges = true;
                     }
                     if (routing.Options.CC_FilterCutOff_Value > -1 || (bInit && routing.Options.CC_FilterCutOff_Value > -1))
                     {
                         CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_FilterCutOff, routing.Options.CC_FilterCutOff_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        bChanges = true;
                     }
                     if (routing.Options.CC_Chorus_Value > -1 || (bInit && routing.Options.CC_Chorus_Value > -1))
                     {
                         CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Chorus, routing.Options.CC_Chorus_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        bChanges = true;
                     }
                     if (routing.Options.CC_Decay_Value > -1 || (bInit && routing.Options.CC_Decay_Value > -1))
                     {
                         CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Decay, routing.Options.CC_Decay_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        bChanges = true;
                     }
                     if (routing.Options.CC_Pan_Value > -1 || (bInit && routing.Options.CC_Pan_Value > -1))
                     {
                         CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Pan, routing.Options.CC_Pan_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        bChanges = true;
                     }
                     if (routing.Options.CC_Release_Value > -1 || (bInit && routing.Options.CC_Release_Value > -1))
                     {
                         CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Release, routing.Options.CC_Release_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        bChanges = true;
                     }
                     if (routing.Options.CC_Reverb_Value > -1 || (bInit && routing.Options.CC_Reverb_Value > -1))
                     {
                         CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Reverb, routing.Options.CC_Reverb_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        bChanges = true;
                     }
                     if (routing.Options.CC_Volume_Value > -1 || (bInit && routing.Options.CC_Volume_Value > -1))
                     {
                         CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Volume, routing.Options.CC_Volume_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        bChanges = true;
                     }
                 }
                 else
@@ -657,40 +688,50 @@ namespace MidiTools
                     if (newop.CC_Attack_Value != routing.Options.CC_Attack_Value || (bInit && routing.Options.CC_Attack_Value > -1))
                     {
                         CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Attack, newop.CC_Attack_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        bChanges = true;
                     }
                     if (newop.CC_Timbre_Value != routing.Options.CC_Timbre_Value || (bInit && routing.Options.CC_Timbre_Value > -1))
                     {
                         CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Timbre, newop.CC_Timbre_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        bChanges = true;
                     }
                     if (newop.CC_FilterCutOff_Value != routing.Options.CC_FilterCutOff_Value || (bInit && routing.Options.CC_FilterCutOff_Value > -1))
                     {
                         CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_FilterCutOff, newop.CC_FilterCutOff_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        bChanges = true;
                     }
                     if (newop.CC_Chorus_Value != routing.Options.CC_Chorus_Value || (bInit && routing.Options.CC_Chorus_Value > -1))
                     {
                         CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Chorus, newop.CC_Chorus_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        bChanges = true;
                     }
                     if (newop.CC_Decay_Value != routing.Options.CC_Decay_Value || (bInit && routing.Options.CC_Decay_Value > -1))
                     {
                         CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Decay, newop.CC_Decay_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        bChanges = true;
                     }
                     if (newop.CC_Pan_Value != routing.Options.CC_Pan_Value || (bInit && routing.Options.CC_Pan_Value > -1))
                     {
                         CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Pan, newop.CC_Pan_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        bChanges = true;
                     }
                     if (newop.CC_Release_Value != routing.Options.CC_Release_Value || (bInit && routing.Options.CC_Release_Value > -1))
                     {
                         CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Release, newop.CC_Release_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        bChanges = true;
                     }
                     if (newop.CC_Reverb_Value != routing.Options.CC_Reverb_Value || (bInit && routing.Options.CC_Reverb_Value > -1))
                     {
                         CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Reverb, newop.CC_Reverb_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        bChanges = true;
                     }
                     if (newop.CC_Volume_Value != routing.Options.CC_Volume_Value || (bInit && routing.Options.CC_Volume_Value > -1))
                     {
                         CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Volume, newop.CC_Volume_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                        bChanges = true;
                     }
                 }
+                //if (bChanges) { routing.UnblockAllCC(); }
             }
 
             if (newop != null) { routing.Options = newop; }
@@ -1253,7 +1294,7 @@ namespace MidiTools
                 return true;
             }
             else //en mode ouverture de projet on a déjà un routing guid
-            { 
+            {
                 AddRouting(sDeviceIn, sDeviceOut, iChIn, iChOut, options, preset);
                 MidiMatrix.Last().SetRoutingGuid(routingGuid);
                 return true;
