@@ -33,8 +33,8 @@ namespace MidiLiveSystem
         private System.Timers.Timer UIRefreshRate;
         private int RefreshCounter = 0;
 
-        private int CurrentVerticalGrid = 0;
-        private int CurrentHorizontalGrid = 1;
+        private int CurrentVerticalGrid = 4;
+        private int CurrentHorizontalGrid = 4;
 
         private MidiConfiguration ConfigWindow;
         private MidiLog LogWindow;
@@ -542,17 +542,21 @@ namespace MidiLiveSystem
 
         private void btnSaveProject_Click(object sender, RoutedEventArgs e)
         {
-            SaveTemplate();
+            if (Boxes.Count > 0)
+            {
+                SaveTemplate();
 
-            try
-            {
-                Database.SaveProject(Boxes, Project, RecordedSequence);
-                Database.SaveInstruments(CubaseInstrumentData.Instruments);
+                try
+                {
+                    Database.SaveProject(Boxes, Project, RecordedSequence);
+                    Database.SaveInstruments(CubaseInstrumentData.Instruments);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Unable to Save Project : " + ex.Message);
+                }
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Unable to Save Project : " + ex.Message);
-            }
+            else { MessageBox.Show("Nothing to Save."); }
         }
 
         private void btnOpenProject_Click(object sender, RoutedEventArgs e)

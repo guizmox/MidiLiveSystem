@@ -180,7 +180,7 @@ namespace MidiLiveSystem
             int iExists = GetProjectName(sProjectName.Replace("'", "''"));
             if (iExists > 0)
             {
-                sProjectName = string.Concat(sProjectName, " (" + DateTime.Now.ToString("yyyy/MM/dd"), ")");
+                sProjectName = string.Concat(sProjectName, " - ", (iExists + 1).ToString("00"), " (" + DateTime.Now.ToString("yyyy/MM/dd"), ")");
             }
 
             using (var connection = new SqliteConnection(connectionString))

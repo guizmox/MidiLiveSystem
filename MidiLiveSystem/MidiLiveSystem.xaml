@@ -6,21 +6,23 @@
         xmlns:local="clr-namespace:MidiLiveSystem"      
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
-        Title="MIDI Live System" Height="700" Width="1200" Closed="Window_Closed" SizeToContent="WidthAndHeight" WindowStartupLocation="CenterScreen" >
-    <Grid Grid.Column="1" Margin="5,5,5,5">
+        Title="MIDI Live System" Height="100" Width="1400" Closed="Window_Closed" SizeToContent="WidthAndHeight" WindowStartupLocation="CenterScreen"  >
+    
+    <Grid Margin="5,5,5,5" >
         <Grid.RowDefinitions>
             <RowDefinition Height="92*" />
-            <RowDefinition Height="8*" />
+            <RowDefinition Height="80" />
         </Grid.RowDefinitions>
         <DockPanel Grid.Row="0">
             <Grid x:Name="gridBoxes">
 
             </Grid>
+            
         </DockPanel>
         <DockPanel Grid.Row="1">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="0*" />
                     <ColumnDefinition Width="10*" />
                     <ColumnDefinition Width="10*" />
                     <ColumnDefinition Width="10*" />
@@ -33,7 +35,7 @@
                     <ColumnDefinition Width="5*" />
                     <ColumnDefinition Width="8*" />
                     <ColumnDefinition Width="8*" />
-                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="0*" />
                 </Grid.ColumnDefinitions>
                 
                 <Button Name="btnAddBox" ToolTip="Adds a box to set a new MIDI route. You can add up to 20 boxes" Width="140" Height="60" Grid.Column="1" Background="CadetBlue" Click="btnAddBox_Click" >
@@ -44,7 +46,7 @@
                                 VerticalAlignment="Center"
                                 Kind="MidiPort" />
                         </TextBlock>
-                        <TextBlock Text="Add Routing Box" />
+                        <TextBlock Text="Add Routing Box" FontSize="11" />
                     </StackPanel>
                 </Button>
 
@@ -56,7 +58,7 @@
                                 VerticalAlignment="Center"
                                 Kind="ContentSave" />
                         </TextBlock>
-                        <TextBlock Text="Save Project" />
+                        <TextBlock Text="Save Project"  FontSize="11"/>
                     </StackPanel>
                 </Button>
 
@@ -68,7 +70,7 @@
                                 VerticalAlignment="Center"
                                 Kind="OpenInBrowser" />
                         </TextBlock>
-                        <TextBlock Text="Open Project" />
+                        <TextBlock Text="Open Project"  FontSize="11"/>
                     </StackPanel>
                 </Button>
 
@@ -80,7 +82,7 @@
                                 VerticalAlignment="Center"
                                 Kind="Tools" />
                         </TextBlock>
-                        <TextBlock Text="Project Settings" />
+                        <TextBlock Text="Project Settings" FontSize="11"/>
                     </StackPanel>
                 </Button>
 
@@ -92,7 +94,7 @@
                                 VerticalAlignment="Center"
                                 Kind="MidiPort" />
                         </TextBlock>
-                        <TextBlock Text="MIDI Monitor" />
+                        <TextBlock Text="MIDI Monitor" FontSize="11" />
                     </StackPanel>
                 </Button>
 
@@ -104,7 +106,7 @@
                                 VerticalAlignment="Center"
                                 Kind="Keyboard" />
                         </TextBlock>
-                        <TextBlock Text="Keyboard" />
+                        <TextBlock Text="Keyboard"  FontSize="11"/>
                     </StackPanel>
                 </Button>
 
@@ -117,7 +119,7 @@
                                 VerticalAlignment="Center"
                                 Kind="Pan" />
                         </TextBlock>
-                        <TextBlock Text="Sound Stage" />
+                        <TextBlock Text="Sound Stage"  FontSize="11"/>
                     </StackPanel>
                 </Button>
                 
@@ -131,7 +133,7 @@
                                 VerticalAlignment="Center"
                                 Kind="ToggleSwitch" />
                         </TextBlock>
-                        <TextBlock Text="Switch View" />
+                        <TextBlock Text="Switch View"  FontSize="11"/>
                     </StackPanel>
                 </Button>
 
@@ -143,7 +145,7 @@
                                 VerticalAlignment="Center"
                                 Kind="Record" />
                         </TextBlock>
-                        <TextBlock x:Name="tbRecord" Text="REC" />
+                        <TextBlock x:Name="tbRecord" Text="REC" FontSize="11"/>
                     </StackPanel>
                 </Button>
 
@@ -155,7 +157,7 @@
                                 VerticalAlignment="Center"
                                 Kind="Play" />
                         </TextBlock>
-                        <TextBlock Name="tbPlay" Text="PLAY" />
+                        <TextBlock Name="tbPlay" Text="PLAY" FontSize="11" />
                     </StackPanel>
                 </Button>
                 
