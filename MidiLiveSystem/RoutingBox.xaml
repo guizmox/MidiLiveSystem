@@ -31,8 +31,8 @@
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="85*"/>
-            <ColumnDefinition Width="15*" />
+            <ColumnDefinition Width="90*"/>
+            <ColumnDefinition Width="10*" />
         </Grid.ColumnDefinitions>
 
         <Grid Grid.Row="0" Grid.Column="1" Margin="2,2,2,2" >
@@ -55,7 +55,7 @@
                     <RowDefinition Height="25*"/>
                     <RowDefinition Height="25*"/>
                 </Grid.RowDefinitions>
-                <Button Name="tbSolo" Grid.Row="0" Background="DarkGray" Click="tbSolo_Click"  >
+                <Button Name="tbSolo" Padding="3" Grid.Row="0" Background="DarkGray" Click="tbSolo_Click"  >
                     <StackPanel>
                             <TextBlock>
                             <materialDesign:PackIcon
@@ -65,7 +65,7 @@
                             </TextBlock>
                     </StackPanel>
                 </Button>
-                <Button Name="tbMute" Grid.Row="1" Background="DarkGray" Click="tbMute_Click" >
+                <Button Name="tbMute" Padding="3" Grid.Row="1" Background="DarkGray" Click="tbMute_Click" >
                     <StackPanel>
                             <TextBlock>
                             <materialDesign:PackIcon
@@ -76,7 +76,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnCopyPreset" Grid.Row="2" Background="DarkGray" Click="btnCopyPreset_Click" >
+                <Button Name="btnCopyPreset" Padding="3" Grid.Row="2" Background="DarkGray" Click="btnCopyPreset_Click" >
                     <StackPanel>
                             <TextBlock>
                             <materialDesign:PackIcon
@@ -87,7 +87,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnPastePreset" Grid.Row="3" Background="DarkGray" Click="btnPastePreset_Click" >
+                <Button Name="btnPastePreset" Padding="3" Grid.Row="3" Background="DarkGray" Click="btnPastePreset_Click" >
                     <StackPanel>
                             <TextBlock>
                             <materialDesign:PackIcon
@@ -132,28 +132,28 @@
                         <ColumnDefinition Width="25*" />
                     </Grid.ColumnDefinitions>
 
-                    <Button x:Name="btnPreset1" Background="IndianRed" Tag="0" Grid.Row="0" Grid.Column="0" Margin="5,5,5,5" Height="Auto" Width="Auto" Click="btnPreset_Click">
+                    <Button x:Name="btnPreset1" FontSize="9" Padding="3" Background="IndianRed" Tag="0" Grid.Row="0" Grid.Column="0" Margin="4,4,4,4" Height="Auto" Width="Auto" Click="btnPreset_Click">
                         <TextBlock TextWrapping="Wrap" Text="Preset 1" />
                     </Button>
-                    <Button x:Name="btnPreset2" Tag="1" Grid.Row="0" Grid.Column="1" Margin="5,5,5,5" Height="Auto" Width="Auto" Click="btnPreset_Click">
+                    <Button x:Name="btnPreset2" FontSize="9" Padding="3" Tag="1" Grid.Row="0" Grid.Column="1" Margin="4,4,4,4" Height="Auto" Width="Auto" Click="btnPreset_Click">
                         <TextBlock TextWrapping="Wrap" Text="Preset 2" />
                     </Button>
-                    <Button x:Name="btnPreset3" Tag="2" Grid.Row="0" Grid.Column="2" Margin="5,5,5,5" Height="Auto" Width="Auto" Click="btnPreset_Click">
+                    <Button x:Name="btnPreset3" FontSize="9" Padding="3" Tag="2" Grid.Row="0" Grid.Column="2" Margin="4,4,4,4" Height="Auto" Width="Auto" Click="btnPreset_Click">
                         <TextBlock TextWrapping="Wrap" Text="Preset 3" />
                     </Button>
-                    <Button x:Name="btnPreset4" Tag="3" Grid.Row="0" Grid.Column="3" Margin="5,5,5,5" Height="Auto" Width="Auto" Click="btnPreset_Click">
+                    <Button x:Name="btnPreset4" FontSize="9" Padding="3" Tag="3" Grid.Row="0" Grid.Column="3" Margin="4,4,4,4" Height="Auto" Width="Auto" Click="btnPreset_Click">
                         <TextBlock TextWrapping="Wrap" Text="Preset 4" />
                     </Button>
-                    <Button x:Name="btnPreset5" Tag="4" Grid.Row="1" Grid.Column="0" Margin="5,5,5,5" Height="Auto" Width="Auto" Click="btnPreset_Click">
+                    <Button x:Name="btnPreset5" FontSize="9" Padding="3" Tag="4" Grid.Row="1" Grid.Column="0" Margin="4,4,4,4" Height="Auto" Width="Auto" Click="btnPreset_Click">
                         <TextBlock TextWrapping="Wrap" Text="Preset 5" />
                     </Button>
-                    <Button x:Name="btnPreset6" Tag="5" Grid.Row="1" Grid.Column="1" Margin="5,5,5,5" Height="Auto" Width="Auto" Click="btnPreset_Click">
+                    <Button x:Name="btnPreset6" FontSize="9" Padding="3" Tag="5" Grid.Row="1" Grid.Column="1" Margin="4,4,4,4" Height="Auto" Width="Auto" Click="btnPreset_Click">
                         <TextBlock TextWrapping="Wrap" Text="Preset 6" />
                     </Button>
-                    <Button x:Name="btnPreset7" Tag="6" Grid.Row="1" Grid.Column="2" Margin="5,5,5,5" Height="Auto" Width="Auto" Click="btnPreset_Click">
+                    <Button x:Name="btnPreset7" FontSize="9" Padding="3" Tag="6" Grid.Row="1" Grid.Column="2" Margin="4,4,4,4" Height="Auto" Width="Auto" Click="btnPreset_Click">
                         <TextBlock TextWrapping="Wrap" Text="Preset 7" />
                     </Button>
-                    <Button x:Name="btnPreset8" Tag="7" Grid.Row="1" Grid.Column="3" Margin="5,5,5,5" Height="Auto" Width="Auto" Click="btnPreset_Click">
+                    <Button x:Name="btnPreset8" FontSize="9" Padding="3" Tag="7" Grid.Row="1" Grid.Column="3" Margin="4,4,4,4" Height="Auto" Width="Auto" Click="btnPreset_Click">
                         <TextBlock TextWrapping="Wrap" Text="Preset 8" />
                     </Button>
                 </Grid>

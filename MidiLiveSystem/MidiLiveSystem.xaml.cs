@@ -336,9 +336,13 @@ namespace MidiLiveSystem
                         AddAllRoutingBoxes();
                         break;
                     case "REMOVE":
-                        Routing.DeleteRouting(box.RoutingGuid);
-                        Boxes.Remove(box);
-                        AddAllRoutingBoxes();
+                        var confirmation = MessageBox.Show("Are you sure ?", "Delete Box", MessageBoxButton.YesNo);
+                        if (confirmation == MessageBoxResult.Yes)
+                        {
+                            Routing.DeleteRouting(box.RoutingGuid);
+                            Boxes.Remove(box);
+                            AddAllRoutingBoxes();
+                        }
                         break;
                     case "MOVE_NEXT":
                         if (box.GridPosition == Boxes.Count - 1) //déjà en dernière position
@@ -442,7 +446,7 @@ namespace MidiLiveSystem
             int i = Routing.AdjustUIRefreshRate(); //renvoit une quantité en ms
 
             Routing.IncomingMidiMessage -= Routing_IncomingMidiMessage;
-            if (Routing.Events <= 12) //pour éviter de saturer les process avec des appels UI inutiles
+            if (Routing.Events <= 30) //pour éviter de saturer les process avec des appels UI inutiles
             {
                 Routing.IncomingMidiMessage += Routing_IncomingMidiMessage;
             }
@@ -782,7 +786,7 @@ namespace MidiLiveSystem
         {
             if (!GridFrames.Any(g => g.Tag.ToString().Equals("")))
             {
-                if (CurrentVerticalGrid * CurrentHorizontalGrid >= 20)
+                if (Boxes.Count >= 20)
                 {
                     MessageBox.Show("You can't add more Routing Boxes.");
                 }

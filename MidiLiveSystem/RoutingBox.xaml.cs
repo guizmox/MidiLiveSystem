@@ -295,7 +295,7 @@ namespace MidiLiveSystem
 
         private void cbChannelMidiOut_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (cbChannelMidiOut.SelectedIndex > -1)
+            if (cbChannelMidiOut.SelectedIndex > -1 && cbChannelMidiOut.IsFocused)
             {
                 ComboBoxItem cbOut = (ComboBoxItem)cbChannelMidiOut.SelectedItem;
                 cbChannelPreset.SelectedValue = cbOut.Tag;
@@ -673,14 +673,14 @@ namespace MidiLiveSystem
             }
 
             //remplissage des champs
-            tbPresetName.Text = bp.PresetName;
-            tbRoutingName.Text = bp.BoxName;
+            if (!tbPresetName.IsFocused) { tbPresetName.Text = bp.PresetName; }
+            if (!tbRoutingName.IsFocused) { tbRoutingName.Text = bp.BoxName; }
 
             if (bp.MidiOptions.PlayNote != null)
             {
-                tbInternalGeneratorKey.Text = bp.MidiOptions.PlayNote.Note.ToString();
-                tbInternalGeneratorVelocity.Text = bp.MidiOptions.PlayNote.Velocity.ToString();
-                tbInternalGeneratorLength.Text = bp.MidiOptions.PlayNote.Length.ToString();
+                if (!tbInternalGeneratorKey.IsFocused) { tbInternalGeneratorKey.Text = bp.MidiOptions.PlayNote.Note.ToString(); }
+                if (!tbInternalGeneratorVelocity.IsFocused) { tbInternalGeneratorVelocity.Text = bp.MidiOptions.PlayNote.Velocity.ToString(); }
+                if (!tbInternalGeneratorLength.IsFocused) { tbInternalGeneratorLength.Text = bp.MidiOptions.PlayNote.Length.ToString(); }
             }
             ckInternalGeneratorLowestKey.IsChecked = bp.MidiOptions.PlayNote_LowestNote;
 
@@ -696,10 +696,10 @@ namespace MidiLiveSystem
             lbPreset.Text = bp.MidiPreset.PresetName;
             lbPreset.Tag = bp.MidiPreset.Tag;
 
-            tbFilterHighNote.Text = bp.MidiOptions.NoteFilterHigh.ToString();
-            tbFilterLowNote.Text = bp.MidiOptions.NoteFilterLow.ToString();
-            tbFilterHighVelo.Text = bp.MidiOptions.VelocityFilterHigh.ToString();
-            tbFilterLowVelo.Text = bp.MidiOptions.VelocityFilterLow.ToString();
+            if (!tbFilterHighNote.IsFocused) { tbFilterHighNote.Text = bp.MidiOptions.NoteFilterHigh.ToString(); }
+            if (!tbFilterLowNote.IsFocused) { tbFilterLowNote.Text = bp.MidiOptions.NoteFilterLow.ToString(); }
+            if (!tbFilterHighVelo.IsFocused) { tbFilterHighVelo.Text = bp.MidiOptions.VelocityFilterHigh.ToString(); }
+            if (!tbFilterLowVelo.IsFocused) { tbFilterLowVelo.Text = bp.MidiOptions.VelocityFilterLow.ToString(); }
 
             ckAllowAftertouch.IsChecked = bp.MidiOptions.AllowAftertouch;
             ckAllowAllCC.IsChecked = bp.MidiOptions.AllowAllCC;
@@ -711,47 +711,51 @@ namespace MidiLiveSystem
             ckAllowSysex.IsChecked = bp.MidiOptions.AllowSysex;
 
             ckAftertouchToNote.IsChecked = bp.MidiOptions.AftertouchVolume;
-            tbNoteTransposition.Text = bp.MidiOptions.TranspositionOffset.ToString();
 
-            tbSmoothCC.Text = bp.MidiOptions.SmoothCCLength.ToString();
+            if (!tbNoteTransposition.IsFocused) { tbNoteTransposition.Text = bp.MidiOptions.TranspositionOffset.ToString(); }
 
-            foreach (var item in cbCCDefaultValues.Items)
+            if (!tbSmoothCC.IsFocused) { tbSmoothCC.Text = bp.MidiOptions.SmoothCCLength.ToString(); }
+
+            if (!cbCCDefaultValues.IsFocused)
             {
-                ComboBoxCustomItem cb = (ComboBoxCustomItem)item;
-
-                switch (cb.Id)
+                foreach (var item in cbCCDefaultValues.Items)
                 {
-                    case "tbCC_Chorus":
-                        cb.Value = bp.MidiOptions.CC_Chorus_Value.ToString();
-                        break;
-                    case "tbCC_Pan":
-                        if (bp.MidiOptions.CC_Pan_Value == -1)
-                        { bp.MidiOptions.CC_Pan_Value = 64; }
-                        cb.Value = bp.MidiOptions.CC_Pan_Value.ToString();
-                        break;
-                    case "tbCC_Volume":
-                        if (bp.MidiOptions.CC_Volume_Value == -1)
-                        { bp.MidiOptions.CC_Volume_Value = 100; }
-                        cb.Value = bp.MidiOptions.CC_Volume_Value.ToString();
-                        break;
-                    case "tbCC_Attack":
-                        cb.Value = bp.MidiOptions.CC_Attack_Value.ToString();
-                        break;
-                    case "tbCC_Decay":
-                        cb.Value = bp.MidiOptions.CC_Decay_Value.ToString();
-                        break;
-                    case "tbCC_Release":
-                        cb.Value = bp.MidiOptions.CC_Release_Value.ToString();
-                        break;
-                    case "tbCC_Reverb":
-                        cb.Value = bp.MidiOptions.CC_Reverb_Value.ToString();
-                        break;
-                    case "tbCC_Timbre":
-                        cb.Value = bp.MidiOptions.CC_Timbre_Value.ToString();
-                        break;
-                    case "tbCC_CutOff":
-                        cb.Value = bp.MidiOptions.CC_FilterCutOff_Value.ToString();
-                        break;
+                    ComboBoxCustomItem cb = (ComboBoxCustomItem)item;
+
+                    switch (cb.Id)
+                    {
+                        case "tbCC_Chorus":
+                            cb.Value = bp.MidiOptions.CC_Chorus_Value.ToString();
+                            break;
+                        case "tbCC_Pan":
+                            if (bp.MidiOptions.CC_Pan_Value == -1)
+                            { bp.MidiOptions.CC_Pan_Value = 64; }
+                            cb.Value = bp.MidiOptions.CC_Pan_Value.ToString();
+                            break;
+                        case "tbCC_Volume":
+                            if (bp.MidiOptions.CC_Volume_Value == -1)
+                            { bp.MidiOptions.CC_Volume_Value = 100; }
+                            cb.Value = bp.MidiOptions.CC_Volume_Value.ToString();
+                            break;
+                        case "tbCC_Attack":
+                            cb.Value = bp.MidiOptions.CC_Attack_Value.ToString();
+                            break;
+                        case "tbCC_Decay":
+                            cb.Value = bp.MidiOptions.CC_Decay_Value.ToString();
+                            break;
+                        case "tbCC_Release":
+                            cb.Value = bp.MidiOptions.CC_Release_Value.ToString();
+                            break;
+                        case "tbCC_Reverb":
+                            cb.Value = bp.MidiOptions.CC_Reverb_Value.ToString();
+                            break;
+                        case "tbCC_Timbre":
+                            cb.Value = bp.MidiOptions.CC_Timbre_Value.ToString();
+                            break;
+                        case "tbCC_CutOff":
+                            cb.Value = bp.MidiOptions.CC_FilterCutOff_Value.ToString();
+                            break;
+                    }
                 }
             }
 

@@ -62,7 +62,10 @@ namespace MidiLiveSystem
         {
             if (tbPrg != null && tbMsb != null & tbLsb != null && InstrumentPresets != null)
             {
-                FilterTreeViewByPrg(tbPrg.Text.Trim(), tbMsb.Text.Trim(), tbLsb.Text.Trim());
+                if (tbPrg.IsFocused || tbMsb.IsFocused || tbLsb.IsFocused)
+                {
+                    FilterTreeViewByPrg(tbPrg.Text.Trim(), tbMsb.Text.Trim(), tbLsb.Text.Trim());
+                }
             }
         }
 
