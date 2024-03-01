@@ -654,7 +654,7 @@ namespace MidiLiveSystem
         {
             if (RecordedSequence == null)
             {
-                RecordedSequence = new MidiSequence(Routing);
+                RecordedSequence = new MidiSequence();
             }
 
             RecordedSequence.RecordCounter -= RecordedSequence_RecordCounter;
@@ -710,10 +710,10 @@ namespace MidiLiveSystem
 
             if (bRecord)
             {
-                RecordedSequence = new MidiSequence(Routing);
+                RecordedSequence = new MidiSequence();
 
                 tbRecord.Text = "GO !";
-                RecordedSequence.StartRecording(true, true);
+                RecordedSequence.StartRecording(true, true, Routing);
                 RecordedSequence.RecordCounter += RecordedSequence_RecordCounter;
                 RecordedSequence.SequenceFinished += Routing_SequenceFinished;
             }
@@ -740,10 +740,8 @@ namespace MidiLiveSystem
                         btnPlaySequence.Background = Brushes.Green;
 
                         RecordedSequence.RecordCounter += PlayedSequence_RecordCounter;
-                        Routing.CloseUsedPorts(false);
-
                         UIRefreshRate.Stop(); //blocage de tout ce qui va potentiellement aller modifier le routing
-                        RecordedSequence.PlaySequenceAsync();
+                        RecordedSequence.PlaySequenceAsync(Routing);
                     }
                 }
                 else
@@ -919,6 +917,7 @@ namespace MidiLiveSystem
                     var box = new RoutingBox(project, MidiTools.MidiRouting.InputDevices, MidiTools.MidiRouting.OutputDevices, iGridPosition);
                     box.BoxGuid = g;
                     box.BoxName = presetsample.BoxName;
+                    box.RoutingGuid = presetsample.RoutingGuid;
                     //box.RoutingGuid = presetsample.RoutingGuid;
                     box.LoadMemory(AllPresets.Where(p => p.BoxGuid == g).ToArray());
                     boxes.Add(box);

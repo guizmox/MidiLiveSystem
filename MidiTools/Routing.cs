@@ -1,0 +1,1543 @@
+﻿using RtMidi.Core.Messages;
+using RtMidi.Core;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using static MidiTools.MidiDevice;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using System.Timers;
+using System.Threading;
+using RtMidi.Core.Enums;
+
+namespace MidiTools
+{
+
+    [Serializable]
+    internal class MatrixItem
+    {
+        internal bool Active { get; set; } = true;
+        internal int ChannelIn = 1;
+        internal int ChannelOut = 1;
+
+        internal List<LiveCC> LiveData = new List<LiveCC>();
+        internal int LiveProgram = 0;
+
+        internal MidiOptions Options { get; set; } = new MidiOptions();
+        internal MidiDevice DeviceIn;
+        internal MidiDevice DeviceOut;
+        internal MidiPreset Preset { get; set; }
+        internal Guid RoutingGuid { get; private set; }
+
+        public MatrixItem(MidiDevice MidiIN, MidiDevice MidiOUT, int iChIN, int iChOUT, MidiOptions options, MidiPreset preset)
+        {
+            DeviceIn = MidiIN;
+            DeviceOut = MidiOUT;
+            ChannelIn = iChIN;
+            ChannelOut = iChOUT;
+            Options = options;
+            RoutingGuid = Guid.NewGuid();
+            Preset = preset;
+        }
+
+        public MatrixItem()
+        {
+
+        }
+
+        internal void SetRoutingGuid(Guid guid)
+        {
+            RoutingGuid = guid;
+        }
+
+        internal bool CheckDeviceIn(string sDeviceIn)
+        {
+            if (DeviceIn != null && DeviceIn.Name != sDeviceIn)
+            {
+                return true;
+            }
+            else
+            {
+                if (DeviceIn == null && sDeviceIn.Length > 0)
+                { return true; }
+                else { return false; }
+            }
+        }
+
+        internal bool CheckDeviceOut(string sDeviceOut)
+        {
+            if (DeviceOut != null && DeviceOut.Name != sDeviceOut)
+            {
+                return true;
+            }
+            else
+            {
+                if (DeviceOut == null && sDeviceOut.Length > 0)
+                { return true; }
+                else { return false; }
+            }
+        }
+
+        internal List<MidiEvent> SetCC(int iCC, int iCCValue, Channel channel, string sDevice, bool bSmooth)
+        {
+            //int iChannel = Tools.GetChannelInt(channel);
+            List<MidiEvent> intermediate = new List<MidiEvent>();
+
+            var cc = LiveData.FirstOrDefault(i => i.Device.Equals(sDevice) && i.Channel == channel && i.CC == iCC);
+            if (cc == null)
+            {
+                LiveData.Add(new LiveCC(sDevice, channel, iCC, iCCValue));
+            }
+            else
+            {
+                if (bSmooth)
+                {
+                    if ((cc.CCValue + 16) < iCCValue)
+                    {
+                        for (int i = cc.CCValue; i < iCCValue; i += 2)
+                        {
+                            intermediate.Add(new MidiEvent(TypeEvent.CC, new List<int> { cc.CC, i }, channel, sDevice));
+                        }
+                        cc.BlockIncoming = true;
+                    }
+                    else if ((cc.CCValue - 16) > iCCValue)
+                    {
+                        for (int i = cc.CCValue; i > iCCValue; i -= 2)
+                        {
+                            intermediate.Add(new MidiEvent(TypeEvent.CC, new List<int> { cc.CC, i }, channel, sDevice));
+                        }
+                        cc.BlockIncoming = true;
+                    }
+                }
+
+                cc.CCValue = iCCValue;
+            }
+
+            return intermediate;
+        }
+
+        internal void SetProgram(int iProgram)
+        {
+            LiveProgram = iProgram;
+        }
+
+        internal void UnblockCC(int iCC, int iCCValue, Channel channel, string sDevice)
+        {
+            var cc = LiveData.FirstOrDefault(i => i.Device.Equals(sDevice) && i.Channel == channel && i.CC == iCC);
+            if (cc != null)
+            {
+                cc.BlockIncoming = false;
+            }
+        }
+
+        internal bool IsBlocked(int iCC, int iCCValue, Channel channel, string sDevice)
+        {
+            var cc = LiveData.FirstOrDefault(i => i.Device.Equals(sDevice) && i.Channel == channel && i.CC == iCC);
+            if (cc != null)
+            {
+                return cc.BlockIncoming;
+            }
+            else { return false; }
+        }
+    }
+
+    [Serializable]
+    public class MidiRouting
+    {
+        private static double CLOCK_INTERVAL = 1000;
+
+        private bool ClockRunning = false;
+        private int ClockBPM = 120;
+        private string ClockDevice = "";
+
+        private int CurrentATValue = 0;
+
+        public static List<RtMidi.Core.Devices.Infos.IMidiInputDeviceInfo> InputDevices
+        {
+            get
+            {
+                List<RtMidi.Core.Devices.Infos.IMidiInputDeviceInfo> list = new List<RtMidi.Core.Devices.Infos.IMidiInputDeviceInfo>();
+                foreach (var inputDeviceInfo in MidiDeviceManager.Default.InputDevices)
+                {
+                    list.Add(inputDeviceInfo);
+                }
+                return list;
+            }
+        }
+
+        public static List<RtMidi.Core.Devices.Infos.IMidiOutputDeviceInfo> OutputDevices
+        {
+            get
+            {
+                List<RtMidi.Core.Devices.Infos.IMidiOutputDeviceInfo> list = new List<RtMidi.Core.Devices.Infos.IMidiOutputDeviceInfo>();
+                foreach (var outputDeviceInfo in MidiDeviceManager.Default.OutputDevices)
+                {
+                    list.Add(outputDeviceInfo);
+                }
+                return list;
+            }
+        }
+
+        public delegate void LogEventHandler(string sDevice, bool bIn, string sLog);
+        public static event LogEventHandler NewLog;
+
+        public delegate void MidiInputEventHandler(MidiEvent ev);
+        public event MidiInputEventHandler IncomingMidiMessage;
+
+        public int Events { get { return _eventsProcessedINLast + _eventsProcessedOUTLast; } }
+
+        public string CyclesInfo
+        {
+            get
+            {
+                string sMessage = "MIDI Average Processing Messages / Sec. : ";
+                sMessage = string.Concat(sMessage, " [IN] : " + (_eventsProcessedINLast).ToString());
+                sMessage = string.Concat(sMessage, " / [OUT] : " + (_eventsProcessedOUTLast).ToString());
+
+                return sMessage;
+            }
+        }
+        public int LowestNoteRunning { get { return _lowestNotePlayed; } }
+
+        private List<MatrixItem> MidiMatrix = new List<MatrixItem>();
+        private List<MidiDevice> UsedDevicesIN = new List<MidiDevice>();
+        private List<MidiDevice> UsedDevicesOUT = new List<MidiDevice>();
+
+        private System.Timers.Timer EventsCounter;
+        private System.Timers.Timer MidiClock;
+
+        private int _eventsProcessedIN = 0;
+        private int _eventsProcessedOUT = 0;
+        private int _eventsProcessedINLast = 0;
+        private int _eventsProcessedOUTLast = 0;
+
+        private int _lowestNotePlayed = -1;
+
+        private List<MidiEvent> _notesentforpanic = new List<MidiEvent>();
+
+        public MidiRouting()
+        {
+            //MidiDevice.OnLogAdded += MidiDevice_OnLogAdded;
+
+            EventsCounter = new System.Timers.Timer();
+            EventsCounter.Elapsed += QueueProcessor_OnEvent;
+            EventsCounter.Interval = CLOCK_INTERVAL;
+            EventsCounter.Start();
+
+            MidiClock = new System.Timers.Timer();
+            MidiClock.Elapsed += MidiClock_OnEvent;
+            MidiClock.Interval = 60000.0 / 120; //valeur par défaut
+
+            InstrumentData.OnSysExInitializerChanged += InstrumentData_OnSysExInitializerChanged;
+        }
+
+        #region PRIVATE
+
+        private void QueueProcessor_OnEvent(object sender, ElapsedEventArgs e)
+        {
+            _eventsProcessedINLast = _eventsProcessedIN;
+            _eventsProcessedOUTLast = _eventsProcessedOUT;
+            _eventsProcessedIN = 0;
+            _eventsProcessedOUT = 0;
+        }
+
+        private void MidiClock_OnEvent(object sender, ElapsedEventArgs e)
+        {
+            foreach (var device in UsedDevicesOUT)
+            {
+                device.SendMidiEvent(new MidiEvent(TypeEvent.CLOCK, null, Channel.Channel1, device.Name));
+            }
+        }
+
+        public void RemovePendingNotes(bool bTransposed)
+        {
+            MidiEvent[] copy;
+
+            lock (_notesentforpanic)
+            {
+                copy = new MidiEvent[_notesentforpanic.Count];
+                _notesentforpanic.CopyTo(copy);
+                _notesentforpanic.Clear();
+            }
+
+            if (bTransposed)
+            {
+                foreach (var pending in copy)
+                {
+                    for (int i = 0; i <= 127; i++)
+                    {
+                        var eventout = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { i, 0 }, pending.Channel, pending.Device);
+                        CreateOUTEvent(eventout, true);
+                    }
+                }
+            }
+            else
+            {
+
+                foreach (var note in copy)
+                {
+                    var eventout = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { note.Values[0], 0 }, note.Channel, note.Device);
+                    CreateOUTEvent(eventout, true);
+                }
+            }
+        }
+
+        public int AdjustUIRefreshRate()
+        {
+            int iAdjust = 1000; //1sec par défaut
+            int iEvents = (_eventsProcessedINLast + _eventsProcessedOUTLast);
+
+            iAdjust = ((iEvents * 2) / 10);
+
+            if (iAdjust < 1)
+            {
+                iAdjust = 1;
+            }
+
+            return iAdjust;
+        }
+
+        private void CheckAndCloseUnusedDevices()
+        {
+            var usedin = MidiMatrix.Where(d => d.DeviceIn != null).Select(d => d.DeviceIn.Name).Distinct();
+            var usedout = MidiMatrix.Where(d => d.DeviceOut != null).Select(d => d.DeviceOut.Name).Distinct();
+
+            List<string> ToRemoveIN = new List<string>();
+            foreach (var devin in UsedDevicesIN)
+            {
+                if (!usedin.Contains(devin.Name))
+                {
+                    ToRemoveIN.Add(devin.Name);
+                }
+            }
+            List<string> ToRemoveOUT = new List<string>();
+            foreach (var devout in UsedDevicesOUT)
+            {
+                if (!usedout.Contains(devout.Name))
+                {
+                    ToRemoveOUT.Add(devout.Name);
+                }
+            }
+            foreach (string s in ToRemoveIN)
+            {
+                var d = UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(s));
+                d.CloseDevice();
+                d.OnMidiEvent -= DeviceIn_OnMidiEvent;
+                UsedDevicesIN.Remove(d);
+            }
+            foreach (string s in ToRemoveOUT)
+            {
+                var d = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(s));
+                d.CloseDevice();
+                d.OnMidiEvent -= DeviceOut_OnMidiEvent;
+                UsedDevicesOUT.Remove(d);
+            }
+        }
+
+        private void InstrumentData_OnSysExInitializerChanged(InstrumentData instr)
+        {
+            var routing = MidiMatrix.FirstOrDefault(m => m.DeviceOut != null && m.DeviceOut.Name.Equals(instr.Device));
+            if (routing != null && instr.SysExInitializer.Length > 0)
+            {
+                SendGenericMidiEvent(new MidiEvent(TypeEvent.SYSEX, instr.SysExInitializer, instr.Device));
+            }
+        }
+
+        private void DeviceOut_OnMidiEvent(bool bIn, MidiDevice.MidiEvent ev)
+        {
+            //lock (_eventsOUT) { _eventsOUT.Add(ev); }
+        }
+
+        private void DeviceIn_OnMidiEvent(bool bIn, MidiDevice.MidiEvent ev)
+        {
+            _eventsProcessedIN += 1;
+
+            //mémorisation de la note pressée la plus grave
+            if (ev.Type == TypeEvent.NOTE_ON && ev.Values[0] < _lowestNotePlayed && ev.Values[1] > 0) { _lowestNotePlayed = ev.Values[0]; }
+            else if (ev.Type == TypeEvent.NOTE_OFF && ev.Values[0] == _lowestNotePlayed) { _lowestNotePlayed = -1; }
+            else if (ev.Type == TypeEvent.NOTE_ON && ev.Values[0] == _lowestNotePlayed && ev.Values[1] == 0) { _lowestNotePlayed = -1; }
+
+            IncomingMidiMessage?.Invoke(ev);
+
+            CreateOUTEvent(ev, false);
+        }
+
+        private void MidiDevice_OnLogAdded(string sDevice, bool bIn, string sLog)
+        {
+            NewLog?.Invoke(sDevice, bIn, sLog);
+        }
+
+        private void CreateOUTEvent(MidiDevice.MidiEvent ev, bool bOutEvent)
+        {
+            //attention : c'est bien un message du device IN qui arrive ! ne marche pas si on a envoyé un message issu d'un device out
+            List<MatrixItem> matrix = new List<MatrixItem>();
+
+            if (!bOutEvent)
+            {
+                matrix = MidiMatrix.Where(i => i.DeviceOut != null && i.Active && i.DeviceIn != null && i.DeviceIn.Name == ev.Device && (i.ChannelIn == 0 || Tools.GetChannel(i.ChannelIn) == ev.Channel)).ToList();
+            }
+            else if (bOutEvent) //envoyé pour un device out
+            {
+                matrix = MidiMatrix.Where(i => i.Active && i.DeviceOut != null && i.DeviceOut.Name == ev.Device && (i.ChannelOut == 0 || Tools.GetChannel(i.ChannelOut) == ev.Channel)).ToList();
+            }
+
+            foreach (MatrixItem item in matrix)
+            {
+                EventProcessor(item, ev, bOutEvent);
+            }
+
+            //List<Task> tasks = new List<Task>();
+            //foreach (MatrixItem item in matrix)
+            //{
+            //    tasks.Add(Task.Factory.StartNew(() => EventProcessor(item, ev.Clone(), bOutEvent)));
+            //}
+            //while (tasks.Count(t => t.IsCompleted) != tasks.Count)
+            //{
+            //    Thread.Sleep(1);
+            //}
+        }
+
+        private void EventProcessor(MatrixItem item, MidiEvent ev, bool bOutEvent)
+        {
+            bool bTranslated = false;
+            if (!bOutEvent) { bTranslated = MidiTranslator(item, ev); } //TRANSLATEUR DE MESSAGES
+
+            if (!bTranslated)
+            {
+                for (int i = (item.ChannelOut == 0 ? 1 : item.ChannelOut); i <= (item.ChannelOut == 0 ? 16 : item.ChannelOut); i++)
+                {
+                    List<MidiDevice.MidiEvent> _eventsOUT = new List<MidiDevice.MidiEvent>();
+
+                    //opérations de filtrage 
+                    switch (ev.Type)
+                    {
+                        case TypeEvent.CC:
+                            if (item.Options.AllowAllCC || bOutEvent)
+                            {
+                                if (item.Options.CC_ToVolume == ev.Values[0])
+                                {
+                                    _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { 7, ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
+                                }
+                                else
+                                {
+                                    var convertedCC = item.Options.CC_Converters.FirstOrDefault(i => i[0] == ev.Values[0]);
+                                    _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { convertedCC != null ? convertedCC[1] : ev.Values[0], ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
+                                }
+                            }
+                            break;
+                        case TypeEvent.CH_PRES:
+                            if ((!item.Options.AftertouchVolume && item.Options.AllowAftertouch) || bOutEvent)
+                            {
+                                _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
+                            }
+                            else if (item.Options.AftertouchVolume)
+                            {
+                                CurrentATValue = ev.Values[0];
+
+                                _eventsOUT.Add(new MidiEvent(TypeEvent.CC, new List<int> { item.DeviceOut.CC_Volume, ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
+                            }
+                            break;
+                        case TypeEvent.NOTE_OFF:
+                            if (item.Options.AllowNotes || bOutEvent)
+                            {
+                                int iNote = Tools.GetNoteIndex(ev.Values[0], ev.Values[1], item.Options);
+                                var convertedNote = item.Options.Note_Converters.FirstOrDefault(i => i[0] == ev.Values[0]);
+                                if (convertedNote != null) { iNote = convertedNote[1]; } //TODO DOUTE
+
+                                if (iNote > -1)
+                                {
+                                    CurrentATValue = 0;
+
+                                    var eventout = new MidiEvent(ev.Type, new List<int> { iNote, item.Options.AftertouchVolume ? 0 : ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name);
+                                    _eventsOUT.Add(eventout);
+
+                                    lock (_notesentforpanic)
+                                    {
+                                        var toremove = _notesentforpanic.FirstOrDefault(n => n.Device == eventout.Device && n.Channel == eventout.Channel && n.Values[0] == eventout.Values[0]);
+                                        if (toremove != null)
+                                        {
+                                            _notesentforpanic.Remove(toremove);
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        case TypeEvent.NOTE_ON:
+                            if (item.Options.AllowNotes || bOutEvent)
+                            {
+                                int iNote = Tools.GetNoteIndex(ev.Values[0], ev.Values[1], item.Options);
+                                var convertedNote = item.Options.Note_Converters.FirstOrDefault(i => i[0] == ev.Values[0]);
+                                if (convertedNote != null) { iNote = convertedNote[1]; } //TODO DOUTE
+
+                                if (iNote > -1) //NOTE : il faut systématiquement mettre au moins une véolcité de 1 pour que la note se déclenche
+                                {
+                                    //int iVelocity = item.Options.AftertouchVolume && ev.Values[1] > 0 ? 1 : ev.Values[1];
+                                    int iVelocity = ev.Values[1];
+
+                                    if (item.Options.AftertouchVolume)
+                                    {
+                                        _eventsOUT.Add(new MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { 7, CurrentATValue }, Tools.GetChannel(i), item.DeviceOut.Name));
+                                    }
+
+                                    var eventout = new MidiEvent(ev.Type, new List<int> { iNote, iVelocity }, Tools.GetChannel(i), item.DeviceOut.Name);
+
+                                    if (iVelocity == 0) //le genos n'envoie pas de note off mais que des ON à 0
+                                    {
+                                        CurrentATValue = 0;
+
+                                        lock (_notesentforpanic)
+                                        {
+                                            var toremove = _notesentforpanic.FirstOrDefault(n => n.Device == eventout.Device && n.Channel == eventout.Channel && n.Values[0] == eventout.Values[0]);
+                                            if (toremove != null)
+                                            {
+                                                _notesentforpanic.Remove(toremove);
+                                            }
+                                        }
+
+                                        _eventsOUT.Add(eventout);
+                                    }
+                                    else
+                                    {
+                                        //problème : par exemple, le keystep envoie 2 messages IN mais 1 seul message out : on empêche la nouvelle note d'arriver
+                                        var notestuck = _notesentforpanic.FirstOrDefault(n => n.Device == eventout.Device && n.Channel == eventout.Channel && n.Values[0] == eventout.Values[0]);
+                                        if (notestuck != null)
+                                        {
+                                            //on n'envoie aucun nouvel évènement
+                                        }
+                                        else
+                                        {
+                                            lock (_notesentforpanic)
+                                            {
+                                                _notesentforpanic.Add(eventout);
+                                            }
+
+                                            _eventsOUT.Add(eventout);
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        case TypeEvent.NRPN:
+                            if (item.Options.AllowNrpn || bOutEvent)
+                            {
+                                _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0], ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
+                            }
+                            break;
+                        case TypeEvent.PB:
+                            if (item.Options.AllowPitchBend || bOutEvent)
+                            {
+                                _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
+                            }
+                            break;
+                        case TypeEvent.PC:
+                            if (item.Options.AllowProgramChange || bOutEvent)
+                            {
+                                _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0] }, Tools.GetChannel(i), item.DeviceOut.Name));
+                            }
+                            break;
+                        case TypeEvent.POLY_PRES:
+                            if (item.Options.AllowAftertouch || bOutEvent)
+                            {
+                                _eventsOUT.Add(new MidiEvent(ev.Type, new List<int> { ev.Values[0], ev.Values[1] }, Tools.GetChannel(i), item.DeviceOut.Name));
+                            }
+                            break;
+                        case TypeEvent.SYSEX:
+                            if (item.Options.AllowSysex || bOutEvent)
+                            {
+                                _eventsOUT.Add(new MidiEvent(ev.Type, SysExTranscoder(ev.SysExData), item.DeviceOut.Name));
+                            }
+                            break;
+                    }
+
+                    if (_eventsOUT.Count > 0)
+                    {
+                        for (int iEv = 0; iEv < _eventsOUT.Count; iEv++)
+                        {
+                            bool bAvoidCCToSmooth = false;
+
+                            if (_eventsOUT[iEv].Type == TypeEvent.PC) //mémoire de CC
+                            {
+                                item.SetProgram(_eventsOUT[iEv].Values[0]);
+                            }
+                            else if (_eventsOUT[iEv].Type == TypeEvent.CC) //mémoire de CC
+                            {
+                                //si l'item est bloqué à cause du smooth, on interdit les nouveaux entrants
+                                if (item.IsBlocked(_eventsOUT[iEv].Values[0], _eventsOUT[iEv].Values[1], _eventsOUT[iEv].Channel, _eventsOUT[iEv].Device))
+                                {
+                                    bAvoidCCToSmooth = true;
+                                }
+                                else
+                                {
+                                    //sinon on enregistre et on crée une liste d'events additionnels
+                                    var newitems = item.SetCC(_eventsOUT[iEv].Values[0], _eventsOUT[iEv].Values[1], _eventsOUT[iEv].Channel, _eventsOUT[iEv].Device, item.Options.SmoothCC);
+                                    int count = newitems.Count;
+                                    if (item.Options.SmoothCC && count > 0)
+                                    {
+                                        bAvoidCCToSmooth = true;
+
+                                        var copiedevent = new MidiEvent(TypeEvent.CC, new List<int> { _eventsOUT[iEv].Values[0], _eventsOUT[iEv].Values[1] }, _eventsOUT[iEv].Channel, _eventsOUT[iEv].Device);
+
+                                        Task.Factory.StartNew(() =>
+                                        {
+                                            foreach (var cc in newitems)
+                                            {
+                                                item.DeviceOut.SendMidiEvent(cc);
+                                                Thread.Sleep((int)(item.Options.SmoothCCLength / count)); //le smoooth doit durer 1sec
+                                            }
+                                            item.UnblockCC(copiedevent.Values[0], copiedevent.Values[1], copiedevent.Channel, copiedevent.Device);
+                                        });
+                                    }
+                                }
+                            }
+
+                            if (!bAvoidCCToSmooth) //ne pas jouer le CC  trop rapide, il a été joué par le Smooth quelques lignes plus haut
+                            {
+                                item.DeviceOut.SendMidiEvent(_eventsOUT[iEv]);
+                            }
+                        }
+
+                        _eventsProcessedOUT += _eventsOUT.Count;
+                    }
+                }
+            }
+        }
+
+        private void ChangeOptions(MatrixItem routing, MidiOptions newop, bool bInit)
+        {
+            if (routing.DeviceOut != null)
+            {
+                if (newop == null) //tout charger
+                {
+                    if (routing.Options.CC_Attack_Value > -1 || (bInit && routing.Options.CC_Attack_Value > -1))
+                    {
+                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Attack, routing.Options.CC_Attack_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                    }
+                    if (routing.Options.CC_Timbre_Value > -1 || (bInit && routing.Options.CC_Timbre_Value > -1))
+                    {
+                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Timbre, routing.Options.CC_Timbre_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                    }
+                    if (routing.Options.CC_FilterCutOff_Value > -1 || (bInit && routing.Options.CC_FilterCutOff_Value > -1))
+                    {
+                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_FilterCutOff, routing.Options.CC_FilterCutOff_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                    }
+                    if (routing.Options.CC_Chorus_Value > -1 || (bInit && routing.Options.CC_Chorus_Value > -1))
+                    {
+                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Chorus, routing.Options.CC_Chorus_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                    }
+                    if (routing.Options.CC_Decay_Value > -1 || (bInit && routing.Options.CC_Decay_Value > -1))
+                    {
+                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Decay, routing.Options.CC_Decay_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                    }
+                    if (routing.Options.CC_Pan_Value > -1 || (bInit && routing.Options.CC_Pan_Value > -1))
+                    {
+                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Pan, routing.Options.CC_Pan_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                    }
+                    if (routing.Options.CC_Release_Value > -1 || (bInit && routing.Options.CC_Release_Value > -1))
+                    {
+                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Release, routing.Options.CC_Release_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                    }
+                    if (routing.Options.CC_Reverb_Value > -1 || (bInit && routing.Options.CC_Reverb_Value > -1))
+                    {
+                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Reverb, routing.Options.CC_Reverb_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                    }
+                    if (routing.Options.CC_Volume_Value > -1 || (bInit && routing.Options.CC_Volume_Value > -1))
+                    {
+                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Volume, routing.Options.CC_Volume_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                    }
+                }
+                else
+                {
+                    if (newop.TranspositionOffset != routing.Options.TranspositionOffset) //midi panic
+                    {
+                        RemovePendingNotes(true);
+                    }
+
+                    //comparer
+                    if (newop.CC_Attack_Value != routing.Options.CC_Attack_Value || (bInit && routing.Options.CC_Attack_Value > -1))
+                    {
+                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Attack, newop.CC_Attack_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                    }
+                    if (newop.CC_Timbre_Value != routing.Options.CC_Timbre_Value || (bInit && routing.Options.CC_Timbre_Value > -1))
+                    {
+                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Timbre, newop.CC_Timbre_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                    }
+                    if (newop.CC_FilterCutOff_Value != routing.Options.CC_FilterCutOff_Value || (bInit && routing.Options.CC_FilterCutOff_Value > -1))
+                    {
+                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_FilterCutOff, newop.CC_FilterCutOff_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                    }
+                    if (newop.CC_Chorus_Value != routing.Options.CC_Chorus_Value || (bInit && routing.Options.CC_Chorus_Value > -1))
+                    {
+                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Chorus, newop.CC_Chorus_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                    }
+                    if (newop.CC_Decay_Value != routing.Options.CC_Decay_Value || (bInit && routing.Options.CC_Decay_Value > -1))
+                    {
+                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Decay, newop.CC_Decay_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                    }
+                    if (newop.CC_Pan_Value != routing.Options.CC_Pan_Value || (bInit && routing.Options.CC_Pan_Value > -1))
+                    {
+                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Pan, newop.CC_Pan_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                    }
+                    if (newop.CC_Release_Value != routing.Options.CC_Release_Value || (bInit && routing.Options.CC_Release_Value > -1))
+                    {
+                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Release, newop.CC_Release_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                    }
+                    if (newop.CC_Reverb_Value != routing.Options.CC_Reverb_Value || (bInit && routing.Options.CC_Reverb_Value > -1))
+                    {
+                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Reverb, newop.CC_Reverb_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                    }
+                    if (newop.CC_Volume_Value != routing.Options.CC_Volume_Value || (bInit && routing.Options.CC_Volume_Value > -1))
+                    {
+                        CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Volume, newop.CC_Volume_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), true);
+                    }
+                }
+            }
+
+            if (newop != null) { routing.Options = newop; }
+        }
+
+        internal void ChangeDefaultCC(List<InstrumentData> instruments)
+        {
+            foreach (var item in MidiMatrix)
+            {
+                if (item.DeviceOut != null)
+                {
+                    var instr = instruments.FirstOrDefault(i => i.Device.Equals(item.DeviceOut.Name));
+                    if (instr != null && instr.DefaultCC.Count > 0)
+                    {
+                        item.DeviceOut.CC_Volume = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Volume);
+                        item.DeviceOut.CC_Attack = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Attack);
+                        item.DeviceOut.CC_Chorus = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Chorus);
+                        item.DeviceOut.CC_Decay = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Decay);
+                        item.DeviceOut.CC_FilterCutOff = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_FilterCutOff);
+                        item.DeviceOut.CC_Pan = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Pan);
+                        item.DeviceOut.CC_Release = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Release);
+                        item.DeviceOut.CC_Reverb = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Reverb);
+                        item.DeviceOut.CC_Timbre = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Timbre);
+                    }
+                }
+            }
+        }
+
+        private void SendProgramChange(MatrixItem routing, MidiPreset preset)
+        {
+            if (routing != null)
+            {
+                ControlChangeMessage pc00 = new ControlChangeMessage(Tools.GetChannel(preset.Channel), 0, preset.Msb);
+                ControlChangeMessage pc32 = new ControlChangeMessage(Tools.GetChannel(preset.Channel), 32, preset.Lsb);
+                ProgramChangeMessage prg = new ProgramChangeMessage(Tools.GetChannel(preset.Channel), preset.Prg);
+
+                if (routing.DeviceOut != null)
+                {
+                    CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { pc00.Control, pc00.Value }, pc00.Channel, routing.DeviceOut.Name), true);
+                    CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { pc32.Control, pc32.Value }, pc32.Channel, routing.DeviceOut.Name), true);
+                    CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.PC, new List<int> { prg.Program }, prg.Channel, routing.DeviceOut.Name), true);
+                }
+            }
+        }
+
+        private void ChangeProgram(MatrixItem routing, MidiPreset newpres, bool bInit)
+        {
+            if (routing.DeviceOut != null)
+            {
+                if (bInit || (newpres.Lsb != routing.Preset.Lsb || newpres.Msb != routing.Preset.Msb || newpres.Prg != routing.Preset.Prg || newpres.Channel != routing.Preset.Channel))
+                {
+                    SendProgramChange(routing, newpres);
+                    routing.Preset = newpres;
+                }
+                else
+                {
+                    routing.Preset = newpres;
+                }
+            }
+            else
+            {
+                routing.Preset = newpres;
+            }
+        }
+
+        private string SysExTranscoder(string data)
+        {
+            //TODO SCRIPT TRANSCO
+            return data;
+        }
+
+        private bool MidiTranslator(MatrixItem routing, MidiEvent ev)
+        {
+            bool bMustTranslate = false;
+
+            if (routing.DeviceOut != null)
+            {
+                foreach (var translate in routing.Options.Translators)
+                {
+                    Match matchIN = null;
+
+                    switch (ev.Type)
+                    {
+                        case TypeEvent.NOTE_ON:
+                            //[IN=KEY#0-127:0-127]
+                            //[IN=KEY#64:64]
+                            matchIN = Regex.Match(translate[0], "(\\[)(IN)=(KEY#)(\\d{1,3})((-)(\\d{1,3}))*(:)(\\d{1,3})((-)(\\d{1,3}))*(\\])");
+                            if (matchIN.Success)
+                            {
+                                string sNote1 = matchIN.Groups[4].Value;
+                                string sNote2 = matchIN.Groups[7].Value;
+                                string sVelo1 = matchIN.Groups[9].Value;
+                                string sVelo2 = matchIN.Groups[12].Value;
+                                if (sNote2.Length == 0) //une seule note
+                                {
+                                    if (Convert.ToInt32(sNote1) == ev.Values[0])
+                                    {
+                                        if (sVelo2.Length == 0)
+                                        {
+                                            if (Convert.ToInt32(sVelo1) == ev.Values[1])
+                                            { bMustTranslate = true; }
+                                        }
+                                        else
+                                        {
+                                            if (Convert.ToInt32(sVelo1) <= ev.Values[1] && Convert.ToInt32(sVelo2) >= ev.Values[1])
+                                            { bMustTranslate = true; }
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    if (Convert.ToInt32(sNote1) <= ev.Values[0] && Convert.ToInt32(sNote2) >= ev.Values[0])
+                                    {
+                                        if (sVelo2.Length == 0)
+                                        {
+                                            if (Convert.ToInt32(sVelo1) == ev.Values[1])
+                                            { bMustTranslate = true; }
+                                        }
+                                        else
+                                        {
+                                            if (Convert.ToInt32(sVelo1) <= ev.Values[1] && Convert.ToInt32(sVelo2) >= ev.Values[1])
+                                            { bMustTranslate = true; }
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        case TypeEvent.CC:
+                            //[IN=CC#7:0-127]
+                            //[IN=CC#7:64]
+                            matchIN = Regex.Match(translate[0], "(\\[)(IN)=(CC#)(\\d{1,3})(:)(\\d{1,3})((-)(\\d{1,3}))*(\\])");
+                            if (matchIN.Success)
+                            {
+                                string sCC = matchIN.Groups[4].Value;
+                                string sVal1 = matchIN.Groups[6].Value;
+                                string sVal2 = matchIN.Groups[9].Value;
+                                if (sVal2.Length == 0)
+                                {
+                                    if (Convert.ToInt32(sCC) == ev.Values[0] && Convert.ToInt32(sVal1) == ev.Values[1])
+                                    { bMustTranslate = true; }
+                                }
+                                else
+                                {
+                                    if (Convert.ToInt32(sCC) == ev.Values[0] && Convert.ToInt32(sVal1) <= ev.Values[1] && Convert.ToInt32(sVal2) >= ev.Values[1])
+                                    { bMustTranslate = true; }
+                                }
+                            }
+                            break;
+                        case TypeEvent.PC:
+                            //[IN=PC#0-127]
+                            //[IN=PC#64]
+                            matchIN = Regex.Match(translate[0], "(\\[)(IN)=(PC#)(\\d{1,3})((-)(\\d{1,3}))*(\\])");
+                            if (matchIN.Success)
+                            {
+                                string prg1 = matchIN.Groups[4].Value;
+                                string prg2 = matchIN.Groups[7].Value;
+                                if (prg2.Length == 0) //un seul PRG
+                                {
+                                    if (Convert.ToInt32(prg1) == ev.Values[0])
+                                    { bMustTranslate = true; }
+                                }
+                                else
+                                {
+                                    if (Convert.ToInt32(prg1) <= ev.Values[0] && Convert.ToInt32(prg2) >= ev.Values[0])
+                                    { bMustTranslate = true; }
+                                }
+                            }
+                            break;
+                        case TypeEvent.CH_PRES:
+                            matchIN = Regex.Match(translate[0], "(\\[)(IN)=(AT#)(\\d{1,3})((-)(\\d{1,3}))*(\\])");
+                            if (matchIN.Success)
+                            {
+                                string at1 = matchIN.Groups[4].Value;
+                                string at2 = matchIN.Groups[7].Value;
+                                if (at2.Length == 0) //un seul PRG
+                                {
+                                    if (Convert.ToInt32(at1) == ev.Values[0])
+                                    { bMustTranslate = true; }
+                                }
+                                else
+                                {
+                                    if (Convert.ToInt32(at1) <= ev.Values[0] && Convert.ToInt32(at2) >= ev.Values[0])
+                                    { bMustTranslate = true; }
+                                }
+                            }
+                            break;
+                        case TypeEvent.SYSEX:
+                            //[IN=SYS#F0...F7]
+                            matchIN = Regex.Match(translate[0], "(\\[)(IN)=(SYS#)([A-f0-9]+)(\\])");
+                            if (matchIN.Success)
+                            {
+                                string sys = matchIN.Groups[4].Value;
+                                if (sys.Contains(ev.SysExData))
+                                { bMustTranslate = true; }
+                            }
+                            break;
+                    }
+
+                    if (bMustTranslate)
+                    {
+                        Match matchOUT = null;
+                        //lecture du message OUT qui doit être construit
+                        Match mType = Regex.Match(translate[0], "(\\[)(OUT)=(SYS#|PC#|CC#|KEY#)");
+                        if (mType.Success)
+                        {
+                            switch (mType.Groups[3].Value)
+                            {
+                                case "PC#":
+                                    //[OUT=PC#0:0:0]
+                                    //[OUT= PC#0-127:0:0]
+                                    matchOUT = Regex.Match(translate[0], "(\\[)(OUT)=(PC#)(\\d{1,3})((-)(\\d{1,3}))*:(\\d{1,3}):(\\d{1,3})(\\])");
+                                    string sPrg1 = matchOUT.Groups[4].Value;
+                                    string sPrg2 = matchOUT.Groups[7].Value;
+                                    string sMsb = matchOUT.Groups[8].Value;
+                                    string sLsb = matchOUT.Groups[9].Value;
+                                    if (sPrg2.Length == 0) //valeur fixée
+                                    {
+                                        routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 0, Convert.ToInt32(sMsb) }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
+                                        routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 32, Convert.ToInt32(sLsb) }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
+                                        routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.PC, new List<int> { Convert.ToInt32(sPrg1) }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
+                                        _eventsProcessedOUT += 3;
+                                    }
+                                    else //valeur IN
+                                    {
+                                        int iPrgValue = 0;
+                                        if (ev.Type == TypeEvent.NOTE_ON) { iPrgValue = Convert.ToInt32(ev.Values[0]); }
+                                        else if (ev.Type == TypeEvent.CC) { iPrgValue = Convert.ToInt32(ev.Values[1]); }
+                                        else if (ev.Type == TypeEvent.PC) { iPrgValue = Convert.ToInt32(ev.Values[0]); }
+                                        else if (ev.Type == TypeEvent.CH_PRES) { iPrgValue = Convert.ToInt32(ev.Values[0]); }
+                                        else if (ev.Type == TypeEvent.SYSEX) { iPrgValue = 0; } //absurde.
+
+                                        routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 0, Convert.ToInt32(sMsb) }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
+                                        routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 32, Convert.ToInt32(sLsb) }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
+                                        routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.PC, new List<int> { iPrgValue }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
+                                        _eventsProcessedOUT += 3;
+                                    }
+                                    break;
+                                case "CC#":
+                                    //[OUT=CC#64:64-127] 4,5,8
+                                    //[OUT= CC#64:64]
+                                    matchOUT = Regex.Match(translate[0], "(\\[)(OUT)=(CC#)(\\d{1,3}):(\\d{1,3})((-)(\\d{1,3}))*(\\])");
+                                    string sCC = matchOUT.Groups[4].Value;
+                                    string sValue1 = matchOUT.Groups[5].Value;
+                                    string sValue2 = matchOUT.Groups[8].Value;
+                                    if (sValue2.Length == 0) //la valeur est fixée
+                                    {
+                                        routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { Convert.ToInt32(sCC), Convert.ToInt32(sValue1) }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
+                                        _eventsProcessedOUT += 1;
+                                    }
+                                    else //la valeur suit la valeur d'entrée
+                                    {
+                                        int iCCValue = 0;
+                                        if (ev.Type == TypeEvent.NOTE_ON) { iCCValue = Convert.ToInt32(ev.Values[0]); }
+                                        else if (ev.Type == TypeEvent.CC) { iCCValue = Convert.ToInt32(ev.Values[1]); }
+                                        else if (ev.Type == TypeEvent.PC) { iCCValue = Convert.ToInt32(ev.Values[0]); }
+                                        else if (ev.Type == TypeEvent.CH_PRES) { iCCValue = Convert.ToInt32(ev.Values[0]); }
+                                        else if (ev.Type == TypeEvent.SYSEX) { iCCValue = 0; } //absurde.
+
+                                        routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { Convert.ToInt32(sCC), iCCValue }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
+                                        _eventsProcessedOUT += 1;
+                                    }
+                                    break;
+                                case "KEY#":
+                                    //[OUT=KEY#64:64:1000] -> fixed key, fixed velo, length  //4,8,12
+                                    //[OUT=KEY#0-127:0-127:1000] -> key range, velo range, length  //4,7,8,11,12
+                                    matchOUT = Regex.Match(translate[0], "(\\[)(OUT)=(KEY#)(\\d{1,3})((-)(\\d{1,3}))*:(\\d{1,3})((-)(\\d{1,3}))*:(\\d+)(\\])");
+                                    string sKey1 = matchOUT.Groups[4].Value;
+                                    string sKey2 = matchOUT.Groups[7].Value;
+                                    string sVelo1 = matchOUT.Groups[8].Value;
+                                    string sVelo2 = matchOUT.Groups[11].Value;
+                                    string sLen = matchOUT.Groups[12].Value;
+
+                                    int iNote = 0;
+                                    int iVelo = 0;
+
+                                    //NOTE FIXE
+                                    if (sKey2.Length == 0) //note fixe saisie
+                                    {
+                                        iNote = Convert.ToInt32(sKey1);
+                                        iVelo = Convert.ToInt32(sVelo1);
+
+                                        if (sVelo2.Length == 0) //note fixe ET vélocité fixe
+                                        {
+                                            Task.Factory.StartNew(() =>
+                                            {
+                                                routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelo }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
+                                                Thread.Sleep(Convert.ToInt32(sLen));
+                                                routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, 0 }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
+                                                _eventsProcessedOUT += 2;
+                                            });
+
+                                        }
+                                        else //note fixe MAIS vélocité dépendante de la valeur entrante
+                                        {
+                                            if (ev.Type == TypeEvent.NOTE_ON) { iVelo = Convert.ToInt32(ev.Values[0]); }
+                                            else if (ev.Type == TypeEvent.CC) { iVelo = Convert.ToInt32(ev.Values[1]); }
+                                            else if (ev.Type == TypeEvent.PC) { iVelo = Convert.ToInt32(ev.Values[0]); }
+                                            else if (ev.Type == TypeEvent.CH_PRES) { iVelo = Convert.ToInt32(ev.Values[0]); }
+                                            else if (ev.Type == TypeEvent.SYSEX) { iVelo = 64; } //absurde.
+
+                                            Task.Factory.StartNew(() =>
+                                            {
+                                                routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelo }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
+                                                Thread.Sleep(Convert.ToInt32(sLen));
+                                                routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, 0 }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
+                                                _eventsProcessedOUT += 2;
+                                            });
+                                        }
+                                    }
+                                    else //NOTE FONCTION DES VALEURS ENTRANTES
+                                    {
+                                        if (sVelo2.Length == 0) //note mobile ET vélocité fixe
+                                        {
+                                            iVelo = Convert.ToInt32(sVelo1);
+
+                                            if (ev.Type == TypeEvent.NOTE_ON) { iNote = Convert.ToInt32(ev.Values[0]); }
+                                            else if (ev.Type == TypeEvent.CC) { iNote = Convert.ToInt32(ev.Values[1]); }
+                                            else if (ev.Type == TypeEvent.PC) { iNote = Convert.ToInt32(ev.Values[0]); }
+                                            else if (ev.Type == TypeEvent.CH_PRES) { iNote = Convert.ToInt32(ev.Values[0]); }
+                                            else if (ev.Type == TypeEvent.SYSEX) { iNote = 64; } //absurde.
+
+                                            Task.Factory.StartNew(() =>
+                                            {
+                                                routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelo }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
+                                                Thread.Sleep(Convert.ToInt32(sLen));
+                                                routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, 0 }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
+                                                _eventsProcessedOUT += 2;
+                                            });
+                                        }
+                                        else //note mobile ET vélocité mobile (un peu débile)
+                                        {
+                                            if (ev.Type == TypeEvent.NOTE_ON) { iNote = Convert.ToInt32(ev.Values[0]); iVelo = Convert.ToInt32(ev.Values[0]); }
+                                            else if (ev.Type == TypeEvent.CC) { iNote = Convert.ToInt32(ev.Values[1]); iVelo = Convert.ToInt32(ev.Values[1]); }
+                                            else if (ev.Type == TypeEvent.PC) { iNote = Convert.ToInt32(ev.Values[0]); iVelo = Convert.ToInt32(ev.Values[0]); }
+                                            else if (ev.Type == TypeEvent.CH_PRES) { iNote = Convert.ToInt32(ev.Values[0]); iVelo = Convert.ToInt32(ev.Values[0]); } //absurde.
+                                            else if (ev.Type == TypeEvent.SYSEX) { iNote = 64; iVelo = 64; } //absurde.
+
+                                            Task.Factory.StartNew(() =>
+                                            {
+                                                routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelo }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
+                                                Thread.Sleep(Convert.ToInt32(sLen));
+                                                routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, 0 }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
+                                                _eventsProcessedOUT += 2;
+                                            });
+                                        }
+                                    }
+                                    break;
+                                case "SYS#":
+                                    matchOUT = Regex.Match(translate[0], "(\\[)(OUT)=(SYS#)([A-f0-9]+)(\\])");
+                                    string sys = matchOUT.Groups[4].Value;
+                                    routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.SYSEX, sys, routing.DeviceOut.Name));
+                                    _eventsProcessedOUT += 1;
+                                    break;
+                                case "AT#":
+                                    //[OUT=PC#0:0:0]
+                                    //[OUT= PC#0-127:0:0]
+                                    matchOUT = Regex.Match(translate[0], "(\\[)(OUT)=(AT#)(\\d{1,3})((-)(\\d{1,3}))*(\\])");
+                                    string sAT1 = matchOUT.Groups[4].Value;
+                                    string sAT2 = matchOUT.Groups[7].Value;
+                                    if (sAT2.Length == 0) //valeur fixée
+                                    {
+                                        routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CH_PRES, new List<int> { Convert.ToInt32(sAT1) }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
+                                        _eventsProcessedOUT += 1;
+                                    }
+                                    else //valeur IN
+                                    {
+                                        int iATValue = 0;
+                                        if (ev.Type == TypeEvent.NOTE_ON) { iATValue = Convert.ToInt32(ev.Values[0]); }
+                                        else if (ev.Type == TypeEvent.CC) { iATValue = Convert.ToInt32(ev.Values[1]); }
+                                        else if (ev.Type == TypeEvent.PC) { iATValue = Convert.ToInt32(ev.Values[0]); }
+                                        else if (ev.Type == TypeEvent.CH_PRES) { iATValue = Convert.ToInt32(ev.Values[0]); }
+                                        else if (ev.Type == TypeEvent.SYSEX) { iATValue = 0; } //absurde.
+
+                                        routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CH_PRES, new List<int> { iATValue }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
+                                        _eventsProcessedOUT += 1;
+                                    }
+                                    break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return bMustTranslate;
+        }
+
+        internal void SendGenericMidiEvent(MidiEvent ev)
+        {
+            CreateOUTEvent(ev, false);
+        }
+
+        internal void InitRouting(List<LiveData> data)
+        {
+            foreach (var live in data)
+            {
+                var deviceout = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(live.DeviceOUT));
+                if (deviceout == null)
+                {
+                    var devOUT = OutputDevices.FirstOrDefault(d => d.Name.Equals(live.DeviceOUT));
+                    var devINIT = new MidiDevice(devOUT, CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(live.DeviceOUT)));
+                    devINIT.OnMidiEvent += DeviceOut_OnMidiEvent;
+                    UsedDevicesOUT.Add(devINIT);
+                    devINIT.OpenDevice();
+                }
+                else
+                {
+                    deviceout.OpenDevice();
+                }
+
+                var devicein = UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(live.DeviceIN));
+                if (devicein == null)
+                {
+                    var devIN = InputDevices.FirstOrDefault(d => d.Name.Equals(live.DeviceIN));
+                    var devINIT = new MidiDevice(devIN);
+                    devINIT.OnMidiEvent += DeviceIn_OnMidiEvent;
+                    UsedDevicesIN.Add(devINIT);
+                    devINIT.OpenDevice();
+                }
+                else
+                {
+                    devicein.OpenDevice();
+                }
+            }
+
+            foreach (var d in data)
+            {
+                foreach (var cc in d.StartCC.Where(c => c.CC != 0 && c.CC != 32))
+                {
+                    SendCC(d.RoutingGuid, cc.CC, cc.CCValue, Tools.GetChannelInt(cc.Channel), cc.Device);
+                }
+
+                var routing = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == d.RoutingGuid);
+                if (routing != null)
+                {
+                    ChangeOptions(routing, d.StartOptions, true);
+
+                    MidiPreset mp = new MidiPreset();
+                    mp.Channel = Tools.GetChannelInt(d.Channel);
+                    mp.PresetName = "Sequencer";
+                    mp.Prg = d.Program;
+
+                    foreach (var cc in d.StartCC.Where(c => c.CC == 0 || c.CC == 32).OrderBy(c => c.CC))
+                    {
+                        if (cc.CC == 00) { mp.Msb = cc.CCValue; }
+                        else if (cc.CC == 32) { mp.Lsb = cc.CCValue; }
+                    }
+                    ChangeProgram(routing, mp, true);
+                }
+            }
+        }
+
+        #endregion
+
+        #region PUBLIC
+
+        public Guid AddRouting(string sDeviceIn, string sDeviceOut, int iChIn, int iChOut, MidiOptions options, MidiPreset preset = null)
+        {
+            var devIN = InputDevices.FirstOrDefault(d => d.Name.Equals(sDeviceIn));
+            var devOUT = OutputDevices.FirstOrDefault(d => d.Name.Equals(sDeviceOut));
+
+            if (devIN != null && UsedDevicesIN.Count(d => d.Name.Equals(sDeviceIn)) == 0)
+            {
+                var device = new MidiDevice(devIN);
+                device.OnMidiEvent += DeviceIn_OnMidiEvent;
+                UsedDevicesIN.Add(device);
+            }
+            if (devOUT != null && UsedDevicesOUT.Count(d => d.Name.Equals(sDeviceOut)) == 0)
+            {
+                var device = new MidiDevice(devOUT, CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(devOUT.Name)));
+                device.OnMidiEvent += DeviceOut_OnMidiEvent;
+                UsedDevicesOUT.Add(device);
+            }
+            //iAction : 0 = delete, 1 = adds
+
+            //devIN != null && devOUT != null && 
+            if (iChIn >= 0 && iChIn <= 16 && iChOut >= 0 && iChOut <= 16)
+            {
+                MidiMatrix.Add(new MatrixItem(UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDeviceIn)), UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut)), iChIn, iChOut, options, preset));
+
+                CheckAndCloseUnusedDevices();
+                //hyper important d'être à la fin !
+                ChangeDefaultCC(CubaseInstrumentData.Instruments);
+                ChangeOptions(MidiMatrix.Last(), options, true);
+                ChangeProgram(MidiMatrix.Last(), preset, true);
+
+                var guid = MidiMatrix.Last().RoutingGuid;
+
+                return guid;
+
+            }
+            else { return Guid.Empty; }
+        }
+
+        public bool ModifyRouting(Guid routingGuid, string sDeviceIn, string sDeviceOut, int iChIn, int iChOut, MidiOptions options, MidiPreset preset = null)
+        {
+            bool bDeviceOutChanged = false;
+
+            var routing = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
+
+            if (routing != null)
+            {
+                if ((routing.DeviceOut == null && sDeviceOut.Length > 0) || (routing.DeviceOut != null && !routing.DeviceOut.Name.Equals(sDeviceOut)))
+                { bDeviceOutChanged = true; }
+
+                routing.ChannelIn = iChIn;
+                routing.ChannelOut = iChOut;
+                bool bINChanged = routing.CheckDeviceIn(sDeviceIn);
+                bool bOUTChanged = routing.CheckDeviceOut(sDeviceOut);
+
+                if (bINChanged)
+                {
+                    bool active = routing.Active;
+                    routing.Active = false;
+
+                    if (!sDeviceIn.Equals(Tools.INTERNAL_GENERATOR))
+                    {
+                        if (sDeviceIn.Length > 0 && UsedDevicesIN.Count(d => d.Name.Equals(sDeviceIn)) == 0)
+                        {
+                            var device = new MidiDevice(InputDevices.FirstOrDefault(d => d.Name.Equals(sDeviceIn)));
+                            device.OnMidiEvent += DeviceIn_OnMidiEvent;
+                            UsedDevicesIN.Add(device);
+                        }
+                        routing.DeviceIn = UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDeviceIn));
+                    }
+
+                    routing.Active = active;
+
+                    CheckAndCloseUnusedDevices();
+                }
+                if (bOUTChanged)
+                {
+                    bool active = routing.Active;
+                    routing.Active = false;
+
+                    if (sDeviceOut.Length > 0 && UsedDevicesOUT.Count(d => d.Name.Equals(sDeviceOut)) == 0)
+                    {
+                        var outdev = OutputDevices.FirstOrDefault(d => d.Name.Equals(sDeviceOut));
+                        var device = new MidiDevice(outdev, CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(outdev.Name)));
+                        device.OnMidiEvent += DeviceOut_OnMidiEvent;
+                        UsedDevicesOUT.Add(device);
+
+                        routing.DeviceOut = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut));
+                        routing.Active = active;
+                    }
+                    else
+                    {
+                        routing.Active = active;
+                        routing.DeviceOut = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut));
+                    }
+
+
+                    CheckAndCloseUnusedDevices();
+                }
+
+                //hyper important d'être à la fin !
+                ChangeDefaultCC(CubaseInstrumentData.Instruments);
+                ChangeOptions(routing, options, bDeviceOutChanged ? true : false);
+                ChangeProgram(routing, preset, bDeviceOutChanged ? true : false);
+
+                return true;
+            }
+            else //en mode ouverture de projet on a déjà un routing guid
+            { 
+                AddRouting(sDeviceIn, sDeviceOut, iChIn, iChOut, options, preset);
+                MidiMatrix.Last().SetRoutingGuid(routingGuid);
+                return true;
+            }
+        }
+
+        public void SetSolo(Guid routingGuid)
+        {
+            var routingOn = MidiMatrix.FirstOrDefault(m => m.RoutingGuid != routingGuid);
+
+            if (routingOn != null)
+            {
+                routingOn.Active = true;
+            }
+
+            var routingOff = MidiMatrix.Where(m => m.RoutingGuid != routingGuid);
+            foreach (var r in routingOff)
+            {
+                RemovePendingNotes(false);
+                r.Active = false;
+            }
+        }
+
+        public void MuteRouting(Guid routingGuid)
+        {
+            var routingOn = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
+            if (routingOn != null)
+            {
+                RemovePendingNotes(false);
+                routingOn.Active = false;
+            }
+        }
+
+        public void UnmuteRouting(Guid routingGuid)
+        {
+            var routingOff = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
+            if (routingOff != null)
+            {
+                routingOff.Active = true;
+            }
+        }
+
+        public void UnmuteAllRouting()
+        {
+            foreach (var r in MidiMatrix)
+            {
+                r.Active = true;
+            }
+        }
+
+        //public void InitRouting(Guid routingGuid, MidiOptions options, MidiPreset preset)
+        //{
+        //    //init des périphériques OUT
+        //    var routing = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
+
+        //    if (routing.DeviceOut != null) //dans le cas ou on a crée un routing sans OUT mais uniquement avec un IN
+        //    {
+        //        ChangeOptions(routing, options, true);
+        //        ChangeProgram(routing, preset, true);
+        //    }
+        //}
+
+        public bool DeleteRouting(Guid routingGuid)
+        {
+            var routing = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
+            if (routing != null)
+            {
+                MidiMatrix.Remove(routing);
+                CheckAndCloseUnusedDevices();
+                return true;
+            }
+            else { return false; }
+
+        }
+
+        public void DeleteAllRouting()
+        {
+            foreach (var device in UsedDevicesIN)
+            {
+                try
+                {
+                    device.CloseDevice();
+                    device.OnMidiEvent -= DeviceIn_OnMidiEvent;
+                }
+                catch { throw; }
+            }
+            foreach (var device in UsedDevicesOUT)
+            {
+                try
+                {
+                    device.CloseDevice();
+                    device.OnMidiEvent -= DeviceOut_OnMidiEvent;
+                }
+                catch { throw; }
+            }
+            UsedDevicesIN.Clear();
+            UsedDevicesOUT.Clear();
+
+            MidiMatrix.Clear();
+        }
+
+        public bool CheckChannelUsage(Guid routingGuid, int iChannel, bool bIn)
+        {
+            var routing = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
+            if (routing != null)
+            {
+                if (routing.DeviceOut != null && MidiMatrix.Any(r => r.DeviceOut != null && r.RoutingGuid != routing.RoutingGuid && r.DeviceOut.Name.Equals(routing.DeviceOut.Name) && r.ChannelOut == routing.ChannelOut))
+                { return true; }
+                else { return false; }
+            }
+            else { return false; }
+        }
+
+        public void SendCC(Guid routingGuid, int iCC, int iValue, int iChannel, string sDevice)
+        {
+            if (MidiMatrix.Any(d => d.RoutingGuid == routingGuid && d.DeviceOut != null))
+            {
+                CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.CC, new List<int> { iCC, iValue }, Tools.GetChannel(iChannel), sDevice), true);
+            }
+        }
+
+        public void SendNote(Guid routingGuid, NoteGenerator note)
+        {
+            var routing = MidiMatrix.FirstOrDefault(d => d.RoutingGuid == routingGuid && d.DeviceOut != null);
+
+            if (routing != null)
+            {
+                Task.Factory.StartNew(() =>
+                {
+                    int iNote = note.Note;
+                    if (routing.Options.PlayNote_LowestNote)
+                    {
+                        iNote = LowestNoteRunning;
+                    }
+
+                    CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, note.Velocity }, Tools.GetChannel(note.Channel), routing.DeviceOut.Name), true);
+                    Thread.Sleep((int)(note.Length * 1000));
+                    CreateOUTEvent(new MidiDevice.MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, note.Velocity }, Tools.GetChannel(note.Channel), routing.DeviceOut.Name), false);
+                });
+            }
+        }
+
+        public void SendProgramChange(Guid routingGuid, MidiPreset mp)
+        {
+            var routing = MidiMatrix.FirstOrDefault(d => d.RoutingGuid == routingGuid && d.DeviceOut != null);
+            if (routing != null)
+            {
+                ChangeProgram(routing, mp, false);
+            }
+        }
+
+        public void StopLog()
+        {
+            OnLogAdded -= MidiDevice_OnLogAdded;
+        }
+
+        public void StartLog()
+        {
+            OnLogAdded += MidiDevice_OnLogAdded;
+        }
+
+        public void Debug()
+        {
+            //4,8,9
+            //var regex = Regex.Match("[IN=KEY#64:1-127]", "(\\[)(IN)=(KEY#)(\\d{1,3})((-)(\\d{1,3}))*(:)(\\d{1,3})((-)(\\d{1,3}))*(\\])");
+            //4,7,8,9
+            //var regex2 = Regex.Match("[IN=KEY#64-127:64]", "(\\[)(IN)=(KEY#)(\\d{1,3})((-)(\\d{1,3}))*(:)(\\d{1,3})((-)(\\d{1,3}))*(\\])");
+
+            //MidiTranslator(null, null);
+        }
+
+        public void OpenUsedPorts(bool bIn)
+        {
+            CheckAndCloseUnusedDevices();
+
+            if (bIn)
+            {
+                foreach (var dev in UsedDevicesIN)
+                {
+                    dev.OpenDevice();
+                    dev.OnMidiEvent += DeviceIn_OnMidiEvent;
+                }
+            }
+            else
+            {
+                foreach (var dev in UsedDevicesOUT)
+                {
+                    dev.OpenDevice();
+                    dev.OnMidiEvent += DeviceOut_OnMidiEvent;
+                }
+            }
+        }
+
+        public void CloseUsedPorts(bool bIn)
+        {
+            CheckAndCloseUnusedDevices();
+
+            if (bIn)
+            {
+                foreach (var dev in UsedDevicesIN)
+                {
+                    dev.CloseDevice();
+                    dev.OnMidiEvent -= DeviceIn_OnMidiEvent;
+                }
+            }
+            else
+            {
+                foreach (var dev in UsedDevicesOUT)
+                {
+                    dev.CloseDevice();
+                    dev.OnMidiEvent -= DeviceOut_OnMidiEvent;
+                }
+            }
+        }
+
+        public void SetClock(bool bActivated, int iBPM, string sDevice)
+        {
+            bool bChanged = false;
+
+            if (ClockRunning != bActivated || ClockBPM != iBPM || !ClockDevice.Equals(sDevice))
+            {
+                bChanged = true;
+            }
+
+            if (bChanged)
+            {
+                MidiClock.Stop(); //coupure de l'horloge interne
+
+                foreach (var device in UsedDevicesIN)  //coupure des horloges externes
+                {
+                    device.DisableClock();
+                    device.OnMidiClockEvent -= MidiClock_OnEvent;
+                }
+
+                if (bActivated)
+                {
+                    var masterdevice = UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDevice));
+                    if (masterdevice == null)
+                    {
+                        MidiClock.Interval = 60000.0 / iBPM;
+                        MidiClock.Start();
+                    }
+                    else
+                    {
+                        masterdevice.EnableClock();
+                        masterdevice.OnMidiClockEvent += MidiClock_OnEvent;
+                    }
+                }
+            }
+
+            ClockRunning = bActivated;
+            ClockBPM = iBPM;
+            ClockDevice = sDevice;
+        }
+
+        internal List<LiveData> GetLiveCCData()
+        {
+            List<LiveData> listdata = new List<LiveData>();
+
+            foreach (var item in MidiMatrix)
+            {
+                var CurrentOptions = item.Options.Clone();
+                List<LiveCC> CurrentCC = new List<LiveCC>();
+
+                foreach (var cc in item.LiveData)
+                {
+                    CurrentCC.Add(new LiveCC(cc.Device, cc.Channel, cc.CC, cc.CCValue));
+                }
+
+                LiveData CurrentData = new LiveData();
+
+                CurrentData.StartCC = CurrentCC;
+                CurrentData.StartOptions = CurrentOptions;
+                CurrentData.RoutingGuid = item.RoutingGuid;
+                CurrentData.Program = item.LiveProgram;
+                CurrentData.DeviceOUT = item.DeviceOut.Name;
+                CurrentData.DeviceIN = item.DeviceIn.Name;
+
+                listdata.Add(CurrentData);
+            }
+            return listdata;
+        }
+
+        #endregion
+
+    }
+}
