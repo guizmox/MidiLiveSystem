@@ -6,7 +6,7 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:MidiLiveSystem"
         mc:Ignorable="d"
-        Title="Preset Browser" Height="500" Width="600" ResizeMode="NoResize" ShowInTaskbar="False" WindowStyle="ToolWindow" WindowStartupLocation="CenterOwner">
+        Title="Preset Browser" Height="800" Width="600" ResizeMode="NoResize" ShowInTaskbar="False" WindowStyle="ToolWindow" WindowStartupLocation="CenterOwner">
 
     <Window.Resources>
         <Style TargetType="Label">
@@ -23,10 +23,11 @@
             <RowDefinition Height="5*" />
             <RowDefinition Height="5*" />
             <RowDefinition Height="80*" />
-            <RowDefinition Height="10*" />
+            <RowDefinition Height="5*" />
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="1">
+        <Border Grid.Row="1" BorderThickness="1" BorderBrush="Black"/>
+        <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="5,5,5,5" >
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="10*"/>
@@ -38,9 +39,11 @@
 
         </StackPanel>
         
-        <TreeView x:Name="tvPresets" Grid.Row="2" SelectedItemChanged="tvPresets_SelectedItemChanged"/>
+        <TreeView x:Name="tvPresets" FontSize="14" Grid.Row="2" SelectedItemChanged="tvPresets_SelectedItemChanged"/>
         <Label Name="lblCaption"  Grid.Row="0" Content="Select a Preset" FontWeight="Bold" Foreground="Red"/>
-        <StackPanel Grid.Column="0" Grid.Row="3" Background="LightGray" >
+
+        <Border Grid.Row="3" BorderThickness="1" BorderBrush="Black"/>
+        <StackPanel Grid.Column="0" Grid.Row="3" Margin="5,5,5,5" VerticalAlignment="Center" Background="LightGray" >
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="10*" />

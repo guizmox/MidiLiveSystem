@@ -86,7 +86,7 @@ namespace MidiLiveSystem
             });
         }
 
-        private void Routing_IncomingMidiMessage(MidiDevice.MidiEvent ev)
+        private void Routing_IncomingMidiMessage(MidiEvent ev)
         {
             Dispatcher.Invoke(() =>
             {
@@ -229,7 +229,7 @@ namespace MidiLiveSystem
                 {
                     CurrentVerticalGrid = config.VerticalGrid;
                 }
-                if (config.HorizontalGrid > -1) 
+                if (config.HorizontalGrid > -1)
                 {
                     CurrentHorizontalGrid = config.HorizontalGrid;
                 }
@@ -237,8 +237,8 @@ namespace MidiLiveSystem
                 //réinit de la fenêtre
                 if (Project.VerticalGrid != CurrentVerticalGrid || Project.HorizontalGrid != CurrentHorizontalGrid)
                 {
-                     Project = config;
-                     AddAllRoutingBoxes();
+                    Project = config;
+                    AddAllRoutingBoxes();
                 }
                 Project = config;
 
@@ -425,14 +425,24 @@ namespace MidiLiveSystem
                         CopiedPreset = (BoxPreset)sValue;
                         break;
                     case "CHECK_OUT_CHANNEL":
-                        int iChannel = (int)sValue;
+                        string sDevice = (string)sValue;
                         SaveTemplate(); //pour obtenir une version propre de ce qui a été saisi et enregistré sur les box
-                        if (Routing.CheckChannelUsage(box.RoutingGuid, iChannel, false))
+
+                        int iAvailable = Routing.GetFreeChannelForDevice(sDevice, false);
+                        if (iAvailable > -1)
                         {
                             Dispatcher.Invoke(() =>
                             {
                                 //MessageBox.Show("Warning : The selected OUT Channel is already in use ! (" + iChannel.ToString() + ")");
-                                box.cbChannelMidiOut.SelectedIndex += 1;
+                                box.cbChannelMidiOut.SelectedValue = iAvailable;
+                            });
+                        }
+                        else
+                        {
+                            Dispatcher.Invoke(() =>
+                            {
+                                //MessageBox.Show("Warning : The selected OUT Channel is already in use ! (" + iChannel.ToString() + ")");
+                                MessageBox.Show("No more Channel available for thie OUT device.");
                             });
                         }
                         break;
@@ -486,7 +496,7 @@ namespace MidiLiveSystem
         private void btnSettings_Click(object sender, RoutedEventArgs e)
         {
             if (ConfigWindow != null)
-            {        
+            {
                 if (!ConfigWindow.IsActive)
                 {
                     ConfigWindow.Closed -= MainConfiguration_Closed;
@@ -524,7 +534,7 @@ namespace MidiLiveSystem
                 {
                     if (!ConductorWindow.IsActive)
                     {
-                        ConductorWindow = new Conductor(Boxes);
+                        ConductorWindow = new Conductor(Boxes, Routing);
                         ConductorWindow.Show();
                     }
                     else if (!ConductorWindow.IsFocused)
@@ -534,7 +544,7 @@ namespace MidiLiveSystem
                 }
                 else
                 {
-                    ConductorWindow = new Conductor(Boxes);
+                    ConductorWindow = new Conductor(Boxes, Routing);
                     ConductorWindow.Show();
                 }
             }
@@ -880,7 +890,7 @@ namespace MidiLiveSystem
                     box.RoutingGuid = Routing.AddRouting(sDevIn, sDevOut,
                                        Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
                                        Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
-                                       box.GetOptions(), box.GetPreset());        
+                                       box.GetOptions(), box.GetPreset());
                 }
                 else
                 {
@@ -921,7 +931,13 @@ namespace MidiLiveSystem
                 var presetsample = AllPresets.FirstOrDefault(p => p.BoxGuid == g);
                 if (presetsample != null)
                 {
-                    try { iGridPosition = Convert.ToInt32(project.BoxNames.FirstOrDefault(b => b[1].Equals(g.ToString()))[2]); } catch { iGridPosition++; }
+                    var boxname = project.BoxNames.FirstOrDefault(b => b[1].Equals(g.ToString()));
+                    if (boxname != null)
+                    {
+                        iGridPosition = Convert.ToInt32(boxname[2]);
+                    }
+                    else { iGridPosition++; }
+
                     var box = new RoutingBox(project, MidiTools.MidiRouting.InputDevices, MidiTools.MidiRouting.OutputDevices, iGridPosition);
                     box.BoxGuid = g;
                     box.BoxName = presetsample.BoxName;
@@ -930,6 +946,19 @@ namespace MidiLiveSystem
                     box.LoadMemory(AllPresets.Where(p => p.BoxGuid == g).ToArray());
                     boxes.Add(box);
                 }
+            }
+            //inscrire le nom des presets en force
+            for (int i = 0; i < AllPresets.Count(); i+= 8) //toujours 8 par box
+            {
+                var box = boxes.FirstOrDefault(b => b.BoxGuid == AllPresets[i].BoxGuid);
+                box.btnPreset1.Content = AllPresets[i].PresetName;
+                box.btnPreset2.Content = AllPresets[i + 1].PresetName;
+                box.btnPreset3.Content = AllPresets[i + 2].PresetName;
+                box.btnPreset4.Content = AllPresets[i + 3].PresetName;
+                box.btnPreset5.Content = AllPresets[i + 4].PresetName;
+                box.btnPreset6.Content = AllPresets[i + 5].PresetName;
+                box.btnPreset7.Content = AllPresets[i + 6].PresetName;
+                box.btnPreset8.Content = AllPresets[i + 7].PresetName;
             }
 
             return boxes;

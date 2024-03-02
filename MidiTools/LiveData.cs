@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Timers;
+using static MidiTools.MidiDevice;
 
 namespace MidiTools
 {
@@ -17,6 +18,7 @@ namespace MidiTools
         public string DeviceIN;
         public Guid RoutingGuid;
         public int Program;
+
 
         public LiveData()
         {

@@ -137,13 +137,10 @@ namespace MidiLiveSystem
             string sProjectName = Project.ProjectName;
             string sSequence = "";
 
-            if (Project.BoxNames == null)
+            Project.BoxNames = new List<string[]>();
+            foreach (var box in Boxes)
             {
-                Project.BoxNames = new List<string[]>();
-                foreach (var box in Boxes)
-                {
-                    Project.BoxNames.Add(new string[] { box.BoxName, box.BoxGuid.ToString(), box.GridPosition.ToString() });
-                }
+                Project.BoxNames.Add(new string[] { box.BoxName, box.BoxGuid.ToString(), box.GridPosition.ToString() });
             }
 
             XmlSerializer serializerConfig = new XmlSerializer(typeof(ProjectConfiguration));
@@ -197,7 +194,7 @@ namespace MidiLiveSystem
 
                 var updateCommand = connection.CreateCommand();
                 updateCommand.CommandText = "UPDATE Projects SET Active = 0 WHERE ProjectGuid = '" + sId + "';";
-                updateCommand.ExecuteNonQuery();    
+                updateCommand.ExecuteNonQuery();
 
                 var insertCommand = connection.CreateCommand();
                 insertCommand.CommandText = "INSERT INTO Projects (ProjectGuid, ProjectName, Config, Routing, Sequence, DateProject, Author, Active) VALUES (@projectid, @projectname, @config, @routing, @sequence, @dateproject, @author, @active)";
@@ -340,14 +337,14 @@ namespace MidiLiveSystem
                         sName = reader.GetString(2);
                         sConfig = reader.GetString(3);
                         sRouting = reader.GetString(4);
-                        sSequence = reader.GetString(5); 
+                        sSequence = reader.GetString(5);
                         sDate = reader.GetString(6);
                         sAuthor = reader.GetString(7);
                     }
                 }
             }
 
-            if (sId.Length > 0 && sConfig.Length > 0 && sRouting.Length > 0) 
+            if (sId.Length > 0 && sConfig.Length > 0 && sRouting.Length > 0)
             {
                 ProjectConfiguration project;
                 RoutingBoxes presets;

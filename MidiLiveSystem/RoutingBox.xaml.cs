@@ -100,11 +100,10 @@ namespace MidiLiveSystem
             {
                 cbChannelMidiIn.Items.Add(new ComboBoxItem() { Tag = i, Content = i == 0 ? "ALL" : ("Ch." + i.ToString()) });
                 cbChannelMidiOut.Items.Add(new ComboBoxItem() { Tag = i, Content = i == 0 ? "ALL" : ("Ch." + i.ToString()) });
-                cbChannelPreset.Items.Add(new ComboBoxItem() { Tag = i, Content = i == 0 ? "ALL" : ("Ch." + i.ToString()) });
             }
             cbChannelMidiIn.SelectedIndex = 1;
-            cbChannelMidiOut.SelectedIndex = 1;
-            cbChannelPreset.SelectedIndex = 1;
+            
+            cbChannelMidiOut.SelectedIndex = -1;
 
             for (int i = 1; i <= 8; i++)
             {
@@ -295,12 +294,21 @@ namespace MidiLiveSystem
 
         private void cbChannelMidiOut_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (cbChannelMidiOut.SelectedIndex > -1 && cbChannelMidiOut.IsFocused)
+            if (cbMidiOut.SelectedItem != null && cbChannelMidiOut.SelectedIndex > -1 && ((ComboBoxItem)e.AddedItems[0]).IsFocused)
             {
-                ComboBoxItem cbOut = (ComboBoxItem)cbChannelMidiOut.SelectedItem;
-                cbChannelPreset.SelectedValue = cbOut.Tag;
+                ComboBoxItem devOut = (ComboBoxItem)cbMidiOut.SelectedItem;
 
-                OnUIEvent?.Invoke(BoxGuid, "CHECK_OUT_CHANNEL", Convert.ToInt32(cbOut.Tag.ToString()));
+                OnUIEvent?.Invoke(BoxGuid, "CHECK_OUT_CHANNEL", devOut.Tag.ToString());
+            }
+        }
+
+        private void cbMidiOut_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (cbMidiOut.SelectedIndex > -1 && cbChannelMidiOut.SelectedIndex > -1)
+            {
+                ComboBoxItem devOut = (ComboBoxItem)cbMidiOut.SelectedItem;
+
+                OnUIEvent?.Invoke(BoxGuid, "CHECK_OUT_CHANNEL", devOut.Tag.ToString());
             }
         }
 
@@ -692,7 +700,6 @@ namespace MidiLiveSystem
                 cbChannelMidiOut.SelectedValue = bp.ChannelOut;
             }
 
-            cbChannelPreset.SelectedValue = bp.MidiPreset.Channel;
             lbPreset.Text = bp.MidiPreset.PresetName;
             lbPreset.Tag = bp.MidiPreset.Tag;
 
@@ -715,6 +722,7 @@ namespace MidiLiveSystem
             if (!tbNoteTransposition.IsFocused) { tbNoteTransposition.Text = bp.MidiOptions.TranspositionOffset.ToString(); }
 
             if (!tbSmoothCC.IsFocused) { tbSmoothCC.Text = bp.MidiOptions.SmoothCCLength.ToString(); }
+            if (!tbDelayNotes.IsFocused) { tbDelayNotes.Text = bp.MidiOptions.DelayNotesLength.ToString(); }
 
             if (!cbCCDefaultValues.IsFocused)
             {
@@ -792,14 +800,14 @@ namespace MidiLiveSystem
 
         public MidiPreset GetPreset()
         {
-            if (cbChannelPreset.SelectedItem != null)
+            if (cbChannelMidiOut.SelectedItem != null)
             {
                 try
                 {
                     int iPrg = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[0]);
                     int iMsb = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[1]);
                     int iLsb = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[2]);
-                    return new MidiPreset("", Convert.ToInt32(((ComboBoxItem)cbChannelPreset.SelectedItem).Tag.ToString()), iPrg, iMsb, iLsb, lbPreset.Text);
+                    return new MidiPreset("", Convert.ToInt32(((ComboBoxItem)cbChannelMidiOut.SelectedItem).Tag.ToString()), iPrg, iMsb, iLsb, lbPreset.Text);
                 }
                 catch (Exception ex)
                 {
@@ -972,6 +980,15 @@ namespace MidiLiveSystem
                 if (iSmooth >= 0 && iSmooth <= 5000)
                 {
                     options.SmoothCCLength = iSmooth;
+                }
+            }
+
+            int iDelay = 0;
+            if (int.TryParse(tbDelayNotes.Text.Trim(), out iDelay))
+            {
+                if (iDelay >= 0 && iDelay <= 1000)
+                {
+                    options.DelayNotesLength = iDelay;
                 }
             }
 

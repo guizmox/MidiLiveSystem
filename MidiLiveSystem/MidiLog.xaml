@@ -21,7 +21,7 @@
                 <ColumnDefinition Width="40*" />
             </Grid.ColumnDefinitions>
             <CheckBox Name="ckOnlyIn" Grid.Column="0"  Content="Only IN" Click="ckOnlyIn_Click"></CheckBox>
-            <ComboBox Name="cbMidiDevices" Grid.Column="1" Grid.Row="1" SelectedValuePath="Tag" />
+            <ComboBox Name="cbMidiDevices" Grid.Column="1" Grid.Row="1" SelectedValuePath="Tag" SelectionChanged="cbMidiDevices_SelectionChanged" />
         </Grid>
 
         </DockPanel>

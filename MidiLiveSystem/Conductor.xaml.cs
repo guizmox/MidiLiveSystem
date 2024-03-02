@@ -21,6 +21,7 @@ namespace MidiLiveSystem
     public partial class Conductor : Window
     {
         private List<RoutingBox> Boxes = new List<RoutingBox>();
+        private MidiRouting Routing = null;
 
         private List<bool> _isMoving = new List<bool>();
         private List<Point> _buttonPosition = new List<Point>();
@@ -28,11 +29,12 @@ namespace MidiLiveSystem
         private List<double> deltaY = new List<double>();
         private List<TranslateTransform> _currentTT = new List<TranslateTransform>();
 
-        public Conductor(List<RoutingBox> boxes)
+        public Conductor(List<RoutingBox> boxes, MidiRouting routing)
         {
             InitializeComponent();
 
             Boxes = boxes;
+            Routing = routing;
 
             for (int i = 0; i < boxes.Count; i++)
             {
@@ -286,6 +288,13 @@ namespace MidiLiveSystem
             int iConvert = Convert.ToInt32(-(dHorizontal * ratio) + 64);
 
             return iConvert;
+        }
+
+        private void ckAddLifeToProject_Click(object sender, RoutedEventArgs e)
+        {
+            CheckBox ck = (CheckBox)sender;
+
+            Routing.AddLifeToProject(ck.IsChecked.Value);
         }
     }
 }

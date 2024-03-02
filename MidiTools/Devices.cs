@@ -15,6 +15,63 @@ using System.IO;
 namespace MidiTools
 {
 
+    [Serializable]
+    public class MidiEvent
+    {
+        public DateTime EventDate;
+        public MidiDevice.TypeEvent Type;
+        public Channel Channel;
+        public List<int> Values = new List<int>();
+        public string Device;
+        public string SysExData;
+
+        internal MidiEvent(MidiDevice.TypeEvent evType, List<int> values, Channel ch, string device)
+        {
+            //Event = ev;
+            Values = values;
+            EventDate = DateTime.Now;
+            Type = evType;
+            Channel = ch;
+            Device = device;
+        }
+
+        internal MidiEvent(MidiDevice.TypeEvent evType, string sSysex, string device)
+        {
+            //Event = ev;
+            EventDate = DateTime.Now;
+            Type = evType;
+            SysExData = sSysex;
+            Device = device;
+        }
+
+        internal MidiEvent()
+        {
+
+        }
+
+        internal Key GetKey()
+        {
+            if (Type == TypeEvent.NOTE_ON || Type == TypeEvent.NOTE_OFF || Type == TypeEvent.POLY_PRES)
+            {
+                Key noteValue;
+                Enum.TryParse<Key>(string.Concat("Key", Values[0].ToString()), out noteValue);
+                return noteValue;
+            }
+            else { return Key.Key0; }
+        }
+
+        internal Channel GetChannel()
+        {
+            Channel channelValue;
+            Enum.TryParse<Channel>(string.Concat("Channel", Values[0].ToString()), out channelValue);
+            return channelValue;
+        }
+
+        internal MidiEvent Clone()
+        {
+            return (MidiEvent)this.MemberwiseClone();
+        }
+    }
 
     public class MidiDevice
     {
@@ -42,64 +99,6 @@ namespace MidiTools
             CLOCK = 9
         }
 
-        [Serializable]
-        public class MidiEvent
-        {
-            public DateTime EventDate;
-            public MidiDevice.TypeEvent Type;
-            public Channel Channel;
-            public List<int> Values = new List<int>();
-            public string Device;
-            public string SysExData;
-
-            internal MidiEvent(MidiDevice.TypeEvent evType, List<int> values, Channel ch, string device)
-            {
-                //Event = ev;
-                Values = values;
-                EventDate = DateTime.Now;
-                Type = evType;
-                Channel = ch;
-                Device = device;
-            }
-
-            internal MidiEvent(MidiDevice.TypeEvent evType, string sSysex, string device)
-            {
-                //Event = ev;
-                EventDate = DateTime.Now;
-                Type = evType;
-                SysExData = sSysex;
-                Device = device;
-            }
-
-            internal MidiEvent()
-            {
-
-            }
-
-            internal Key GetKey()
-            {
-                if (Type == TypeEvent.NOTE_ON || Type == TypeEvent.NOTE_OFF || Type == TypeEvent.POLY_PRES)
-                {
-                    Key noteValue;
-                    Enum.TryParse<Key>(string.Concat("Key", Values[0].ToString()), out noteValue);
-                    return noteValue;
-                }
-                else { return Key.Key0; }
-            }
-
-            internal Channel GetChannel()
-            {
-                Channel channelValue;
-                Enum.TryParse<Channel>(string.Concat("Channel", Values[0].ToString()), out channelValue);
-                return channelValue;
-            }
-
-            internal MidiEvent Clone()
-            {
-                return (MidiEvent)this.MemberwiseClone();
-            }
-        }
-
         public string Name { get; internal set; }
 
         private int MIDI_InOrOut; //IN = 1, OUT = 2
@@ -110,16 +109,16 @@ namespace MidiTools
         internal delegate void LogEventHandler(string sDevice, bool bIn, string sLog);
         internal static event LogEventHandler OnLogAdded;
 
-        internal delegate void MidiEventHandler(bool bIn, MidiDevice.MidiEvent ev);
+        internal delegate void MidiEventHandler(bool bIn, MidiEvent ev);
         internal event MidiEventHandler OnMidiEvent;
 
         internal delegate void MidiClockEventHandler(object sender, ElapsedEventArgs e);
         internal event MidiClockEventHandler OnMidiClockEvent;
 
 
-        internal delegate void MidiEventSequenceHandlerIN(MidiDevice.MidiEvent ev);
+        internal delegate void MidiEventSequenceHandlerIN(MidiEvent ev);
         internal static event MidiEventSequenceHandlerIN OnMidiSequenceEventIN;
-        internal delegate void MidiEventSequenceHandlerOUT(MidiDevice.MidiEvent ev);
+        internal delegate void MidiEventSequenceHandlerOUT(MidiEvent ev);
         internal static event MidiEventSequenceHandlerOUT OnMidiSequenceEventOUT;
 
         internal MidiDevice(RtMidi.Core.Devices.Infos.IMidiInputDeviceInfo inputDevice)
@@ -291,7 +290,7 @@ namespace MidiTools
 
     internal class MidiOutputDeviceEvents
     {
-        internal delegate void MidiEventHandler(MidiDevice.MidiEvent ev);
+        internal delegate void MidiEventHandler(MidiEvent ev);
         internal event MidiEventHandler OnMidiEvent;
 
         private IMidiOutputDevice outputDevice;
@@ -339,7 +338,7 @@ namespace MidiTools
             }
         }
 
-        internal void SendEvent(MidiDevice.MidiEvent ev)
+        internal void SendEvent(MidiEvent ev)
         {
             switch (ev.Type)
             {
@@ -473,7 +472,7 @@ namespace MidiTools
 
     internal class MidiInputDeviceEvents
     {
-        internal delegate void MidiEventHandler(MidiDevice.MidiEvent ev);
+        internal delegate void MidiEventHandler(MidiEvent ev);
         internal event MidiEventHandler OnMidiEvent;
 
         private IMidiInputDevice inputDevice;
@@ -624,12 +623,12 @@ namespace MidiTools
 
         private void AddEvent(MidiDevice.TypeEvent evType, List<int> values, Channel ch)
         {
-            OnMidiEvent?.Invoke(new MidiDevice.MidiEvent(evType, values, ch, inputDevice.Name));
+            OnMidiEvent?.Invoke(new MidiEvent(evType, values, ch, inputDevice.Name));
         }
 
         private void AddEventSysEx(MidiDevice.TypeEvent evType, string sData)
         {
-            OnMidiEvent?.Invoke(new MidiDevice.MidiEvent(evType, sData, inputDevice.Name));
+            OnMidiEvent?.Invoke(new MidiEvent(evType, sData, inputDevice.Name));
         }
 
         internal void Stop()

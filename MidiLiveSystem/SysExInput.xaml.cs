@@ -23,10 +23,8 @@ namespace MidiLiveSystem
     /// </summary>
     public partial class SysExInput : Window
     {
-        MidiRouting Routing = null;
-        Guid RoutingGuid = Guid.Empty;
-
         public bool InvalidData = false;
+        private bool DeviceAdded = false;
 
         public SysExInput()
         {
@@ -44,7 +42,7 @@ namespace MidiLiveSystem
         {
             foreach (var d in MidiRouting.InputDevices)
             {
-                cbMidiIn.Items.Add(new ComboBoxItem() { Tag = d.Name, Content = d.Name });
+                cbMidiIn.Items.Add(new ComboBoxItem() { Tag = "I-" + d.Name, Content = d.Name });
             }
 
             if (sSysex.Length > 0)
@@ -56,37 +54,30 @@ namespace MidiLiveSystem
 
         private void Window_Closed(object sender, EventArgs e)
         {
-            if (Routing != null)
+            if (DeviceAdded && cbMidiIn.SelectedValue != null)
             {
-                Routing.CloseUsedPorts(true);
-                Routing.DeleteAllRouting();
-                Routing.IncomingMidiMessage -= Routing_IncomingMidiMessage;
-                Routing = null;
+                MidiRouting.CheckAndCloseINPort(cbMidiIn.SelectedValue.ToString().Substring(2));
             }
         }
 
         private void cbMidiIn_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            ComboBoxItem item = (ComboBoxItem)e.AddedItems[0];
+            ComboBoxItem cbNew = (ComboBoxItem)e.AddedItems[0];
+            ComboBoxItem cbOld = null;
+            if (e.RemovedItems != null && e.RemovedItems.Count > 0) { cbOld = (ComboBoxItem)e.RemovedItems[0]; }
 
-            if (item != null)
+            if (cbOld != null && DeviceAdded && cbOld.Tag.ToString().StartsWith("I-"))
             {
-                if (Routing != null)
-                {
-                    Routing.ModifyRouting(RoutingGuid, item.Tag.ToString(), "", 0, 0, new MidiOptions(), new MidiPreset());
-                }
-                else
-                {
-                    //ouvrir le device et fermer le précédent pour écouter les messages entrants
-                    Routing = new MidiRouting();
-                    RoutingGuid = Routing.AddRouting(item.Tag.ToString(), "", 0, 0, new MidiOptions(), new MidiPreset());
-                    Routing.IncomingMidiMessage += Routing_IncomingMidiMessage;
-                }
+                MidiRouting.CheckAndCloseINPort(cbOld.Tag.ToString().Substring(2));
+            }
 
+            if (cbNew != null && cbNew.Tag.ToString().StartsWith("I-"))
+            {
+                DeviceAdded = MidiRouting.CheckAndOpenINPort(cbNew.Tag.ToString().Substring(2));
             }
         }
 
-        private void Routing_IncomingMidiMessage(MidiDevice.MidiEvent ev)
+        private void Routing_IncomingMidiMessage(MidiEvent ev)
         {
             if (ev.Type == MidiDevice.TypeEvent.SYSEX)
             {

@@ -116,6 +116,7 @@ namespace MidiTools
 
         public bool SmoothCC { get { return SmoothCCLength > 0 ? true : false; } }
         public int SmoothCCLength = 0;
+        public int DelayNotesLength = 0;
 
         public bool AddCCConverter(int iFrom, int iTo)
         {
