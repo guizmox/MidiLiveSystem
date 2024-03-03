@@ -81,6 +81,26 @@ namespace MidiLiveSystem
 
 
             InitPage(inputDevices, outputDevices);
+
+            MidiRouting.OutputMidiMessage += MidiRouting_OutputMidiMessage;
+        }
+
+        private void MidiRouting_OutputMidiMessage(bool b, Guid routingGuid)
+        {
+            if (RoutingGuid == routingGuid)
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    if (b)
+                    {
+                        tbRoutingPlay.Foreground = Brushes.Red;
+                    }
+                    else
+                    {
+                        tbRoutingPlay.Foreground = Brushes.White;
+                    }
+                });
+            }
         }
 
         private void InitPage(List<IMidiInputDeviceInfo> inputDevices, List<IMidiOutputDeviceInfo> outputDevices)
@@ -96,14 +116,16 @@ namespace MidiLiveSystem
             {
                 cbMidiOut.Items.Add(new ComboBoxItem() { Tag = s.Name, Content = s.Name });
             }
+
+            cbChannelMidiOut.Items.Add(new ComboBoxItem() { Tag = "0", Content = "NA" });
             for (int i = 0; i <= 16; i++)
             {
                 cbChannelMidiIn.Items.Add(new ComboBoxItem() { Tag = i, Content = i == 0 ? "ALL" : ("Ch." + i.ToString()) });
-                cbChannelMidiOut.Items.Add(new ComboBoxItem() { Tag = i, Content = i == 0 ? "ALL" : ("Ch." + i.ToString()) });
+                if (i > 0) { cbChannelMidiOut.Items.Add(new ComboBoxItem() { Tag = i, Content = "Ch." + i.ToString() }); }
             }
             cbChannelMidiIn.SelectedIndex = 1;
             
-            cbChannelMidiOut.SelectedIndex = -1;
+            cbChannelMidiOut.SelectedIndex = 0;
 
             for (int i = 1; i <= 8; i++)
             {
@@ -294,21 +316,23 @@ namespace MidiLiveSystem
 
         private void cbChannelMidiOut_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (cbMidiOut.SelectedItem != null && cbChannelMidiOut.SelectedIndex > -1 && ((ComboBoxItem)e.AddedItems[0]).IsFocused)
+            if (cbMidiOut.SelectedItem != null && ((ComboBoxItem)e.AddedItems[0]).IsFocused && cbChannelMidiOut.SelectedIndex > 0)
             {
                 ComboBoxItem devOut = (ComboBoxItem)cbMidiOut.SelectedItem;
 
-                OnUIEvent?.Invoke(BoxGuid, "CHECK_OUT_CHANNEL", devOut.Tag.ToString());
+                OnUIEvent?.Invoke(BoxGuid, "CHECK_OUT_CHANNEL", devOut.Tag.ToString() + "#|#" + cbChannelMidiOut.SelectedValue);
             }
         }
 
         private void cbMidiOut_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (cbMidiOut.SelectedIndex > -1 && cbChannelMidiOut.SelectedIndex > -1)
+            if (cbMidiOut.SelectedIndex > -1)
             {
+                cbChannelMidiOut.SelectedIndex = 0;
+
                 ComboBoxItem devOut = (ComboBoxItem)cbMidiOut.SelectedItem;
 
-                OnUIEvent?.Invoke(BoxGuid, "CHECK_OUT_CHANNEL", devOut.Tag.ToString());
+                OnUIEvent?.Invoke(BoxGuid, "CHECK_OUT_CHANNEL", devOut.Tag.ToString() + "#|#" + cbChannelMidiOut.SelectedValue);
             }
         }
 
@@ -1035,7 +1059,7 @@ namespace MidiLiveSystem
         public string DeviceIn { get; set; } = "";
         public string DeviceOut { get; set; } = "";
         public int ChannelIn { get; set; } = 1;
-        public int ChannelOut { get; set; } = 1;
+        public int ChannelOut { get; set; } = 0;
 
         public BoxPreset()
         {

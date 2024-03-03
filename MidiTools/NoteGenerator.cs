@@ -13,7 +13,7 @@ namespace MidiTools
         public int Note = 64;
         public int Octave = 3;
         public int Channel = 1;
-        public decimal Length = 1;
+        public decimal Length = 100;
 
         public NoteGenerator(int iChannel, int iOctave, int iNote, int iVelocity, decimal dLength)
         {
@@ -31,8 +31,8 @@ namespace MidiTools
 
         private void SetLength(decimal dLength)
         {
-            if (dLength > 9) { Length = 9; }
-            else if (dLength < 0) { Length = 0; }
+            if (dLength > 10000) { Length = 10000; }
+            else if (dLength < 100) { Length = 100; }
             else { Length = dLength; }
         }
 

@@ -40,7 +40,7 @@
                 <RowDefinition Height="20*"/>
                 <RowDefinition Height="80*"/>
             </Grid.RowDefinitions>
-            <TextBlock MouseDown="Menu_OpenMenu" Grid.Row="0" HorizontalAlignment="Center">
+            <TextBlock x:Name="tbRoutingBoxIncoming" MouseDown="Menu_OpenMenu" Grid.Row="0" HorizontalAlignment="Center">
                             <materialDesign:PackIcon
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
@@ -111,7 +111,7 @@
                                     <ColumnDefinition Width="20*" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Name="tbRoutingName" Grid.Column="0" Text="Routing Name" VerticalAlignment="Center" HorizontalAlignment="Left" Foreground="IndianRed" />
-                                <TextBlock Grid.Column="1" >  
+                                <TextBlock Name="tbRoutingPlay" Grid.Column="1" >  
                                 <materialDesign:PackIcon
                                 Kind="Play" />
                                 </TextBlock>
@@ -237,7 +237,7 @@
                                 <TextBox Name="tbInternalGeneratorKey" Grid.Row="1" Grid.Column="1" MaxLength="3" Text="64" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
                                 <TextBlock Grid.Column="2" Grid.Row="1"  Text="VELO."/>
                                 <TextBox Name="tbInternalGeneratorVelocity" Grid.Row="1" Grid.Column="3" MaxLength="3" Text="127" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                                <TextBlock Grid.Column="4" Grid.Row="1" Text="LEN. (S)"/>
+                                <TextBlock Grid.Column="4" Grid.Row="1" Text="LEN.(ms)"/>
                                 <TextBox Name="tbInternalGeneratorLength" Grid.Row="1" Grid.Column="5" MaxLength="3" Text="1" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
                             </Grid>
                         </StackPanel>

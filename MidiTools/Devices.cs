@@ -24,6 +24,7 @@ namespace MidiTools
         public List<int> Values = new List<int>();
         public string Device;
         public string SysExData;
+        public int WaitTimeBeforeNextEvent = 0;
 
         internal MidiEvent(MidiDevice.TypeEvent evType, List<int> values, Channel ch, string device)
         {

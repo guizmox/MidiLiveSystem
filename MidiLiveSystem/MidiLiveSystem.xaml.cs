@@ -425,11 +425,11 @@ namespace MidiLiveSystem
                         CopiedPreset = (BoxPreset)sValue;
                         break;
                     case "CHECK_OUT_CHANNEL":
-                        string sDevice = (string)sValue;
-                        SaveTemplate(); //pour obtenir une version propre de ce qui a été saisi et enregistré sur les box
+                        string sDevice = ((string)sValue).Split("#|#")[0];
+                        int iChannelWanted = Convert.ToInt32(((string)sValue).Split("#|#")[1]);
 
-                        int iAvailable = Routing.GetFreeChannelForDevice(sDevice, false);
-                        if (iAvailable > -1)
+                        int iAvailable = Routing.GetFreeChannelForDevice(sDevice, iChannelWanted, false);
+                        if (iAvailable > 0)
                         {
                             Dispatcher.Invoke(() =>
                             {
@@ -442,9 +442,11 @@ namespace MidiLiveSystem
                             Dispatcher.Invoke(() =>
                             {
                                 //MessageBox.Show("Warning : The selected OUT Channel is already in use ! (" + iChannel.ToString() + ")");
-                                MessageBox.Show("No more Channel available for thie OUT device.");
+                                MessageBox.Show("No more Channel available for this OUT device.");
                             });
                         }
+
+                        SaveTemplate(); //pour obtenir une version propre de ce qui a été saisi et enregistré sur les box
                         break;
                 }
             }
@@ -456,7 +458,7 @@ namespace MidiLiveSystem
             int i = Routing.AdjustUIRefreshRate(); //renvoit une quantité en ms
 
             Routing.IncomingMidiMessage -= Routing_IncomingMidiMessage;
-            if (Routing.Events <= 30) //pour éviter de saturer les process avec des appels UI inutiles
+            if (Routing.Events <= 8) //pour éviter de saturer les process avec des appels UI inutiles
             {
                 Routing.IncomingMidiMessage += Routing_IncomingMidiMessage;
             }
@@ -948,7 +950,7 @@ namespace MidiLiveSystem
                 }
             }
             //inscrire le nom des presets en force
-            for (int i = 0; i < AllPresets.Count(); i+= 8) //toujours 8 par box
+            for (int i = 0; i < AllPresets.Count(); i += 8) //toujours 8 par box
             {
                 var box = boxes.FirstOrDefault(b => b.BoxGuid == AllPresets[i].BoxGuid);
                 box.btnPreset1.Content = AllPresets[i].PresetName;
