@@ -422,7 +422,7 @@ namespace MidiTools
 
                 List<MidiEvent> EventsToProcess = EventPreProcessor(routing, ev, routingOUT == null ? false : true);
 
-                if (routing != null)
+                if (routingOUT != null)
                 {
                     foreach (var evToProcess in EventsToProcess)
                     {
