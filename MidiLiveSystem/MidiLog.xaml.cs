@@ -50,9 +50,7 @@ namespace MidiLiveSystem
             }
             else
             {
-                if (!Dispatcher.CheckAccess())
-                {
-                    Dispatcher.Invoke(() =>
+                Dispatcher.Invoke(() =>
                 {
                     if (cbMidiDevices.SelectedIndex == 0 || cbMidiDevices.SelectedValue.ToString().Substring(2).Equals(sDevice))
                     {
@@ -66,21 +64,6 @@ namespace MidiLiveSystem
                         rtbMidiLog.ScrollToEnd();
                     }
                 });
-                }
-                else
-                {
-                    if (cbMidiDevices.SelectedIndex == 0 || cbMidiDevices.SelectedValue.ToString().Equals(sDevice))
-                    {
-                        Paragraph paragraph = new Paragraph(new Run(sLog));
-                        paragraph.LineHeight = 1;
-                        rtbMidiLog.Document.Blocks.Add(paragraph);
-                        if (rtbMidiLog.Document.Blocks.Count > 1000)
-                        {
-                            rtbMidiLog.Document.Blocks.Clear();
-                        }
-                        rtbMidiLog.ScrollToEnd();
-                    }
-                }
             }
         }
 

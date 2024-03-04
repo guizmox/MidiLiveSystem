@@ -42,6 +42,7 @@ namespace MidiLiveSystem
         private List<DetachedBox> DetachedWindows = new List<DetachedBox>();
         public ProgramHelp HelpWindow;
         public Conductor ConductorWindow;
+        public RecallButtons RecallWindow;
 
         private bool ViewOnConfig = false;
 
@@ -65,6 +66,10 @@ namespace MidiLiveSystem
 
             //chargement des template instruments
             CubaseInstrumentData.Instruments = Database.LoadInstruments();
+
+            MidiRouting.InputMidiMessage += MidiRouting_InputMidiMessage;
+
+            RecallWindow = new RecallButtons(Boxes, Project);
         }
 
         private void Keyboard_KeyPressed(string sKey)
@@ -122,6 +127,27 @@ namespace MidiLiveSystem
                     }
                 }
             });
+        }
+
+        private void MidiRouting_InputMidiMessage(MidiEvent ev)
+        {
+            if (RecallWindow != null && Project.TriggerRecallDevice.Equals(ev.Device))
+            {
+                if (ev.Type == MidiDevice.TypeEvent.NOTE_ON && Project.TriggerRecallButtons.Equals("NOTE") && ev.Values[0] >= Project.TriggerRecallButtonsValue && ev.Values[0] <= Project.TriggerRecallButtonsValue + 8)
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        RecallWindow.SetButton(true, Project.TriggerRecallButtonsValue, ev.Values[0]);
+                    });
+                }
+                else if (ev.Type == MidiDevice.TypeEvent.NOTE_ON && Project.TriggerRecallButtons.Equals("CC") && ev.Values[1] < 8)
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        RecallWindow.SetButton(false, Project.TriggerRecallButtonsValue, ev.Values[1]);
+                    });
+                }
+            }
         }
 
         private void InitFrames(int iRows, int iCols)
@@ -202,6 +228,10 @@ namespace MidiLiveSystem
             if (ConductorWindow != null)
             {
                 ConductorWindow.Close();
+            }
+            if (RecallWindow != null)
+            {
+                RecallWindow.Close();
             }
 
             foreach (var detached in DetachedWindows)
@@ -579,6 +609,11 @@ namespace MidiLiveSystem
         {
             try
             {
+                if (RecallWindow.IsVisible) //pour forcer le rafraichissement suite au rechargement de la config
+                {
+                    RecallWindow.Close();
+                }
+
                 //Id, ProjectGuid, Name, DateProject, Author, Active
                 List<string[]> projects = Database.GetProjects();
                 if (projects.Count > 0)
@@ -667,6 +702,19 @@ namespace MidiLiveSystem
                 Keyboard.KeyPressed -= Keyboard_KeyPressed;
                 KeysWindow.Close();
                 KeysWindow = null;
+            }
+        }
+
+        private void btnRecallButtons_Click(object sender, RoutedEventArgs e)
+        {
+            if (RecallWindow.IsVisible)
+            {
+                RecallWindow.Close();
+            }
+            else
+            {
+                RecallWindow = new RecallButtons(Boxes, Project);
+                RecallWindow.Show();
             }
         }
 
@@ -908,7 +956,6 @@ namespace MidiLiveSystem
                 Routing.SetClock(Project.ClockActivated, Project.BPM, Project.ClockDevice);
             }
         }
-
     }
 
     [Serializable]

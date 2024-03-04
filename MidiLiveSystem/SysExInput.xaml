@@ -6,7 +6,7 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:MidiLiveSystem"
         mc:Ignorable="d"
-        Title="System Exclusive Input" Height="300" Width="400" ResizeMode="NoResize" WindowStyle="ToolWindow" Closed="Window_Closed" WindowStartupLocation="CenterOwner">
+        Title="System Exclusive Input" Height="300" Width="400" ResizeMode="NoResize" WindowStyle="ToolWindow" Closed="Window_Closed" WindowStartupLocation="CenterScreen">
 
 
     <Window.Resources>

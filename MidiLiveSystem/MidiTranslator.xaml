@@ -6,7 +6,7 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:MidiLiveSystem"
         mc:Ignorable="d"
-        Title="Midi Translator" Height="300" Width="400" Background="DimGray" WindowStartupLocation="CenterOwner">
+        Title="Midi Translator" Height="300" Width="400" Background="DimGray" WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
         <Style TargetType="TextBlock">

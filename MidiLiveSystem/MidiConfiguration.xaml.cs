@@ -84,6 +84,7 @@ namespace MidiLiveSystem
                     {
                         cbMidiIn.Items.Add(new ComboBoxItem() { Tag = d, Content = d });
                         cbMidiInClock.Items.Add(new ComboBoxItem() { Tag = d, Content = d });
+                        cbMidiInRecall.Items.Add(new ComboBoxItem() { Tag = d, Content = d });
                     }
                 }
 
@@ -110,6 +111,11 @@ namespace MidiLiveSystem
                     cbMidiInClock.SelectedIndex = 0;
                     MessageBox.Show("Unable to set Master Clock Device. Set to default");
                 }
+
+                tbRecallButtonsTrigger.Text = Configuration.TriggerRecallButtonsValue.ToString();
+                cbRecallButtonsTrigger.SelectedValue = Configuration.TriggerRecallButtons;
+                cbMidiInRecall.SelectedValue = Configuration.TriggerRecallDevice;
+
             }
             else
             {
@@ -121,11 +127,15 @@ namespace MidiLiveSystem
                 tbHorizontalItems.Text = "-1";
                 tbVerticalItems.Text = "-1";
 
+                tbRecallButtonsTrigger.Text = "UI";
+                cbRecallButtonsTrigger.SelectedValue = "0";
+
                 cbMidiInClock.Items.Add(new ComboBoxItem() { Tag = Tools.INTERNAL_GENERATOR, Content = Tools.INTERNAL_GENERATOR });
                 foreach (var s in MidiTools.MidiRouting.InputDevices)
                 {
                     cbMidiIn.Items.Add(new ComboBoxItem() { Tag = s.Name, Content = s.Name });
                     cbMidiInClock.Items.Add(new ComboBoxItem() { Tag = s.Name, Content = s.Name });
+                    cbMidiInRecall.Items.Add(new ComboBoxItem() { Tag = s.Name, Content = s.Name });
                 }
                 cbMidiInClock.SelectedIndex = 0;
 
@@ -452,8 +462,21 @@ namespace MidiLiveSystem
             Configuration.DevicesOUT = sDevicesOut;
             Configuration.HorizontalGrid = ihorizontal;
             Configuration.VerticalGrid = ivertical;
+            Configuration.TriggerRecallButtons = ((ComboBoxItem)cbRecallButtonsTrigger.SelectedItem).Tag.ToString();
+            Configuration.TriggerRecallDevice = ((ComboBoxItem)cbMidiInRecall.SelectedItem).Tag.ToString();
             Configuration.ClockDevice = cbMidiInClock.SelectedItem == null ? "" : ((ComboBoxItem)cbMidiInClock.SelectedItem).Tag.ToString();
             Configuration.ClockActivated = ckActivateClock.IsChecked.Value;
+
+            int iTriggerValue = 0;
+            if (int.TryParse(tbRecallButtonsTrigger.Text, out iTriggerValue))
+            {
+                if (iTriggerValue < 0 || iTriggerValue > 127)
+                {
+                    iTriggerValue = 0;
+                }
+            }
+
+            Configuration.TriggerRecallButtonsValue = iTriggerValue;
 
             int iBpm = 0;
             if (int.TryParse(tbBPM.Text.Trim(), out iBpm))
@@ -488,7 +511,28 @@ namespace MidiLiveSystem
     [Serializable]
     public class ProjectConfiguration
     {
-        private List<string> _sBoxNames = null;
+        [Serializable]
+        public class RecallConfiguration
+        {
+            public string ButtonName = "";
+            public int ButtonIndex = 0;
+            public List<Guid> BoxGuids = new List<Guid>();
+            public List<int> BoxPresets = new List<int>();
+
+            public RecallConfiguration()
+            {
+
+            }
+
+            public RecallConfiguration(List<Guid> boxguids, List<int> boxpresets, string name, int iButton)
+            {
+                BoxGuids = boxguids;
+                BoxPresets = boxpresets;
+                ButtonName = name;
+                ButtonIndex = iButton;
+            }
+        }
+
         private List<string> _listDevicesIn = null;
         private List<string> _listDevicesOut = null;
 
@@ -505,6 +549,8 @@ namespace MidiLiveSystem
                 _listDevicesOut = value;
             }
         }
+
+        public List<RecallConfiguration> RecallData = new List<RecallConfiguration>();
 
         public List<string> DevicesIN
         {
@@ -526,9 +572,35 @@ namespace MidiLiveSystem
 
         public int HorizontalGrid = -1;
         public int VerticalGrid = -1;
-        internal string ClockDevice = "";
+
+        private string _clockDevice = "";
+        internal string ClockDevice
+        {
+            get { return _clockDevice; }
+            set
+            {
+                MidiRouting.CheckAndCloseINPort(_clockDevice);
+                MidiRouting.CheckAndOpenINPort(value);
+                _clockDevice = value;
+            }
+        }
+
         internal int BPM = 120;
         internal bool ClockActivated = false;
+
+        private string _triggerDevice = "";
+
+        public string TriggerRecallButtons = "UI";
+        public int TriggerRecallButtonsValue = 0;
+        internal string TriggerRecallDevice { 
+            get { return _triggerDevice; }
+            set
+            {
+                MidiRouting.CheckAndCloseINPort(_triggerDevice);
+                MidiRouting.CheckAndOpenINPort(value);
+                _triggerDevice = value;
+            }
+        }
 
         public ProjectConfiguration()
         {

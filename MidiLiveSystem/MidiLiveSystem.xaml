@@ -98,7 +98,19 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnKeyboard" ToolTip="Opens a virtual keyboard that can be convenient if you're using a tactile screen." Width="140" Height="60" Grid.Column="6" Background="DarkKhaki" Click="btnKeyboard_Click" >
+                <Button Name="btnRecallButtons" ToolTip="Opens a window with 8 buttons that can recall a specific Project Configuration" Width="140" Height="60" Grid.Column="6" Background="DarkKhaki" Click="btnRecallButtons_Click" >
+                    <StackPanel>
+                        <TextBlock HorizontalAlignment="Center">
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="CallToAction" />
+                        </TextBlock>
+                        <TextBlock Text="Recall Buttons"  FontSize="11"/>
+                    </StackPanel>
+                </Button>
+                
+                <Button Visibility="Hidden" Name="btnKeyboard" ToolTip="Opens a virtual keyboard that can be convenient if you're using a tactile screen." Width="140" Height="60" Grid.Column="6" Background="DarkKhaki" Click="btnKeyboard_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon

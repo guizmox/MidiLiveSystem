@@ -272,7 +272,7 @@
                             </Grid>
                         </StackPanel>
                         <TextBlock Grid.Column="0" Grid.Row="6" Text="INIT CC VALUES"/>
-                        <ComboBox Name="cbCCDefaultValues" Grid.ColumnSpan="3"  BorderThickness="0" Grid.Column="1" Grid.Row="6"  SelectedValuePath="Tag" SelectedValue="{Binding SelectedItem, Mode=TwoWay}" >
+                        <ComboBox Name="cbCCDefaultValues" Grid.ColumnSpan="3"  BorderThickness="0" Grid.Column="1" Grid.Row="6"  SelectedValue="{Binding SelectedItem, Mode=TwoWay}" >
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
                                     <Grid>

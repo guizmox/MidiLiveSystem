@@ -689,20 +689,20 @@ namespace MidiLiveSystem
 
         private void FillUI(BoxPreset bp, bool bIsFirst)
         {
-            if (bIsFirst)
-            {
-                cbMidiIn.IsEnabled = true;
-                cbMidiOut.IsEnabled = true;
-                cbChannelMidiIn.IsEnabled = true;
-                cbChannelMidiOut.IsEnabled = true;
-            }
-            else
-            {
-                cbMidiIn.IsEnabled = false;
-                cbMidiOut.IsEnabled = false;
-                cbChannelMidiIn.IsEnabled = false;
-                cbChannelMidiOut.IsEnabled = false;
-            }
+            //if (bIsFirst)
+            //{
+            //    cbMidiIn.IsEnabled = true;
+            //    cbMidiOut.IsEnabled = true;
+            //    cbChannelMidiIn.IsEnabled = true;
+            //    cbChannelMidiOut.IsEnabled = true;
+            //}
+            //else
+            //{
+            //    cbMidiIn.IsEnabled = false;
+            //    cbMidiOut.IsEnabled = false;
+            //    cbChannelMidiIn.IsEnabled = false;
+            //    cbChannelMidiOut.IsEnabled = false;
+            //}
 
             //remplissage des champs
             if (!tbPresetName.IsFocused) { tbPresetName.Text = bp.PresetName; }
@@ -716,13 +716,13 @@ namespace MidiLiveSystem
             }
             ckInternalGeneratorLowestKey.IsChecked = bp.MidiOptions.PlayNote_LowestNote;
 
-            if (bIsFirst)
-            {
+            //if (bIsFirst)
+            //{
                 cbMidiIn.SelectedValue = bp.DeviceIn;
                 cbMidiOut.SelectedValue = bp.DeviceOut;
                 cbChannelMidiIn.SelectedValue = bp.ChannelIn;
                 cbChannelMidiOut.SelectedValue = bp.ChannelOut;
-            }
+            //}
 
             lbPreset.Text = bp.MidiPreset.PresetName;
             lbPreset.Tag = bp.MidiPreset.Tag;

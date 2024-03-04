@@ -6,8 +6,8 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:MidiLiveSystem"
         mc:Ignorable="d"
-        Title="Project Configuration" Height="450" Width="600"
-        Closed="Window_Closed" WindowStyle="ToolWindow" ResizeMode="NoResize" WindowStartupLocation="CenterOwner">
+        Title="Project Configuration" Height="500" Width="600"
+        Closed="Window_Closed" WindowStyle="ToolWindow" ResizeMode="NoResize" WindowStartupLocation="CenterScreen">
 
 
     <Window.Resources>
@@ -40,6 +40,7 @@
                     <RowDefinition Height="*" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="15*" />
@@ -49,7 +50,7 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.RowSpan="4" Grid.ColumnSpan="4" BorderThickness="1" BorderBrush="Black" />
+                <Border Grid.RowSpan="5" Grid.ColumnSpan="4" BorderThickness="1" BorderBrush="Black" />
                 
                 <Label Grid.Column="0" Grid.Row="0" Content="PROJECT NAME"/>
                 <TextBox Name="tbProjectName" ToolTip="Name your Project" Text="My Project" Grid.Column="1" Grid.Row="0" VerticalAlignment="Center"/>
@@ -97,39 +98,59 @@
                 <Label Grid.Column="0" Grid.Row="1" Content="ROUTING BOX NAMES"/>
                 <ComboBox Name="cbRoutingNames" ToolTip="Name the routing boxes to help you recognize the purpose of each of them" Grid.Column="1" Grid.Row="1" SelectedValuePath="Tag" />
 
-                <Border Grid.Row="5" Grid.RowSpan="4" Grid.ColumnSpan="4" BorderThickness="1" BorderBrush="Black" />
+
+
+                <Label Grid.Column="0" Grid.Row="4" Content="RECALL BUTTONS"/>
+                <ComboBox Name="cbMidiInRecall" Grid.Column="1" Grid.Row="4" Width="175" HorizontalAlignment="Left" ToolTip="Chooses the MIDI port to which the Recall Buttons will react" SelectedValuePath="Tag" />
+
+                <StackPanel VerticalAlignment="Center" Grid.Column="2" Grid.ColumnSpan="2" Grid.Row="4">
+                    <Grid >
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80*"/>
+                            <ColumnDefinition Width="20*"/>
+                        </Grid.ColumnDefinitions>
+                    <ComboBox Name="cbRecallButtonsTrigger" Grid.Column="0" ToolTip="External Trigger for Recall Buttons" SelectedValuePath="Tag"  >
+                        <ComboBoxItem Tag="UI" Content="No external Trigger"/>
+                        <ComboBoxItem Tag="NOTE" Content="Trigger with a Note (Select the lowest note. Next recall will be assigned to +1 semitone)"/>
+                        <ComboBoxItem Tag="CC" Content="Trigger with a CC (Select a Control Change. CC value will range from 0 to 8)" />
+                    </ComboBox>
+                        <TextBox x:Name="tbRecallButtonsTrigger" Grid.Column="1" ToolTip="Note or CC" MaxLength="3" Text="0" HorizontalAlignment="Right" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                    </Grid>
+                </StackPanel>
+
+                <Border Grid.Row="6" Grid.RowSpan="4" Grid.ColumnSpan="5" BorderThickness="1" BorderBrush="Black" />
                 
-                <Label Grid.Column="0" Grid.Row="5" Content="INPUT PORTS"/>
-                <ComboBox Name="cbMidiIn" ToolTip="MIDI inputs that are available" Grid.Column="1" Grid.Row="5" SelectedValuePath="Tag" />
+                <Label Grid.Column="0" Grid.Row="6" Content="INPUT PORTS"/>
+                <ComboBox Name="cbMidiIn" ToolTip="MIDI inputs that are available" Grid.Column="1" Grid.Row="6" SelectedValuePath="Tag" />
 
-                <Label Grid.Column="0" Grid.Row="6" Content="OUTPUT PORTS"/>
-                <ComboBox Name="cbMidiOut" ToolTip="MIDI outputs that are available" Grid.Column="1" Grid.Row="6" SelectedValuePath="Tag" SelectionChanged="cbMidiOut_SelectionChanged" />
+                <Label Grid.Column="0" Grid.Row="7" Content="OUTPUT PORTS"/>
+                <ComboBox Name="cbMidiOut" ToolTip="MIDI outputs that are available" Grid.Column="1" Grid.Row="7" SelectedValuePath="Tag" SelectionChanged="cbMidiOut_SelectionChanged" />
 
-                <Button Name="btnPastePreset" ToolTip="This allows you to load a Cubase .txt file that contains instrument information (ie : presets). Very convenient if you want to quickly recall a program change. " Grid.Column="3" Grid.Row="6" Click="btnLoadPresetFile_Click" >
+                <Button Name="btnPastePreset" ToolTip="This allows you to load a Cubase .txt file that contains instrument information (ie : presets). Very convenient if you want to quickly recall a program change. " Grid.Column="3" Grid.Row="7" Click="btnLoadPresetFile_Click" >
                     <StackPanel Width="Auto">
                         <TextBlock Text="Load Cubase Preset File"/>
                     </StackPanel>
                 </Button>
-                <Button Name="btnShowPresets" ToolTip="Opens the presets menu that let you browse the Cubase instrument file content" Grid.Column="3" Grid.Row="7" Click="btnShowPresets_Click" >
+                <Button Name="btnShowPresets" ToolTip="Opens the presets menu that let you browse the Cubase instrument file content" Grid.Column="3" Grid.Row="8" Click="btnShowPresets_Click" >
                     <StackPanel Width="Auto">
                         <TextBlock Text="Show Presets"/>
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnSaveDefaultCC" ToolTip="Save the changed Default CC values" Grid.Column="3" Grid.Row="8" Click="btnSaveDefaultCC_Click" >
+                <Button Name="btnSaveDefaultCC" ToolTip="Save the changed Default CC values" Grid.Column="3" Grid.Row="9" Click="btnSaveDefaultCC_Click" >
                     <StackPanel Width="Auto">
                         <TextBlock Text="Save CC Values"/>
                     </StackPanel>
                 </Button>
-                <Button Name="btnSysExInitializer" ToolTip="If using external MIDI devices, you can initialize them with a custom SysEx message if required." Grid.Column="1" Grid.Row="7" Click="btnInitializeSysEx_Click" >
+                <Button Name="btnSysExInitializer" ToolTip="If using external MIDI devices, you can initialize them with a custom SysEx message if required." Grid.Column="1" Grid.Row="8" Click="btnInitializeSysEx_Click" >
                     <StackPanel Width="Auto">
                         <TextBlock Text="Initialize OUT port with SysEx"/>
                     </StackPanel>
                 </Button>
 
-                <Label Grid.Column="0" Grid.Row="8" Content="DEFAULT CC FOR INSTR."/>
+                <Label Grid.Column="0" Grid.Row="9" Content="DEFAULT CC FOR INSTR."/>
 
-                <ComboBox Name="cbCCDefault" Grid.ColumnSpan="1"  BorderThickness="0" Grid.Column="1" Grid.Row="8"  SelectedValuePath="Tag" SelectedValue="{Binding SelectedItem, Mode=TwoWay}" >
+                <ComboBox Name="cbCCDefault" Grid.ColumnSpan="1"  BorderThickness="0" Grid.Column="1" Grid.Row="9" SelectedValue="{Binding SelectedItem, Mode=TwoWay}" >
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
                             <Grid>
@@ -153,7 +174,7 @@
                     <local:ComboBoxCustomItem Id="tbCC_CutOff" Description="Filter Cut-Off :" Value="74"/>
                 </ComboBox>
 
-                <Button Name="btnClose" Grid.Row="9" Grid.Column="3" Content="OK" Width="50" Margin="5,0,5,0" HorizontalAlignment="Right" Click="btnClose_Click" />
+                <Button Name="btnClose" Grid.Row="10" Grid.Column="3" Content="OK" Width="50" Margin="5,0,5,0" HorizontalAlignment="Right" Click="btnClose_Click" />
 
             </Grid>
         </DockPanel>

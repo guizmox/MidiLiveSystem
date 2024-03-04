@@ -106,6 +106,8 @@ namespace MidiTools
 
         private MidiInputDeviceEvents MIDI_InputEvents;
         private MidiOutputDeviceEvents MIDI_OutputEvents;
+        internal bool UsedForRouting = false;
+        internal bool IsReserverdForInternalPurposes = false;
 
         internal delegate void LogEventHandler(string sDevice, bool bIn, string sLog);
         internal static event LogEventHandler OnLogAdded;
