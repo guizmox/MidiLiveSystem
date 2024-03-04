@@ -420,7 +420,7 @@ namespace MidiTools
             {
                 OutputMidiMessage?.Invoke(true, routing.RoutingGuid);
 
-                List<MidiEvent> EventsToProcess = EventPreProcessor(routing, ev, routing == null ? false : true);
+                List<MidiEvent> EventsToProcess = EventPreProcessor(routing, ev, routingOUT == null ? false : true);
 
                 if (routing != null)
                 {

@@ -463,7 +463,7 @@ namespace MidiLiveSystem
             Configuration.HorizontalGrid = ihorizontal;
             Configuration.VerticalGrid = ivertical;
             Configuration.TriggerRecallButtons = ((ComboBoxItem)cbRecallButtonsTrigger.SelectedItem).Tag.ToString();
-            Configuration.TriggerRecallDevice = ((ComboBoxItem)cbMidiInRecall.SelectedItem).Tag.ToString();
+            Configuration.TriggerRecallDevice = cbMidiInRecall.SelectedItem == null ? "" : ((ComboBoxItem)cbMidiInRecall.SelectedItem).Tag.ToString();
             Configuration.ClockDevice = cbMidiInClock.SelectedItem == null ? "" : ((ComboBoxItem)cbMidiInClock.SelectedItem).Tag.ToString();
             Configuration.ClockActivated = ckActivateClock.IsChecked.Value;
 
