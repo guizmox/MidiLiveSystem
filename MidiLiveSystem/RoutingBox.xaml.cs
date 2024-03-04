@@ -453,16 +453,7 @@ namespace MidiLiveSystem
         {
             string sNew = ((Button)sender).Tag.ToString();
             cbPresetButton.SelectedValue = sNew;
-            LoadPreset(Convert.ToInt32(sNew));
-
-            if (pnlInternalGenerator.Visibility == Visibility.Visible)
-            {
-                OnUIEvent?.Invoke(BoxGuid, "PLAY_NOTE", GetOptions());
-            }
-            else
-            {
-                OnUIEvent?.Invoke(BoxGuid, "PRESET_CHANGE", GetPreset());
-            }
+            PresetButtonPushed();
         }
 
         private void btnCopyPreset_Click(object sender, RoutedEventArgs e)
@@ -495,6 +486,19 @@ namespace MidiLiveSystem
             catch (Exception ex)
             {
                 MessageBox.Show("Unable to Save Preset (" + ex.Message + ")");
+            }
+        }
+
+        public void PresetButtonPushed()
+        {
+
+            if (pnlInternalGenerator.Visibility == Visibility.Visible)
+            {
+                OnUIEvent?.Invoke(BoxGuid, "PLAY_NOTE", GetOptions());
+            }
+            else
+            {
+                OnUIEvent?.Invoke(BoxGuid, "PRESET_CHANGE", GetPreset());
             }
         }
 

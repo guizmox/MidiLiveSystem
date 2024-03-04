@@ -37,14 +37,14 @@ namespace MidiLiveSystem
         {
             foreach (var box in Boxes)
             {
-                cbRecallSet1.Items.Add(new ComboBoxCustomItem() { Id = box.BoxGuid.ToString(), Description = box.BoxName + " - Preset : ", Value = "1" });
-                cbRecallSet2.Items.Add(new ComboBoxCustomItem() { Id = box.BoxGuid.ToString(), Description = box.BoxName + " - Preset : ", Value = "1" });
-                cbRecallSet3.Items.Add(new ComboBoxCustomItem() { Id = box.BoxGuid.ToString(), Description = box.BoxName + " - Preset : ", Value = "1" });
-                cbRecallSet4.Items.Add(new ComboBoxCustomItem() { Id = box.BoxGuid.ToString(), Description = box.BoxName + " - Preset : ", Value = "1" });
-                cbRecallSet5.Items.Add(new ComboBoxCustomItem() { Id = box.BoxGuid.ToString(), Description = box.BoxName + " - Preset : ", Value = "1" });
-                cbRecallSet6.Items.Add(new ComboBoxCustomItem() { Id = box.BoxGuid.ToString(), Description = box.BoxName + " - Preset : ", Value = "1" });
-                cbRecallSet7.Items.Add(new ComboBoxCustomItem() { Id = box.BoxGuid.ToString(), Description = box.BoxName + " - Preset : ", Value = "1" });
-                cbRecallSet8.Items.Add(new ComboBoxCustomItem() { Id = box.BoxGuid.ToString(), Description = box.BoxName + " - Preset : ", Value = "1" });
+                cbRecallSet1.Items.Add(new ComboBoxCustomItem() { Id = box.BoxGuid.ToString(), Description = box.BoxName + " - Preset : ", Value = "0" });
+                cbRecallSet2.Items.Add(new ComboBoxCustomItem() { Id = box.BoxGuid.ToString(), Description = box.BoxName + " - Preset : ", Value = "0" });
+                cbRecallSet3.Items.Add(new ComboBoxCustomItem() { Id = box.BoxGuid.ToString(), Description = box.BoxName + " - Preset : ", Value = "0" });
+                cbRecallSet4.Items.Add(new ComboBoxCustomItem() { Id = box.BoxGuid.ToString(), Description = box.BoxName + " - Preset : ", Value = "0" });
+                cbRecallSet5.Items.Add(new ComboBoxCustomItem() { Id = box.BoxGuid.ToString(), Description = box.BoxName + " - Preset : ", Value = "0" });
+                cbRecallSet6.Items.Add(new ComboBoxCustomItem() { Id = box.BoxGuid.ToString(), Description = box.BoxName + " - Preset : ", Value = "0" });
+                cbRecallSet7.Items.Add(new ComboBoxCustomItem() { Id = box.BoxGuid.ToString(), Description = box.BoxName + " - Preset : ", Value = "0" });
+                cbRecallSet8.Items.Add(new ComboBoxCustomItem() { Id = box.BoxGuid.ToString(), Description = box.BoxName + " - Preset : ", Value = "0" });
             }
 
             cbRecallSet1.SelectedIndex = -1;
@@ -226,10 +226,14 @@ namespace MidiLiveSystem
                 var box = Boxes.FirstOrDefault(b => b.BoxGuid.ToString().Equals(cb.Id));
                 if (box != null)
                 {
-                    int iPreset = Convert.ToInt32(cb.Value);
-                    if (iPreset > 0)
+                    int iPreset = 0;
+                    if (int.TryParse(cb.Value, out iPreset))
                     {
-                        box.cbPresetButton.SelectedIndex = iPreset - 1;
+                        if (iPreset > 0)
+                        {
+                            box.cbPresetButton.SelectedIndex = iPreset - 1;
+                            box.PresetButtonPushed();
+                        }
                     }
                 }
             }
@@ -290,8 +294,9 @@ namespace MidiLiveSystem
                     var box = Boxes.FirstOrDefault(b => b.BoxGuid.ToString().Equals(cbBox.Id));
                     if (box != null)
                     {
-                        int iPreset = Convert.ToInt32(cbBox.Value);
-                        if (iPreset > 0)
+                        int iPreset = 0;
+
+                        if (int.TryParse(cbBox.Value, out iPreset))
                         {
                             boxguids.Add(box.BoxGuid);
                             boxpresets.Add(iPreset);
