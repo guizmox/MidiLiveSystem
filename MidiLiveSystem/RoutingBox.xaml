@@ -297,14 +297,20 @@
                         </ComboBox>
                         <TextBlock Grid.Column="0" Grid.Row="7" Text="TRANSPOSITION"/>
                         <TextBox Name="tbNoteTransposition" Grid.Column="1" Grid.Row="7" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed" />
-                        <StackPanel Grid.Row="7" Grid.Column="2" Grid.ColumnSpan="2" VerticalAlignment="Center">
+                        <StackPanel Grid.Row="7" Grid.Column="2" Grid.ColumnSpan="3" VerticalAlignment="Center">
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="70*" />
-                                    <ColumnDefinition Width="30*" />
+                                    <ColumnDefinition Width="50*" />
+                                    <ColumnDefinition Width="50*" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="AFTERTOUCH PLAY" />
-                                <CheckBox Name="ckAftertouchToNote" Grid.Column="1" IsChecked="False" />
+                                <TextBlock Grid.Column="0" Text="PLAY MODE" />
+                                <ComboBox Name="cbPlayMode" SelectedIndex="0" Grid.Column="1" Grid.ColumnSpan="2" SelectedValuePath="Tag">
+                                    <ComboBoxItem Tag="NORMAL" Content="Normal"/>
+                                    <ComboBoxItem Tag="AFTERTOUCH" Content="Aftertouch"/>
+                                    <ComboBoxItem Tag="MONO_LOW" Content="Mono-L. Note"/>
+                                    <ComboBoxItem Tag="MONO_HIGH" Content="Mono-H. Note"/>
+                                    <ComboBoxItem Tag="HARMONY" Content="Harmony"/>
+                                </ComboBox>
                             </Grid>
                         </StackPanel>
 

@@ -70,7 +70,9 @@ namespace MidiLiveSystem
             MidiRouting.InputMidiMessage += MidiRouting_InputMidiMessage;
 
             RecallWindow = new RecallButtons(Boxes, Project);
+            RecallWindow.Closed += RecallWindow_Closed;
         }
+
 
         private void Keyboard_KeyPressed(string sKey)
         {
@@ -203,9 +205,7 @@ namespace MidiLiveSystem
         private void Window_Closed(object sender, EventArgs e)
         {
             UIRefreshRate.Elapsed -= UIRefreshRate_Elapsed;
-
-            Database.SaveInstruments(CubaseInstrumentData.Instruments);
-            Routing.DeleteAllRouting();
+            UIRefreshRate.Stop();
 
             //Database.SaveProject(Boxes, Project, RecordedSequence);
 
@@ -238,6 +238,14 @@ namespace MidiLiveSystem
             {
                 detached.Close();
             }
+
+            Database.SaveInstruments(CubaseInstrumentData.Instruments);
+            Routing.DeleteAllRouting();
+        }
+
+        private void RecallWindow_Closed(object sender, EventArgs e)
+        {
+            RecallWindow.SaveRecallsToProject();
         }
 
         private void Log_Closed(object sender, EventArgs e)
@@ -709,12 +717,16 @@ namespace MidiLiveSystem
         {
             if (RecallWindow.IsVisible)
             {
+                RecallWindow.Closed -= RecallWindow_Closed;
                 RecallWindow.Close();
             }
             else
             {
+                RecallWindow.Close();
+                RecallWindow.Closed -= RecallWindow_Closed;
                 RecallWindow = new RecallButtons(Boxes, Project);
                 RecallWindow.Show();
+                RecallWindow.Closed += RecallWindow_Closed;
             }
         }
 

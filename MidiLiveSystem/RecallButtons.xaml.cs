@@ -111,11 +111,6 @@ namespace MidiLiveSystem
             }
         }
 
-        private void Window_Closed(object sender, EventArgs e)
-        {
-            SaveRecallsToProject();
-        }
-
         private void btnPreset_Click(object sender, RoutedEventArgs e)
         {
             Button btnPreset = (sender) as Button;
@@ -239,7 +234,7 @@ namespace MidiLiveSystem
             }
         }
 
-        private void SaveRecallsToProject()
+        public void SaveRecallsToProject()
         {
             Project.RecallData.Clear();
 

@@ -19,9 +19,11 @@ namespace MidiTools
     {
         private int[] CCToNotBlock = new int[16] { 0, 6, 32, 64, 65, 66, 67, 68, 120, 121, 122, 123, 124, 125, 126, 127 };
 
+        private Harmony _harmony = Harmony.MAJOR;
+        private int _noteHarmony = 0;
 
         public int CurrentATValue = 0;
-        public List<MidiEvent> NotesSentForPanic = new List<MidiEvent>();
+        public bool[] NotesSentForPanic = new bool[128];
 
         internal bool Active { get; set; } = true;
         internal int ChannelIn = 1;
@@ -172,6 +174,214 @@ namespace MidiTools
                 item.BlockIncoming = false;
             }
         }
+
+        internal List<MidiEvent> SetPlayMono(bool bHigh, MidiEvent incomingEV)
+        {
+            List<MidiEvent> eventsOUT = new List<MidiEvent>();
+
+            if (incomingEV.Type == TypeEvent.NOTE_ON && incomingEV.Values[1] > 0)
+            {
+                if (bHigh)
+                {
+                    int iHighestNote = Array.LastIndexOf(NotesSentForPanic, true);
+                    if (incomingEV.Values[0] > iHighestNote || iHighestNote == -1)
+                    {
+                        //on envoie les NOTE OFF de tous les items en dessous de la note qui vient d'être jouée
+                        for (int i = 0; i < 128; i++)
+                        {
+                            if (NotesSentForPanic[i])
+                            {
+                                eventsOUT.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { i, 0 }, incomingEV.Channel, incomingEV.Device));
+                                NotesSentForPanic[i] = false;
+                            }
+                        }
+                        eventsOUT.Add(incomingEV);
+                        NotesSentForPanic[incomingEV.Values[0]] = true;
+                    }
+                    else
+                    {
+                        eventsOUT.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { incomingEV.Values[0], 0 }, incomingEV.Channel, incomingEV.Device));
+                    }
+                }
+                else
+                {
+                    int iLowestNote = Array.IndexOf(NotesSentForPanic, true);
+                    if (incomingEV.Values[0] < iLowestNote || iLowestNote == -1)
+                    {
+                        //on envoie les NOTE OFF de tous les items en dessus de la note qui vient d'être jouée
+                        for (int i = 0; i < 128; i++)
+                        {
+                            if (NotesSentForPanic[i])
+                            {
+                                eventsOUT.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { i, 0 }, incomingEV.Channel, incomingEV.Device));
+                                NotesSentForPanic[i] = false;
+                            }
+                        }
+                        eventsOUT.Add(incomingEV);
+                        NotesSentForPanic[incomingEV.Values[0]] = true;
+                    }
+                    else
+                    {
+                        eventsOUT.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { incomingEV.Values[0], 0 }, incomingEV.Channel, incomingEV.Device));
+                    }
+                }
+            }
+            else
+            {
+                eventsOUT.Add(new MidiEvent(incomingEV.Type, new List<int> { incomingEV.Values[0], incomingEV.Values[1] }, incomingEV.Channel, incomingEV.Device));
+                NotesSentForPanic[incomingEV.Values[0]] = false;
+            }
+
+            return eventsOUT;
+        }
+
+        internal void MemorizeNotesPlayed(MidiEvent eventOUT)
+        {
+            if (eventOUT.Type == TypeEvent.NOTE_ON)
+            {
+                if (eventOUT.Values[1] == 0) //le genos n'envoie pas de note off mais que des ON à 0
+                {
+                    if (NotesSentForPanic[eventOUT.Values[0]])
+                    {
+                        NotesSentForPanic[eventOUT.Values[0]] = false;
+                    }
+                }
+                else
+                {
+                    //problème : par exemple, le keystep envoie 2 messages IN mais 1 seul message out : on empêche la nouvelle note d'arriver
+                    if (!NotesSentForPanic[eventOUT.Values[0]])
+                    {
+                        NotesSentForPanic[eventOUT.Values[0]] = true;
+                    }
+                }
+            }
+            else
+            {
+                if (NotesSentForPanic[eventOUT.Values[0]])
+                {
+                    NotesSentForPanic[eventOUT.Values[0]] = false;
+                }
+            }
+        }
+
+        internal List<MidiEvent> SetHarmony(MidiEvent eventOUT)
+        {
+            List<MidiEvent> newNotes = new List<MidiEvent>();
+
+            if (eventOUT.Type == TypeEvent.NOTE_ON && eventOUT.Values[1] > 0)
+            {
+                NotesSentForPanic[eventOUT.Values[0]] = true;
+
+                int iPlayedNotes = NotesSentForPanic.Count(n => n == true);
+
+                List<int> bChord = new List<int>();
+                //on collecte toutes les notes actives
+                for (int i = 0; i < 128; i++)
+                {
+                    if (NotesSentForPanic[i] && !bChord.Contains(i % 12))  //tout ramener sur 2 octaves 
+                    {
+                        bChord.Add(i % 12);
+                    }
+                }
+
+                int iLowestNote = Array.IndexOf(NotesSentForPanic, true);
+
+                //if (iPlayedNotes > 2 && bChord.Count > 2)  // pour identifier la fondamentale il faut au moins la tierce (cas du MI - SOL qui a 3 demi-tons mais qui est à priori majeur)
+                if (iPlayedNotes > 2 && bChord.Count > 2)
+                {
+                    //var bMinor = IsMinorChord(bChord);
+                    //recherche d'un intervalle de tierce mineure (+3dm) dans l'ensemble des notes jouées
+                    _harmony = Harmony.MAJOR;
+                    int offsetOctave = 0;
+
+                    for (int i = 0; i < NotesSentForPanic.Length; i++) 
+                    {
+                        for (int iOct = 0; iOct < 5; iOct++)
+                        {
+                            if (NotesSentForPanic[i] && ((iLowestNote + (12 * iOct)) + 3) == i)
+                            {
+                                offsetOctave = iOct;
+                                _harmony = Harmony.MINOR;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (_noteHarmony > 0)
+                    {
+                        NotesSentForPanic[_noteHarmony] = false;
+                        newNotes.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { _noteHarmony, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
+                        _noteHarmony = 0;
+                    }
+
+                    if (_harmony == Harmony.MINOR)
+                    {
+                        _noteHarmony = iLowestNote + (offsetOctave * 12) + 3;  
+                        NotesSentForPanic[_noteHarmony] = true;
+                        newNotes.Add(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { _noteHarmony, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
+                    }
+                    else
+                    {
+                        _noteHarmony = iLowestNote + (offsetOctave * 12) + 4;
+                        NotesSentForPanic[_noteHarmony] = true;
+                        newNotes.Add(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { _noteHarmony, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
+                    }
+                }
+            }
+            else
+            {
+                if (_noteHarmony > 0 && NotesSentForPanic.Count(n => n == true) <= 2)
+                {
+                    NotesSentForPanic[_noteHarmony] = false;
+                    newNotes.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { _noteHarmony, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
+                    _noteHarmony = 0;
+                }
+                NotesSentForPanic[eventOUT.Values[0]] = false;
+                newNotes.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { eventOUT.Values[0], eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
+                return newNotes;
+            }
+
+            return newNotes;
+        }
+
+        static Tuple<bool, int> IsMinorChord(List<int> suite)
+        {
+            int[] copy = new int[suite.Count];
+            suite.CopyTo(copy);
+            
+            suite.Sort();
+
+            int offset = 0;
+
+            //la fondamentale de l'accord est la note la plus grave de la tierce la plus grave (tierce mineure ou majeure)
+            //donc recherche de l'intervalle 3 ou 4 le plus bas dans la suite logique
+            //recherche des tierces
+
+            for (int i = 0; i < suite.Count - 1; i++)
+            {
+                //0-4-9
+                if (suite[i] + 3 == suite[i + 1] || suite[suite.Count - 1] - suite[suite.Count - 2] == 5)
+                {
+                    //4-9-0 => +4 / 0-4-9 => +3 / 9-0-4 => -4
+                    if (copy[0] == suite[0]) { offset = 3; }
+                    else if (copy[1] == suite[0]) { offset = -4; }
+                    else if (copy[2] == suite[0]) { offset = 4; }
+
+                    return new Tuple<bool, int>(true, offset);
+                }
+                else if (suite[i] + 4 == suite[i + 1])
+                {
+                    //0-4-7 => -3 / 4-7-0 => +4 / 7-0-4 => +3
+                    if (copy[0] == suite[0]) { offset = -3; }
+                    else if (copy[1] == suite[0]) { offset = 3; }
+                    else if (copy[2] == suite[0]) { offset = 4; }
+                    return new Tuple<bool, int>(false, offset);
+                }
+            }
+
+
+            return new Tuple<bool, int>(false, offset);
+        }
     }
 
     [Serializable]
@@ -218,7 +428,7 @@ namespace MidiTools
 
         public delegate void OutputtingMidiEventHandler(bool b, Guid routingGuid);
         public static event OutputtingMidiEventHandler OutputMidiMessage;
-        
+
         public delegate void InputMidiEventHandler(MidiEvent ev);
         public static event InputMidiEventHandler InputMidiMessage;
 
@@ -287,11 +497,10 @@ namespace MidiTools
 
         private void RemovePendingNotes(MatrixItem routing, bool bTransposed)
         {
-            MidiEvent[] copy;
+            bool[] copy;
 
-            copy = new MidiEvent[routing.NotesSentForPanic.Count];
-            routing.NotesSentForPanic.CopyTo(copy);
-            routing.NotesSentForPanic.Clear();
+            copy = new bool[128];
+            routing.NotesSentForPanic = new bool[128];
 
             if (bTransposed)
             {
@@ -299,7 +508,7 @@ namespace MidiTools
                 {
                     for (int i = 0; i <= 127; i++)
                     {
-                        var eventout = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { i, 0 }, pending.Channel, pending.Device);
+                        var eventout = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { i, 0 }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name);
                         CreateOUTEvent(eventout, routing);
                     }
                 }
@@ -307,9 +516,9 @@ namespace MidiTools
             else
             {
 
-                foreach (var note in copy)
+                for (int i = 0; i <= 127; i++)
                 {
-                    var eventout = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { note.Values[0], 0 }, note.Channel, note.Device);
+                    var eventout = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { copy[i] ? i : 0, 0 }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name);
                     CreateOUTEvent(eventout, routing);
                 }
             }
@@ -416,7 +625,7 @@ namespace MidiTools
                 matrix.Add(routingOUT);
             }
 
-            foreach (MatrixItem routing in matrix)
+            foreach (MatrixItem routing in matrix.OrderBy(r => r.Options.PlayMode))
             {
                 OutputMidiMessage?.Invoke(true, routing.RoutingGuid);
 
@@ -486,11 +695,11 @@ namespace MidiTools
                         }
                         break;
                     case TypeEvent.CH_PRES:
-                        if ((!routing.Options.AftertouchVolume && routing.Options.AllowAftertouch) || bOutEvent)
+                        if ((routing.Options.PlayMode != PlayModes.AFTERTOUCH && routing.Options.AllowAftertouch) || bOutEvent)
                         {
                             _eventsOUT = new MidiEvent(evIN.Type, new List<int> { evIN.Values[0] }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name);
                         }
-                        else if (routing.Options.AftertouchVolume)
+                        else if (routing.Options.PlayMode == PlayModes.AFTERTOUCH)
                         {
                             routing.CurrentATValue = evIN.Values[0];
 
@@ -508,17 +717,8 @@ namespace MidiTools
                             {
                                 routing.CurrentATValue = 0;
 
-                                var eventout = new MidiEvent(evIN.Type, new List<int> { iNote, routing.Options.AftertouchVolume ? 0 : evIN.Values[1] }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name);
+                                var eventout = new MidiEvent(evIN.Type, new List<int> { iNote, routing.Options.PlayMode == PlayModes.AFTERTOUCH ? 0 : evIN.Values[1] }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name);
                                 _eventsOUT = eventout;
-
-                                lock (routing.NotesSentForPanic)
-                                {
-                                    var toremove = routing.NotesSentForPanic.FirstOrDefault(n => n.Device == eventout.Device && n.Channel == eventout.Channel && n.Values[0] == eventout.Values[0]);
-                                    if (toremove != null)
-                                    {
-                                        routing.NotesSentForPanic.Remove(toremove);
-                                    }
-                                }
                             }
                         }
                         break;
@@ -539,33 +739,17 @@ namespace MidiTools
                                 if (iVelocity == 0) //le genos n'envoie pas de note off mais que des ON à 0
                                 {
                                     routing.CurrentATValue = 0;
-
-                                    lock (routing.NotesSentForPanic)
-                                    {
-                                        var toremove = routing.NotesSentForPanic.FirstOrDefault(n => n.Device == eventout.Device && n.Channel == eventout.Channel && n.Values[0] == eventout.Values[0]);
-                                        if (toremove != null)
-                                        {
-                                            routing.NotesSentForPanic.Remove(toremove);
-                                        }
-                                    }
-
                                     _eventsOUT = eventout;
                                 }
                                 else
                                 {
                                     //problème : par exemple, le keystep envoie 2 messages IN mais 1 seul message out : on empêche la nouvelle note d'arriver
-                                    var notestuck = routing.NotesSentForPanic.FirstOrDefault(n => n.Device == eventout.Device && n.Channel == eventout.Channel && n.Values[0] == eventout.Values[0]);
-                                    if (notestuck != null)
+                                    if (routing.NotesSentForPanic[eventout.Values[0]])
                                     {
                                         //on n'envoie aucun nouvel évènement
                                     }
                                     else
                                     {
-                                        lock (routing.NotesSentForPanic)
-                                        {
-                                            routing.NotesSentForPanic.Add(eventout);
-                                        }
-
                                         _eventsOUT = eventout;
                                     }
                                 }
@@ -671,61 +855,85 @@ namespace MidiTools
                 case TypeEvent.NOTE_OFF: //delayer
                     if (!bOutEvent) // ne doit fonctionner qu'avec les input du routing et pas avec les évènements forcés
                     {
-                        if (routing.Options.AftertouchVolume)
+                        bool bMono = false;
+
+                        switch (routing.Options.PlayMode)
                         {
-                            EventsToProcess.Add(new MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { 7, routing.CurrentATValue }, eventOUT.Channel, eventOUT.Device));
+                            case PlayModes.AFTERTOUCH:
+                                EventsToProcess.Add(new MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { 7, routing.CurrentATValue }, eventOUT.Channel, eventOUT.Device));
+                                routing.MemorizeNotesPlayed(eventOUT);
+                                break;
+                            case PlayModes.MONO_HIGH:
+                                EventsToProcess.AddRange(routing.SetPlayMono(true, eventOUT));
+                                bMono = EventsToProcess.Count > 0 ? true : false;
+                                break;
+                            case PlayModes.MONO_LOW:
+                                EventsToProcess.AddRange(routing.SetPlayMono(false, eventOUT));
+                                bMono = EventsToProcess.Count > 0 ? true : false;
+                                break;
+                            case PlayModes.HARMONY:
+                                var newev = routing.SetHarmony(eventOUT);
+                                bMono = true;
+                                EventsToProcess.AddRange(newev);
+                                break;
+                            default:
+                                routing.MemorizeNotesPlayed(eventOUT);
+                                break;
                         }
 
-                        if (GiveLife) //donne de la vie au projet en ajoutant un peu de pitch bend et de delay
+                        if (!bMono) //si la recherche de la low note ou high note a ramené un résultat (par SetPlayMono) ça signifie que la note entrante a été bloquée
                         {
-                            Random random = new Random();
-
-                            if (eventOUT.Type == TypeEvent.NOTE_ON && eventOUT.Values[1] > 0)
+                            if (GiveLife) //donne de la vie au projet en ajoutant un peu de pitch bend et de delay
                             {
-                                int randomWaitON = random.Next(1, 40);
-                                int randomPB = random.Next(8192 - 400, 8192 + 400);
+                                Random random = new Random();
 
-                                int iNewVol = routing.RandomizeCCValue(7, eventOUT.Channel, eventOUT.Device, 5);
-                                int iNewMod = routing.RandomizeCCValue(1, eventOUT.Channel, eventOUT.Device, 5);
-                                //int iNewPan = 0; // routing.RandomizeCCValue(10, copiedevent.Channel, copiedevent.Device, 5);
-
-                                MidiEvent pbRandom = new MidiEvent(TypeEvent.PB, new List<int> { randomPB }, eventOUT.Channel, eventOUT.Device);
-
-                                if (iNewVol > 0)
+                                if (eventOUT.Type == TypeEvent.NOTE_ON && eventOUT.Values[1] > 0)
                                 {
-                                    EventsToProcess.Add(new MidiEvent(TypeEvent.CC, new List<int> { 7, iNewVol }, eventOUT.Channel, eventOUT.Device));
+                                    int randomWaitON = random.Next(1, 40);
+                                    int randomPB = random.Next(8192 - 400, 8192 + 400);
+
+                                    int iNewVol = routing.RandomizeCCValue(7, eventOUT.Channel, eventOUT.Device, 5);
+                                    int iNewMod = routing.RandomizeCCValue(1, eventOUT.Channel, eventOUT.Device, 5);
+                                    //int iNewPan = 0; // routing.RandomizeCCValue(10, copiedevent.Channel, copiedevent.Device, 5);
+
+                                    MidiEvent pbRandom = new MidiEvent(TypeEvent.PB, new List<int> { randomPB }, eventOUT.Channel, eventOUT.Device);
+
+                                    if (iNewVol > 0)
+                                    {
+                                        EventsToProcess.Add(new MidiEvent(TypeEvent.CC, new List<int> { 7, iNewVol }, eventOUT.Channel, eventOUT.Device));
+                                    }
+                                    if (iNewMod > 0)
+                                    {
+                                        EventsToProcess.Add(new MidiEvent(TypeEvent.CC, new List<int> { 1, iNewMod }, eventOUT.Channel, eventOUT.Device));
+                                    }
+                                    //if (iNewPan > 0)
+                                    //{
+                                    //    routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 10, iNewPan }, copiedevent.Channel, copiedevent.Device));
+                                    //}
+
+                                    EventsToProcess.Add(pbRandom);
+
+                                    eventOUT.WaitTimeBeforeNextEvent = randomWaitON + routing.Options.DelayNotesLength > 0 ? routing.Options.DelayNotesLength : 0;
+                                    EventsToProcess.Add(eventOUT);
                                 }
-                                if (iNewMod > 0)
+                                else
                                 {
-                                    EventsToProcess.Add(new MidiEvent(TypeEvent.CC, new List<int> { 1, iNewMod }, eventOUT.Channel, eventOUT.Device));
+                                    int randomWaitOFF = random.Next(41, 60); //trick pour éviter que les note off se déclenchent avant les note on
+
+                                    eventOUT.WaitTimeBeforeNextEvent = randomWaitOFF + routing.Options.DelayNotesLength > 0 ? routing.Options.DelayNotesLength : 0;
+                                    routing.DeviceOut.SendMidiEvent(eventOUT);
+
                                 }
-                                //if (iNewPan > 0)
-                                //{
-                                //    routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 10, iNewPan }, copiedevent.Channel, copiedevent.Device));
-                                //}
-
-                                EventsToProcess.Add(pbRandom);
-
-                                eventOUT.WaitTimeBeforeNextEvent = randomWaitON + routing.Options.DelayNotesLength > 0 ? routing.Options.DelayNotesLength : 0;
+                            }
+                            else if (routing.Options.DelayNotesLength > 0)
+                            {
+                                eventOUT.WaitTimeBeforeNextEvent = routing.Options.DelayNotesLength;
                                 EventsToProcess.Add(eventOUT);
                             }
                             else
                             {
-                                int randomWaitOFF = random.Next(41, 60); //trick pour éviter que les note off se déclenchent avant les note on
-
-                                eventOUT.WaitTimeBeforeNextEvent = randomWaitOFF + routing.Options.DelayNotesLength > 0 ? routing.Options.DelayNotesLength : 0;
-                                routing.DeviceOut.SendMidiEvent(eventOUT);
-
+                                EventsToProcess.Add(eventOUT);
                             }
-                        }
-                        else if (routing.Options.DelayNotesLength > 0)
-                        {
-                            eventOUT.WaitTimeBeforeNextEvent = routing.Options.DelayNotesLength;
-                            EventsToProcess.Add(eventOUT);
-                        }
-                        else
-                        {
-                            EventsToProcess.Add(eventOUT);
                         }
                     }
                     else { EventsToProcess.Add(eventOUT); }
@@ -740,7 +948,7 @@ namespace MidiTools
 
         }
 
-        private void ChangeOptions(MatrixItem routing, MidiOptions newop, bool bInit)
+        void ChangeOptions(MatrixItem routing, MidiOptions newop, bool bInit)
         {
             bool bChanges = false;
 

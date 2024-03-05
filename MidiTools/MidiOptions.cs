@@ -4,6 +4,20 @@ using System.Text;
 
 namespace MidiTools
 {
+    public enum PlayModes
+    {
+        NORMAL = 1,
+        AFTERTOUCH = 2,
+        MONO_LOW = 3,
+        MONO_HIGH = 4,
+        HARMONY = 5
+    }
+
+    public enum Harmony
+    {
+        MINOR = 1,
+        MAJOR = 2
+    }
 
     [Serializable]
     public class MidiOptions
@@ -85,7 +99,7 @@ namespace MidiTools
             }
         }
 
-        public bool AftertouchVolume = false;
+        public PlayModes PlayMode = PlayModes.NORMAL;
 
         public bool AllowModulation = true;
         public bool AllowNotes = true;

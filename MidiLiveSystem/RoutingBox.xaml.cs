@@ -745,7 +745,7 @@ namespace MidiLiveSystem
             ckAllowProgramChange.IsChecked = bp.MidiOptions.AllowProgramChange;
             ckAllowSysex.IsChecked = bp.MidiOptions.AllowSysex;
 
-            ckAftertouchToNote.IsChecked = bp.MidiOptions.AftertouchVolume;
+            cbPlayMode.SelectedValue = bp.MidiOptions.PlayMode;
 
             if (!tbNoteTransposition.IsFocused) { tbNoteTransposition.Text = bp.MidiOptions.TranspositionOffset.ToString(); }
 
@@ -958,12 +958,12 @@ namespace MidiLiveSystem
                 }
             }
 
-            options.AftertouchVolume = ckAftertouchToNote.IsChecked.Value;
+            Enum.TryParse<PlayModes>(cbPlayMode.SelectedValue.ToString(), out options.PlayMode);
 
             //pour éviter que le volume soit à 0 après un click sur aftertouch
-            if (ckAftertouchToNote.IsChecked.Value && options.CC_Volume_Value > 0)
+            if (options.PlayMode == PlayModes.AFTERTOUCH && options.CC_Volume_Value > 0)
             { options.CC_Volume_Value = -1; }
-            else if (!ckAftertouchToNote.IsChecked.Value && options.CC_Volume_Value == -1)
+            else if (options.PlayMode != PlayModes.AFTERTOUCH && options.CC_Volume_Value == -1)
             { options.CC_Volume_Value = 100; }
 
             options.TranspositionOffset = TextParser(tbNoteTransposition.Text);

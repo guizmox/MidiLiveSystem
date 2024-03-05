@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:MidiLiveSystem"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
-        Title="Recall Buttons" Background="Gray" Height="150" Width="Auto" SizeToContent="Width"  WindowStyle="ToolWindow" WindowStartupLocation="CenterScreen" Closed="Window_Closed">
+        Title="Recall Buttons" Background="Gray" Height="150" Width="Auto" SizeToContent="Width"  WindowStyle="ToolWindow" WindowStartupLocation="CenterScreen" >
 
     <Grid Margin="5,5,5,5" >
         <Grid.RowDefinitions>
