@@ -270,6 +270,14 @@ namespace MidiTools
 
             if (eventOUT.Type == TypeEvent.NOTE_ON && eventOUT.Values[1] > 0)
             {
+
+                if (_noteHarmony > 0)
+                {
+                    NotesSentForPanic[_noteHarmony] = false;
+                    newNotes.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { _noteHarmony, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
+                    _noteHarmony = 0;
+                }
+
                 NotesSentForPanic[eventOUT.Values[0]] = true;
 
                 int iPlayedNotes = NotesSentForPanic.Count(n => n == true);
@@ -278,55 +286,74 @@ namespace MidiTools
                 //on collecte toutes les notes actives
                 for (int i = 0; i < 128; i++)
                 {
-                    if (NotesSentForPanic[i] && !bChord.Contains(i % 12))  //tout ramener sur 2 octaves 
+                    if (NotesSentForPanic[i] && !bChord.Contains(i % 24))  //tout ramener sur 2 octaves 
                     {
-                        bChord.Add(i % 12);
+                        bChord.Add(i % 24);
                     }
                 }
 
-                int iLowestNote = Array.IndexOf(NotesSentForPanic, true);
-
-                //if (iPlayedNotes > 2 && bChord.Count > 2)  // pour identifier la fondamentale il faut au moins la tierce (cas du MI - SOL qui a 3 demi-tons mais qui est à priori majeur)
                 if (iPlayedNotes > 2 && bChord.Count > 2)
                 {
-                    //var bMinor = IsMinorChord(bChord);
-                    //recherche d'un intervalle de tierce mineure (+3dm) dans l'ensemble des notes jouées
-                    _harmony = Harmony.MAJOR;
-                    int offsetOctave = 0;
-
-                    for (int i = 0; i < NotesSentForPanic.Length; i++) 
-                    {
-                        for (int iOct = 0; iOct < 5; iOct++)
-                        {
-                            if (NotesSentForPanic[i] && ((iLowestNote + (12 * iOct)) + 3) == i)
-                            {
-                                offsetOctave = iOct;
-                                _harmony = Harmony.MINOR;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (_noteHarmony > 0)
-                    {
-                        NotesSentForPanic[_noteHarmony] = false;
-                        newNotes.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { _noteHarmony, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
-                        _noteHarmony = 0;
-                    }
+                    var chordType = IsMinorChord(bChord);
+                    _harmony = chordType.Item1 ? Harmony.MINOR : Harmony.MAJOR;
 
                     if (_harmony == Harmony.MINOR)
                     {
-                        _noteHarmony = iLowestNote + (offsetOctave * 12) + 3;  
+                        _noteHarmony = Array.LastIndexOf(NotesSentForPanic, true) + chordType.Item2;
                         NotesSentForPanic[_noteHarmony] = true;
                         newNotes.Add(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { _noteHarmony, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
                     }
                     else
                     {
-                        _noteHarmony = iLowestNote + (offsetOctave * 12) + 4;
+                        _noteHarmony = Array.LastIndexOf(NotesSentForPanic, true) + chordType.Item2;
                         NotesSentForPanic[_noteHarmony] = true;
                         newNotes.Add(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { _noteHarmony, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
                     }
                 }
+
+                //int iLowestNote = Array.IndexOf(NotesSentForPanic, true);
+
+                ////if (iPlayedNotes > 2 && bChord.Count > 2)  // pour identifier la fondamentale il faut au moins la tierce (cas du MI - SOL qui a 3 demi-tons mais qui est à priori majeur)
+                //if (iPlayedNotes > 2 && bChord.Count > 2)
+                //{
+                //    //var bMinor = IsMinorChord(bChord);
+                //    //recherche d'un intervalle de tierce mineure (+3dm) dans l'ensemble des notes jouées
+                //    _harmony = Harmony.MAJOR;
+                //    int offsetOctave = 0;
+
+                //    for (int i = 0; i < NotesSentForPanic.Length; i++)
+                //    {
+                //        for (int iOct = 0; iOct < 5; iOct++)
+                //        {
+                //            if (NotesSentForPanic[i] && ((iLowestNote + (12 * iOct)) + 3) == i)
+                //            {
+                //                offsetOctave = iOct;
+                //                _harmony = Harmony.MINOR;
+                //                break;
+                //            }
+                //        }
+                //    }
+
+                //    if (_noteHarmony > 0)
+                //    {
+                //        NotesSentForPanic[_noteHarmony] = false;
+                //        newNotes.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { _noteHarmony, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
+                //        _noteHarmony = 0;
+                //    }
+
+                //    if (_harmony == Harmony.MINOR)
+                //    {
+                //        _noteHarmony = iLowestNote + (offsetOctave * 12) + 3;
+                //        NotesSentForPanic[_noteHarmony] = true;
+                //        newNotes.Add(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { _noteHarmony, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
+                //    }
+                //    else
+                //    {
+                //        _noteHarmony = iLowestNote + (offsetOctave * 12) + 4;
+                //        NotesSentForPanic[_noteHarmony] = true;
+                //        newNotes.Add(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { _noteHarmony, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
+                //    }
+                //}
             }
             else
             {
@@ -346,41 +373,100 @@ namespace MidiTools
 
         static Tuple<bool, int> IsMinorChord(List<int> suite)
         {
-            int[] copy = new int[suite.Count];
-            suite.CopyTo(copy);
-            
-            suite.Sort();
+            int[] MinorChordsIntervals = new int[16] { 9, -4, -3, -4, -4, -5, -4, 4, -5, 9, -5, -3, 5, 4, -9, 5 };
+            int[] MajorChordsIntervals = new int[16] { -4, -3, -4, -6, 7, -4, -5, -4, -3, 7, -3, -5, -7, 3, 5, -9 };
+            int iOffset = 0;
 
-            int offset = 0;
-
-            //la fondamentale de l'accord est la note la plus grave de la tierce la plus grave (tierce mineure ou majeure)
-            //donc recherche de l'intervalle 3 ou 4 le plus bas dans la suite logique
-            //recherche des tierces
-
-            for (int i = 0; i < suite.Count - 1; i++)
+            for (int i = 0; i < MinorChordsIntervals.Length; i += 2)
             {
-                //0-4-9
-                if (suite[i] + 3 == suite[i + 1] || suite[suite.Count - 1] - suite[suite.Count - 2] == 5)
+                if (suite[0] - suite[1] == MinorChordsIntervals[i] && suite[1] - suite[2] == MinorChordsIntervals[i + 1])
                 {
-                    //4-9-0 => +4 / 0-4-9 => +3 / 9-0-4 => -4
-                    if (copy[0] == suite[0]) { offset = 3; }
-                    else if (copy[1] == suite[0]) { offset = -4; }
-                    else if (copy[2] == suite[0]) { offset = 4; }
-
-                    return new Tuple<bool, int>(true, offset);
+                    switch (i)
+                    {
+                        case 0:
+                        case 2:
+                            iOffset = 5;
+                            break;
+                        case 4:
+                        case 6:
+                            iOffset = 3;
+                            break;
+                        case 8:
+                        case 10:
+                            iOffset = 4;
+                            break;
+                        case 12:
+                            iOffset = -3;
+                            break;
+                        case 14:
+                            iOffset = -4;
+                            break;
+                    }
+                    return new Tuple<bool, int>(true, iOffset);
                 }
-                else if (suite[i] + 4 == suite[i + 1])
+                else if (suite[0] - suite[1] == MajorChordsIntervals[i] && suite[1] - suite[2] == MajorChordsIntervals[i + 1])
                 {
-                    //0-4-7 => -3 / 4-7-0 => +4 / 7-0-4 => +3
-                    if (copy[0] == suite[0]) { offset = -3; }
-                    else if (copy[1] == suite[0]) { offset = 3; }
-                    else if (copy[2] == suite[0]) { offset = 4; }
-                    return new Tuple<bool, int>(false, offset);
+                    switch (i)
+                    {
+                        case 0:
+                        case 2:
+                            iOffset = 5;
+                            break;
+                        case 4:
+                        case 6:
+                            iOffset = 3;
+                            break;
+                        case 8:
+                        case 10:
+                            iOffset = 4;
+                            break;
+                        case 12:
+                            iOffset = -4;
+                            break;
+                        case 14:
+                            iOffset = 3;
+                            break;
+                    }
+                    return new Tuple<bool, int>(false, iOffset);
                 }
             }
 
+            return new Tuple<bool, int>(false, 0);
+            //int[] copy = new int[suite.Count];
+            //suite.CopyTo(copy);
 
-            return new Tuple<bool, int>(false, offset);
+            //suite.Sort();
+
+            //int offset = 0;
+
+            ////la fondamentale de l'accord est la note la plus grave de la tierce la plus grave (tierce mineure ou majeure)
+            ////donc recherche de l'intervalle 3 ou 4 le plus bas dans la suite logique
+            ////recherche des tierces
+
+            //for (int i = 0; i < suite.Count - 1; i++)
+            //{
+            //    //0-4-9
+            //    if (suite[i] + 3 == suite[i + 1] || suite[suite.Count - 1] - suite[suite.Count - 2] == 5)
+            //    {
+            //        //4-9-0 => +4 / 0-4-9 => +3 / 9-0-4 => -4
+            //        if (copy[0] == suite[0]) { offset = 3; }
+            //        else if (copy[1] == suite[0]) { offset = -4; }
+            //        else if (copy[2] == suite[0]) { offset = 4; }
+
+            //        return new Tuple<bool, int>(true, offset);
+            //    }
+            //    else if (suite[i] + 4 == suite[i + 1])
+            //    {
+            //        //0-4-7 => -3 / 4-7-0 => +4 / 7-0-4 => +3
+            //        if (copy[0] == suite[0]) { offset = -3; }
+            //        else if (copy[1] == suite[0]) { offset = 3; }
+            //        else if (copy[2] == suite[0]) { offset = 4; }
+            //        return new Tuple<bool, int>(false, offset);
+            //    }
+            //}
+
+
+            //return new Tuple<bool, int>(false, offset);
         }
     }
 
@@ -495,30 +581,13 @@ namespace MidiTools
             }
         }
 
-        private void RemovePendingNotes(MatrixItem routing, bool bTransposed)
+        private void RemovePendingNotes(MatrixItem routing)
         {
-            bool[] copy;
-
-            copy = new bool[128];
-            routing.NotesSentForPanic = new bool[128];
-
-            if (bTransposed)
+            for (int i = 0; i <= 127; i++)
             {
-                foreach (var pending in copy)
+                if (routing.NotesSentForPanic[i])
                 {
-                    for (int i = 0; i <= 127; i++)
-                    {
-                        var eventout = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { i, 0 }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name);
-                        CreateOUTEvent(eventout, routing);
-                    }
-                }
-            }
-            else
-            {
-
-                for (int i = 0; i <= 127; i++)
-                {
-                    var eventout = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { copy[i] ? i : 0, 0 }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name);
+                    var eventout = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { i, 0 }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name);
                     CreateOUTEvent(eventout, routing);
                 }
             }
@@ -1008,7 +1077,7 @@ namespace MidiTools
                     {
                         foreach (var item in MidiMatrix)
                         {
-                            RemovePendingNotes(item, true);
+                            RemovePendingNotes(item);
                         }
                     }
 
@@ -1650,7 +1719,7 @@ namespace MidiTools
             var routingOff = MidiMatrix.Where(m => m.RoutingGuid != routingGuid);
             foreach (var r in routingOff)
             {
-                RemovePendingNotes(r, false);
+                RemovePendingNotes(r);
                 r.Active = false;
             }
         }
@@ -1660,7 +1729,7 @@ namespace MidiTools
             var routingOn = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
             if (routingOn != null)
             {
-                RemovePendingNotes(routingOn, false);
+                RemovePendingNotes(routingOn);
                 routingOn.Active = false;
             }
         }
