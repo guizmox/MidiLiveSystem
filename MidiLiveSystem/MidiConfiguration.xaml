@@ -88,9 +88,9 @@
                             <ColumnDefinition Width="40*"/>
                             <ColumnDefinition Width="10*"/>
                         </Grid.ColumnDefinitions>
-                        <Label Grid.Column="0" Content="HORIZONTAL"/>
+                        <Label Grid.Column="0" Content="BOXES / COL."/>
                         <TextBox Name="tbHorizontalItems" ToolTip="Main grid configuration. Keep '-1' for automatic behavior" Grid.Column="1" Text="-1" MaxLength="1" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                        <Label Grid.Column="2" Content="VERTICAL"/>
+                        <Label Grid.Column="2" Content="BOXES / ROW"/>
                         <TextBox Name="tbVerticalItems" ToolTip="Main grid configuration. Keep '-1' for automatic behavior" Grid.Column="3" Text="-1" MaxLength="1" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
                     </Grid>
                 </StackPanel>

@@ -600,7 +600,14 @@ namespace MidiTools
         {
             AddLog(inputDevice.Name, true, msg.Channel, "Note On", msg.Key.ToString(), "Velocity", msg.Velocity.ToString());
 
-            AddEvent(TypeEvent.NOTE_ON, new List<int> { Tools.GetNoteInt(msg.Key), msg.Velocity }, msg.Channel);
+            if (msg.Velocity == 0)
+            {
+                AddEvent(TypeEvent.NOTE_OFF, new List<int> { Tools.GetNoteInt(msg.Key), msg.Velocity }, msg.Channel);
+            }
+            else
+            {
+                AddEvent(TypeEvent.NOTE_ON, new List<int> { Tools.GetNoteInt(msg.Key), msg.Velocity }, msg.Channel);
+            }
         }
 
         private void ControlChangeHandler(IMidiInputDevice sender, in ControlChangeMessage msg)

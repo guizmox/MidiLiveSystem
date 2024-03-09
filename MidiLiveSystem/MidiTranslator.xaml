@@ -43,6 +43,7 @@
             <ComboBoxItem Content="Program Change - Range" Tag="PC_RANGE"/>
             <ComboBoxItem Content="Aftertouch  - Single Value" Tag="AT"/>
             <ComboBoxItem Content="Aftertouch  - Range" Tag="AT_RANGE"/>
+            <ComboBoxItem Content="Pitch Bend" Tag="PB"/>
         </ComboBox>
 
         <StackPanel Name="pnlINKEY" Grid.Column="1" Grid.Row="1" Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
@@ -69,6 +70,32 @@
             </Grid>
         </StackPanel>
 
+        <StackPanel Name="pnlINPB" Grid.Column="1" Grid.Row="1"  Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="30*"/>
+                    <ColumnDefinition Width="15*"/>
+                    <ColumnDefinition Width="5*"/>
+                    <ColumnDefinition Width="30*"/>
+                    <ColumnDefinition Width="15*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="50*"/>
+                    <RowDefinition Height="50*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Column="0" Grid.Row="0" Text="DIRECTION"/>
+                <ComboBox Name="cbINPBDirection"  Grid.Column="0" Grid.Row="1" SelectedValuePath="Tag" SelectionChanged="cbPBDirection_SelectionChanged" >
+                    <ComboBoxItem Content="Only Up" Tag="UP"/>
+                    <ComboBoxItem Content="Only Down" Tag="DOWN"/>
+                    <ComboBoxItem Content="Both Directions" Tag="BOTH"/>
+                </ComboBox>
+                <TextBlock Grid.Column="3" Grid.Row="0" Text="LOW VALUE"/>
+                <TextBox Name="tbINLowPBValue" Grid.Row="0" Grid.Column="4" Text="0" MaxLength="5" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                <TextBlock Grid.Column="3" Grid.Row="1" Text="HIGH VALUE"/>
+                <TextBox Name="tbINHighPBValue" Grid.Row="1" Grid.Column="4" Text="8192" MaxLength="5" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+            </Grid>
+        </StackPanel>
+        
         <StackPanel Name="pnlINCC" Grid.Column="1" Grid.Row="1"  Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -147,6 +174,7 @@
             <ComboBoxItem Content="Program Change - Follows EVENT IN Value" Tag="PC_RANGE"/>
             <ComboBoxItem Content="Aftertouch  - Single Value" Tag="AT"/>
             <ComboBoxItem Content="Aftertouch  - Range" Tag="AT_RANGE"/>
+            <ComboBoxItem Content="Pitch Bend" Tag="PB"/>
         </ComboBox>
 
         <StackPanel Name="pnlOUTKEY" Grid.Column="1" Grid.Row="4" Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
@@ -171,6 +199,33 @@
             </Grid>
         </StackPanel>
 
+
+        <StackPanel Name="pnlOUTPB" Grid.Column="1" Grid.Row="4"  Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="30*"/>
+                    <ColumnDefinition Width="15*"/>
+                    <ColumnDefinition Width="5*"/>
+                    <ColumnDefinition Width="30*"/>
+                    <ColumnDefinition Width="15*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="50*"/>
+                    <RowDefinition Height="50*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Column="0" Grid.Row="0" Text="DIRECTION"/>
+                <ComboBox Name="cbOUTPBDirection"  Grid.Column="0" Grid.Row="1" SelectedValuePath="Tag" SelectionChanged="cbPBDirection_SelectionChanged" >
+                    <ComboBoxItem Content="Only Up" Tag="UP"/>
+                    <ComboBoxItem Content="Only Down" Tag="DOWN"/>
+                    <ComboBoxItem Content="Both Directions" Tag="BOTH"/>
+                </ComboBox>
+                <TextBlock Grid.Column="3" Grid.Row="0" Text="LOW VALUE"/>
+                <TextBox Name="tbOUTLowPBValue" Grid.Row="0" Grid.Column="4" Text="0" MaxLength="5" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                <TextBlock Grid.Column="3" Grid.Row="1" Text="HIGH VALUE"/>
+                <TextBox Name="tbOUTHighPBValue" Grid.Row="1" Grid.Column="4" Text="8192" MaxLength="5" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+            </Grid>
+        </StackPanel>
+            
         <StackPanel Name="pnlOUTCC" Grid.Column="1" Grid.Row="4" Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
             <Grid>
                 <Grid.ColumnDefinitions>

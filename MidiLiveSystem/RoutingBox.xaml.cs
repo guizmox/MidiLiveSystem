@@ -239,7 +239,10 @@ namespace MidiLiveSystem
                     {
                         InstrumentPresets.OnPresetChanged -= PresetBrowser_OnPresetChanged;
                     }
-                    InstrumentPresets = new PresetBrowser(instr);
+
+                    var preset = GetPreset();
+
+                    InstrumentPresets = new PresetBrowser(instr, preset);
                     InstrumentPresets.OnPresetChanged += PresetBrowser_OnPresetChanged;
                     InstrumentPresets.ShowDialog();
                     InstrumentPresets.GetPreset();

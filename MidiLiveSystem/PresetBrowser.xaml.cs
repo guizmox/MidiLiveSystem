@@ -26,7 +26,7 @@ namespace MidiLiveSystem
 
         private InstrumentData InstrumentPresets;
 
-        public PresetBrowser(InstrumentData instr)
+        public PresetBrowser(InstrumentData instr, MidiPreset preset = null)
         {
             InitializeComponent();
 
@@ -38,6 +38,14 @@ namespace MidiLiveSystem
             }
 
             lblCaption.Content = "Preset Browser";
+
+            if (preset != null && preset.PresetName.Length > 0)
+            {
+                tbLsb.Text = preset.Lsb.ToString();
+                tbMsb.Text = preset.Msb.ToString();
+                tbPrg.Text = preset.Prg.ToString();
+                tbName.Text = preset.PresetName;
+            }
         }
 
         private void tvPresets_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
@@ -88,7 +96,7 @@ namespace MidiLiveSystem
 
                 TreeViewItem categoryItem = new TreeViewItem();
                 categoryItem.Header = g.Category;
-                categoryItem.Tag = "";
+                categoryItem.Tag = g.IndexInFile.ToString();
 
                 //if (g.Category.Equals("Orchestral Woodwinds"))
                 //{
@@ -110,25 +118,25 @@ namespace MidiLiveSystem
                 switch (g.Level)
                 {
                     case 1:
-                        sL1 = g.Category;
+                        sL1 = g.IndexInFile.ToString();
                         sL2 = "";
                         sL3 = "";
                         sL4 = "";
                         tvPresets.Items.Add(categoryItem);
                         break;
                     case 2:
-                        sL2 = g.Category;
+                        sL2 = g.IndexInFile.ToString();
                         sL3 = "";
                         sL4 = "";
                         FindParentNode(tvPresets, sL1).Items.Add(categoryItem);
                         break;
                     case 3:
-                        sL3 = g.Category;
+                        sL3 = g.IndexInFile.ToString();
                         sL4 = "";
                         FindParentNode(tvPresets, sL2).Items.Add(categoryItem);
                         break;
                     case 4:
-                        sL4 = g.Category;
+                        sL4 = g.IndexInFile.ToString();
                         FindParentNode(tvPresets, sL3).Items.Add(categoryItem);
                         break;
                     case 5:
@@ -139,18 +147,18 @@ namespace MidiLiveSystem
             }
         }
 
-        private TreeViewItem FindParentNode(ItemsControl parent, string categoryName)
+        private TreeViewItem FindParentNode(ItemsControl parent, string categoryIndexInFile)
         {
             foreach (var item in parent.Items)
             {
                 TreeViewItem treeItem = item as TreeViewItem;
-                if (treeItem.Header.ToString() == categoryName)
+                if (treeItem.Tag.ToString() == categoryIndexInFile)
                 {
                     return treeItem;
                 }
                 else
                 {
-                    var result = FindParentNode(treeItem, categoryName);
+                    var result = FindParentNode(treeItem, categoryIndexInFile);
                     if (result != null)
                         return result;
                 }

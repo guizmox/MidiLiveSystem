@@ -89,6 +89,11 @@ namespace MidiLiveSystem
                         sbINScript.Append("AT#");
                         sbINScript.Append(tbINLowATValue.Text.Trim() + "-" + tbINHighATValue.Text.Trim());
                         break;
+                    case "PB":
+                        //[IN=PB#0:0-127] //0=UP, 1=DOWN, 2=BOTH
+                        sbINScript.Append("PB#");
+                        sbINScript.Append(cbINPBDirection.SelectedIndex.ToString() + ":" + tbINLowPBValue.Text.Trim() + "-" + tbINHighPBValue.Text.Trim());
+                        break;
                 }
 
                 sbINScript.Append("]");
@@ -159,6 +164,11 @@ namespace MidiLiveSystem
                         sbOUTScript.Append("AT#");
                         sbOUTScript.Append("0-127");
                         break;
+                    case "PB":
+                        //[OUT=PB#0:0-127] //0=UP, 1=DOWN, 2=BOTH
+                        sbINScript.Append("PB#");
+                        sbINScript.Append(cbOUTPBDirection.SelectedIndex.ToString() + ":" + tbOUTLowPBValue.Text.Trim() + "-" + tbOUTHighPBValue.Text.Trim());
+                        break;
                 }
 
                 sbOUTScript.Append("]");
@@ -199,6 +209,20 @@ namespace MidiLiveSystem
             if (int.TryParse(sValue, out iParse))
             {
                 if (iParse >= (bLessAuthorized ? -1 : 0) && iParse <= 127)
+                {
+                    return true;
+                }
+                else { return false; }
+            }
+            else { return false; }
+        }
+
+        private bool ControlPitchBendValue(string sValue)
+        {
+            int iParse = -1;
+            if (int.TryParse(sValue, out iParse))
+            {
+                if (iParse >= -8192 && iParse <= 8192)
                 {
                     return true;
                 }
@@ -338,6 +362,26 @@ namespace MidiLiveSystem
                 }
             }
 
+            if (!ControlPitchBendValue(tbINHighPBValue.Text))
+            {
+                sbErrors.AppendLine("IN PB High Value (" + tbINHighPBValue.Text + ")");
+            }
+
+            if (!ControlPitchBendValue(tbINLowPBValue.Text))
+            {
+                sbErrors.AppendLine("IN PB Low Value (" + tbINLowPBValue.Text + ")");
+            }
+
+            if (!ControlPitchBendValue(tbOUTHighPBValue.Text))
+            {
+                sbErrors.AppendLine("OUT PB High Value (" + tbOUTHighPBValue.Text + ")");
+            }
+
+            if (!ControlPitchBendValue(tbOUTLowPBValue.Text))
+            {
+                sbErrors.AppendLine("OUT PB Low Value (" + tbOUTLowPBValue.Text + ")");
+            }
+
             return sbErrors.ToString();
         }
 
@@ -354,6 +398,7 @@ namespace MidiLiveSystem
                         pnlINPC.Visibility = Visibility.Hidden;
                         pnlINSYS.Visibility = Visibility.Hidden;
                         pnlINAT.Visibility = Visibility.Hidden;
+                        pnlINPB.Visibility = Visibility.Hidden;
                         tbINLowKey.IsEnabled = true;
                         tbINHighKey.IsEnabled = false;
                         tbINLowVelo.IsEnabled = true;
@@ -369,6 +414,7 @@ namespace MidiLiveSystem
                         pnlINPC.Visibility = Visibility.Hidden;
                         pnlINSYS.Visibility = Visibility.Hidden;
                         pnlINAT.Visibility = Visibility.Hidden;
+                        pnlINPB.Visibility = Visibility.Hidden;
                         tbINLowKey.IsEnabled = true;
                         tbINHighKey.IsEnabled = true;
                         tbINLowVelo.IsEnabled = true;
@@ -384,6 +430,7 @@ namespace MidiLiveSystem
                         pnlINPC.Visibility = Visibility.Hidden;
                         pnlINSYS.Visibility = Visibility.Hidden;
                         pnlINAT.Visibility = Visibility.Hidden;
+                        pnlINPB.Visibility = Visibility.Hidden;
                         tbINLowCCValue.IsEnabled = true;
                         tbINHighCCValue.IsEnabled = false;
                         tbINLowCCValue.Text = "0";
@@ -395,6 +442,7 @@ namespace MidiLiveSystem
                         pnlINPC.Visibility = Visibility.Hidden;
                         pnlINSYS.Visibility = Visibility.Hidden;
                         pnlINAT.Visibility = Visibility.Hidden;
+                        pnlINPB.Visibility = Visibility.Hidden;
                         tbINLowCCValue.IsEnabled = true;
                         tbINHighCCValue.IsEnabled = true;
                         tbINLowCCValue.Text = "0";
@@ -406,6 +454,7 @@ namespace MidiLiveSystem
                         pnlINPC.Visibility = Visibility.Visible;
                         pnlINSYS.Visibility = Visibility.Hidden;
                         pnlINAT.Visibility = Visibility.Hidden;
+                        pnlINPB.Visibility = Visibility.Hidden;
                         tbINLowPCValue.IsEnabled = true;
                         tbINHighPCValue.IsEnabled = false;
                         tbINLowPCValue.Text = "0";
@@ -417,6 +466,7 @@ namespace MidiLiveSystem
                         pnlINPC.Visibility = Visibility.Visible;
                         pnlINSYS.Visibility = Visibility.Hidden;
                         pnlINAT.Visibility = Visibility.Hidden;
+                        pnlINPB.Visibility = Visibility.Hidden;
                         tbINLowPCValue.IsEnabled = true;
                         tbINHighPCValue.IsEnabled = true;
                         tbINLowPCValue.Text = "0";
@@ -428,6 +478,7 @@ namespace MidiLiveSystem
                         pnlINPC.Visibility = Visibility.Hidden;
                         pnlINSYS.Visibility = Visibility.Visible;
                         pnlINAT.Visibility = Visibility.Hidden;
+                        pnlINPB.Visibility = Visibility.Hidden;
                         break;
                     case "AT":
                         pnlINKEY.Visibility = Visibility.Hidden;
@@ -435,6 +486,7 @@ namespace MidiLiveSystem
                         pnlINPC.Visibility = Visibility.Hidden;
                         pnlINSYS.Visibility = Visibility.Hidden;
                         pnlINAT.Visibility = Visibility.Visible;
+                        pnlINPB.Visibility = Visibility.Hidden;
                         tbINLowATValue.IsEnabled = true;
                         tbINHighATValue.IsEnabled = false;
                         tbINLowATValue.Text = "0";
@@ -446,10 +498,22 @@ namespace MidiLiveSystem
                         pnlINPC.Visibility = Visibility.Hidden;
                         pnlINSYS.Visibility = Visibility.Hidden;
                         pnlINAT.Visibility = Visibility.Visible;
+                        pnlINPB.Visibility = Visibility.Hidden;
                         tbINLowATValue.IsEnabled = true;
                         tbINHighATValue.IsEnabled = true;
                         tbINLowATValue.Text = "0";
                         tbINHighATValue.Text = "127";
+                        break;
+                    case "PB":
+                        pnlINKEY.Visibility = Visibility.Hidden;
+                        pnlINCC.Visibility = Visibility.Hidden;
+                        pnlINPC.Visibility = Visibility.Hidden;
+                        pnlINSYS.Visibility = Visibility.Hidden;
+                        pnlINAT.Visibility = Visibility.Hidden;
+                        pnlINPB.Visibility = Visibility.Visible;
+                        cbINPBDirection.SelectedIndex = 0;
+                        tbINLowPBValue.Text = "0";
+                        tbINHighPBValue.Text = "8192";
                         break;
                 }
             }
@@ -468,6 +532,7 @@ namespace MidiLiveSystem
                         pnlOUTPC.Visibility = Visibility.Hidden;
                         pnlOUTSYS.Visibility = Visibility.Hidden;
                         pnlOUTAT.Visibility = Visibility.Hidden;
+                        pnlOUTPB.Visibility = Visibility.Hidden;
                         tbOUTKey.IsEnabled = true;
                         tbOUTKey.Text = "0";
                         break;
@@ -477,6 +542,7 @@ namespace MidiLiveSystem
                         pnlOUTPC.Visibility = Visibility.Hidden;
                         pnlOUTSYS.Visibility = Visibility.Hidden;
                         pnlOUTAT.Visibility = Visibility.Hidden;
+                        pnlOUTPB.Visibility = Visibility.Hidden;
                         tbOUTKey.IsEnabled = false;
                         tbOUTKey.Text = "-1";
                         break;
@@ -486,6 +552,7 @@ namespace MidiLiveSystem
                         pnlOUTPC.Visibility = Visibility.Hidden;
                         pnlOUTSYS.Visibility = Visibility.Hidden;
                         pnlOUTAT.Visibility = Visibility.Hidden;
+                        pnlOUTPB.Visibility = Visibility.Hidden;
                         tbOUTCCValue.IsEnabled = true;
                         tbOUTCCValue.Text = "0";
                         break;
@@ -495,6 +562,7 @@ namespace MidiLiveSystem
                         pnlOUTPC.Visibility = Visibility.Hidden;
                         pnlOUTSYS.Visibility = Visibility.Hidden;
                         pnlOUTAT.Visibility = Visibility.Hidden;
+                        pnlOUTPB.Visibility = Visibility.Hidden;
                         tbOUTCCValue.IsEnabled = false;
                         tbOUTCCValue.Text = "-1";
                         break;
@@ -504,6 +572,7 @@ namespace MidiLiveSystem
                         pnlOUTPC.Visibility = Visibility.Visible;
                         pnlOUTSYS.Visibility = Visibility.Hidden;
                         pnlOUTAT.Visibility = Visibility.Hidden;
+                        pnlOUTPB.Visibility = Visibility.Hidden;
                         tbOUTPCValue.IsEnabled = true;
                         tbOUTPCValue.Text = "0";
                         break;
@@ -513,6 +582,7 @@ namespace MidiLiveSystem
                         pnlOUTPC.Visibility = Visibility.Visible;
                         pnlOUTSYS.Visibility = Visibility.Hidden;
                         pnlOUTAT.Visibility = Visibility.Hidden;
+                        pnlOUTPB.Visibility = Visibility.Hidden;
                         tbOUTPCValue.IsEnabled = false;
                         tbOUTPCValue.Text = "-1";
                         break;
@@ -522,6 +592,7 @@ namespace MidiLiveSystem
                         pnlOUTPC.Visibility = Visibility.Hidden;
                         pnlOUTSYS.Visibility = Visibility.Visible;
                         pnlOUTAT.Visibility = Visibility.Hidden;
+                        pnlOUTPB.Visibility = Visibility.Hidden;
                         break;
                     case "AT":
                         pnlOUTKEY.Visibility = Visibility.Hidden;
@@ -529,6 +600,7 @@ namespace MidiLiveSystem
                         pnlOUTPC.Visibility = Visibility.Hidden;
                         pnlOUTSYS.Visibility = Visibility.Hidden;
                         pnlOUTAT.Visibility = Visibility.Visible;
+                        pnlOUTPB.Visibility = Visibility.Hidden;
                         tbOUTATValue.IsEnabled = true;
                         tbOUTATValue.Text = "0";
                         break;
@@ -538,12 +610,47 @@ namespace MidiLiveSystem
                         pnlOUTPC.Visibility = Visibility.Hidden;
                         pnlOUTSYS.Visibility = Visibility.Hidden;
                         pnlOUTAT.Visibility = Visibility.Visible;
+                        pnlOUTPB.Visibility = Visibility.Hidden;
                         tbOUTATValue.IsEnabled = false;
                         tbOUTATValue.Text = "-1";
+                        break;
+                    case "PB":
+                        pnlOUTKEY.Visibility = Visibility.Hidden;
+                        pnlOUTCC.Visibility = Visibility.Hidden;
+                        pnlOUTPC.Visibility = Visibility.Hidden;
+                        pnlOUTSYS.Visibility = Visibility.Hidden;
+                        pnlOUTAT.Visibility = Visibility.Hidden;
+                        pnlOUTPB.Visibility = Visibility.Visible;
+                        cbOUTPBDirection.SelectedIndex = 0;
+                        tbOUTLowPBValue.Text = "0";
+                        tbOUTHighPBValue.Text = "8192";
                         break;
                 }
             }
         }
 
+        private void cbPBDirection_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ComboBox cb = (ComboBox)sender;
+            if (cb.Name.Equals("cbOUTPBDirection"))
+            {
+                if (cb.SelectedIndex == 0) 
+                { tbOUTLowPBValue.Text = "0"; tbOUTHighPBValue.Text = "8192"; }
+                else if (cb.SelectedIndex == 1)
+                { tbOUTLowPBValue.Text = "-8192"; tbOUTHighPBValue.Text = "0"; }
+                else
+                { tbOUTLowPBValue.Text = "-8192"; tbOUTHighPBValue.Text = "8192"; }
+            }
+            else
+            {
+                if (cb.SelectedIndex == 0)
+                { tbINLowPBValue.Text = "0"; tbINHighPBValue.Text = "8192"; }
+                else if (cb.SelectedIndex == 1)
+                { tbINLowPBValue.Text = "-8192"; tbINHighPBValue.Text = "0"; }
+                else
+                { tbINLowPBValue.Text = "-8192"; tbINHighPBValue.Text = "8192"; }
+            }
+
+        }
     }
 }

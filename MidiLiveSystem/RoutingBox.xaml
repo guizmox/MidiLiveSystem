@@ -307,9 +307,12 @@
                                 <ComboBox Name="cbPlayMode" SelectedIndex="0" Grid.Column="1" Grid.ColumnSpan="2" SelectedValuePath="Tag">
                                     <ComboBoxItem Tag="NORMAL" Content="Normal"/>
                                     <ComboBoxItem Tag="AFTERTOUCH" Content="Aftertouch"/>
-                                    <ComboBoxItem Tag="MONO_LOW" Content="Mono-L. Note"/>
-                                    <ComboBoxItem Tag="MONO_HIGH" Content="Mono-H. Note"/>
-                                    <ComboBoxItem Tag="HARMONY" Content="Harmony"/>
+                                    <ComboBoxItem Tag="MONO_HIGH" Content="Mono-H. note"/>
+                                    <ComboBoxItem Tag="MONO_LOW" Content="Mono-L. note"/>
+                                    <ComboBoxItem Tag="MONO_INTERMEDIATE_HIGH" Content="Intermediate high note"/>
+                                    <ComboBoxItem Tag="MONO_INTERMEDIATE_LOW" Content="Intermediate low note"/>
+                                    <ComboBoxItem Tag="MONO_IN_BETWEEN" Content="Fill empty octave with less used note"/>
+                                    <ComboBoxItem Tag="HARMONY" Content="Third harmonizer"/>
                                 </ComboBox>
                             </Grid>
                         </StackPanel>

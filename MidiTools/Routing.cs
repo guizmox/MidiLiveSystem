@@ -19,11 +19,28 @@ namespace MidiTools
     {
         private int[] CCToNotBlock = new int[16] { 0, 6, 32, 64, 65, 66, 67, 68, 120, 121, 122, 123, 124, 125, 126, 127 };
 
+        private int[] MinorChordsIntervals = new int[32] { 9, -4, -3, -4, -4, -5, -4, 4, -5, 9, -5, -3, 5, 4, -9, 5, -7, -5, -2, -1, -2, 23, -5, 21, 21, -4, -4, 19, 19, -3, -100, -100 };
+        private int[] MajorChordsIntervals = new int[32] { -4, -3, -4, -6, 7, -4, -5, -4, -3, 7, -3, -5, -7, 3, 5, -9, -3, 19, -2, -2, -2, 2, 19, -4, 20, -3, -4, 21, 21, -5, -3, 21 };
+        private int[] OtherIntervals = new int[32] { -3, -3, -5, -2, -2, -4, -2, -5, -6, -3, -5, -5, 19, -5, -6, 21, -2, 20, -3, -6, 18, -3, -2, 19, -100, -100, -100, -100, -100, -100, -100, -100 };
+
         private Harmony _harmony = Harmony.MAJOR;
         private int _noteHarmony = 0;
 
         public int CurrentATValue = 0;
         public bool[] NotesSentForPanic = new bool[128];
+        public List<int> CurrentNotesPlayed
+        {
+            get
+            {
+                List<int> list = new List<int>();
+                for (int i = 0; i < 128; i++)
+                {
+                    if (NotesSentForPanic[i])
+                    { list.Add(i); }
+                }
+                return list;
+            }
+        }
 
         internal bool Active { get; set; } = true;
         internal int ChannelIn = 1;
@@ -175,59 +192,165 @@ namespace MidiTools
             }
         }
 
-        internal List<MidiEvent> SetPlayMono(bool bHigh, MidiEvent incomingEV)
+        internal List<MidiEvent> SetPlayMono(int iHigh, MidiEvent incomingEV)
         {
-            List<MidiEvent> eventsOUT = new List<MidiEvent>();
+            //NotesSentForPanic[incomingEV.Values[0]] = true;
 
-            if (incomingEV.Type == TypeEvent.NOTE_ON && incomingEV.Values[1] > 0)
+            //1 = high, 2=low, 3=intermediate high, 4=intermediate low
+            List<MidiEvent> eventsOUT = new List<MidiEvent>();
+            int iPlayedNotes = NotesSentForPanic.Count(n => n == true);
+
+            //en partant du haut, recherche un groupe de 3 notes jouées sur moins de 2 octaves et isoler celle du milieu ?
+            Random r = new Random();
+            int iRnd = r.Next(0, iPlayedNotes <= 2 ? 0 : iPlayedNotes - 2);
+            int iAvoidNotes = 1 + iRnd;
+
+            if (incomingEV.Type == TypeEvent.NOTE_ON)
             {
-                if (bHigh)
+                switch (iHigh)
                 {
-                    int iHighestNote = Array.LastIndexOf(NotesSentForPanic, true);
-                    if (incomingEV.Values[0] > iHighestNote || iHighestNote == -1)
-                    {
-                        //on envoie les NOTE OFF de tous les items en dessous de la note qui vient d'être jouée
-                        for (int i = 0; i < 128; i++)
+                    case 1:
+                        int iHighestNote = Array.LastIndexOf(NotesSentForPanic, true);
+                        if (incomingEV.Values[0] >= iHighestNote || iHighestNote == -1)
                         {
-                            if (NotesSentForPanic[i])
+                            if (iHighestNote > -1)
                             {
-                                eventsOUT.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { i, 0 }, incomingEV.Channel, incomingEV.Device));
-                                NotesSentForPanic[i] = false;
+                                eventsOUT.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iHighestNote, 0 }, incomingEV.Channel, incomingEV.Device));
+                                NotesSentForPanic[iHighestNote] = false;
+                            }
+
+                            eventsOUT.Add(incomingEV);
+                            NotesSentForPanic[incomingEV.Values[0]] = true;
+                        }
+                        else
+                        {
+                            eventsOUT.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { incomingEV.Values[0], 0 }, incomingEV.Channel, incomingEV.Device));
+                        }
+                        break;
+                    case 2:
+                        int iLowestNote = Array.IndexOf(NotesSentForPanic, true);
+                        if (incomingEV.Values[0] <= iLowestNote || iLowestNote == -1)
+                        {
+                            if (iLowestNote > -1)
+                            {
+                                eventsOUT.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iLowestNote, 0 }, incomingEV.Channel, incomingEV.Device));
+                                NotesSentForPanic[iLowestNote] = false;
+                            }
+
+                            eventsOUT.Add(incomingEV);
+                            NotesSentForPanic[incomingEV.Values[0]] = true;
+                        }
+                        else
+                        {
+                            eventsOUT.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { incomingEV.Values[0], 0 }, incomingEV.Channel, incomingEV.Device));
+                        }
+                        break;
+                    case 3:  //note intermédiaire en partant du haut des notes jouées du clavier
+                        NotesSentForPanic[incomingEV.Values[0]] = true;
+                        if (iPlayedNotes > 2)
+                        {
+                            int iMediumNoteHigh = incomingEV.Values[0];
+                            int iCntA = 0;
+                            for (int i = NotesSentForPanic.Length - 1; i > 0; i--)
+                            {
+                                if (NotesSentForPanic[i] && iCntA < iAvoidNotes)
+                                {
+                                    iCntA++;
+                                }
+                                else if (NotesSentForPanic[i] && iCntA == iAvoidNotes)
+                                {
+                                    iMediumNoteHigh = i;
+                                    break;
+                                }
+                            }
+                            if (incomingEV.Values[0] == iMediumNoteHigh)
+                            {
+                                eventsOUT.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iMediumNoteHigh, 0 }, incomingEV.Channel, incomingEV.Device));
+                                NotesSentForPanic[iMediumNoteHigh] = false;
+
+                                eventsOUT.Add(incomingEV);
+                                NotesSentForPanic[incomingEV.Values[0]] = true;
                             }
                         }
-                        eventsOUT.Add(incomingEV);
-                        NotesSentForPanic[incomingEV.Values[0]] = true;
-                    }
-                    else
-                    {
-                        eventsOUT.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { incomingEV.Values[0], 0 }, incomingEV.Channel, incomingEV.Device));
-                    }
-                }
-                else
-                {
-                    int iLowestNote = Array.IndexOf(NotesSentForPanic, true);
-                    if (incomingEV.Values[0] < iLowestNote || iLowestNote == -1)
-                    {
-                        //on envoie les NOTE OFF de tous les items en dessus de la note qui vient d'être jouée
-                        for (int i = 0; i < 128; i++)
+                        else
                         {
-                            if (NotesSentForPanic[i])
+                            eventsOUT.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { incomingEV.Values[0], 0 }, incomingEV.Channel, incomingEV.Device));
+                        }
+                        break;
+                    case 4: //note intermédiaire en partant du bas des notes jouées du clavier              
+                        NotesSentForPanic[incomingEV.Values[0]] = true;
+                        if (iPlayedNotes > 2)
+                        {
+                            int iMediumNoteLow = incomingEV.Values[0];
+                            int iCntB = 0;
+                            for (int i = 0; i < NotesSentForPanic.Length - 1; i++)
                             {
-                                eventsOUT.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { i, 0 }, incomingEV.Channel, incomingEV.Device));
-                                NotesSentForPanic[i] = false;
+                                if (NotesSentForPanic[i] && iCntB < iAvoidNotes)
+                                {
+                                    iCntB++;
+                                }
+                                else if (NotesSentForPanic[i] && iCntB == iAvoidNotes)
+                                {
+                                    iMediumNoteLow = i;
+                                    break;
+                                }
+                            }
+                            if (incomingEV.Values[0] == iMediumNoteLow)
+                            {
+                                eventsOUT.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iMediumNoteLow, 0 }, incomingEV.Channel, incomingEV.Device));
+                                NotesSentForPanic[iMediumNoteLow] = false;
+
+                                eventsOUT.Add(incomingEV);
+                                NotesSentForPanic[incomingEV.Values[0]] = true;
                             }
                         }
-                        eventsOUT.Add(incomingEV);
+                        else
+                        {
+                            eventsOUT.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { incomingEV.Values[0], 0 }, incomingEV.Channel, incomingEV.Device));
+                        }
+                        break;
+                    case 5: //note intermédiaire basée sur la moins représentée dans toutes les notes jouées, si possible 
+                            //la faire jouer dans un trou pour remplir le spectre comme un alto ?
                         NotesSentForPanic[incomingEV.Values[0]] = true;
-                    }
-                    else
-                    {
-                        eventsOUT.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { incomingEV.Values[0], 0 }, incomingEV.Channel, incomingEV.Device));
-                    }
+
+                        var notes = CurrentNotesPlayed;
+                        int octavehole = 0;
+                        int[] bChord = new int[notes.Count];
+
+                        for (int i = 0; i < notes.Count - 1; i++)
+                        {
+                            bChord[i] = notes[i] % 12;
+
+                            if (notes[i + 1] >= notes[i] + 7) //espace disponible d'une octave
+                            {
+                                octavehole = notes[i] / 12;
+                            }
+                        }
+
+                        if (_noteHarmony > 0)
+                        {
+                            eventsOUT.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { _noteHarmony, incomingEV.Values[1] }, incomingEV.Channel, incomingEV.Device));
+                            _noteHarmony = 0;
+                        }
+
+                        if (octavehole > 0 && notes.Count >= 3)
+                        {
+                            //recherche de l'occurence la moins présente dans les notes
+                            _noteHarmony = FindLessUsedNote(bChord) + (12 * octavehole);
+
+                            eventsOUT.Add(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { _noteHarmony, incomingEV.Values[1] }, incomingEV.Channel, incomingEV.Device));
+                            //NotesSentForPanic[_noteHarmony] = true;
+                        }
+                        break;
                 }
             }
             else
             {
+                if (_noteHarmony > 0)
+                {
+                    eventsOUT.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { _noteHarmony, incomingEV.Values[1] }, incomingEV.Channel, incomingEV.Device));
+                    _noteHarmony = 0;
+                }
                 eventsOUT.Add(new MidiEvent(incomingEV.Type, new List<int> { incomingEV.Values[0], incomingEV.Values[1] }, incomingEV.Channel, incomingEV.Device));
                 NotesSentForPanic[incomingEV.Values[0]] = false;
             }
@@ -235,24 +358,36 @@ namespace MidiTools
             return eventsOUT;
         }
 
+        internal static int FindLessUsedNote(int[] list)
+        {
+            Dictionary<int, int> occurrenceCount = new Dictionary<int, int>();
+
+            // Parcourir la liste et compter les occurrences
+            foreach (int num in list)
+            {
+                if (occurrenceCount.ContainsKey(num))
+                {
+                    occurrenceCount[num]++;
+                }
+                else
+                {
+                    occurrenceCount[num] = 1;
+                }
+            }
+
+            int minOccurrence = occurrenceCount.Values.Min();
+            int leastFrequentNumber = occurrenceCount.FirstOrDefault(x => x.Value == minOccurrence).Key;
+
+            return leastFrequentNumber;
+        }
+
         internal void MemorizeNotesPlayed(MidiEvent eventOUT)
         {
             if (eventOUT.Type == TypeEvent.NOTE_ON)
             {
-                if (eventOUT.Values[1] == 0) //le genos n'envoie pas de note off mais que des ON à 0
+                if (!NotesSentForPanic[eventOUT.Values[0]])
                 {
-                    if (NotesSentForPanic[eventOUT.Values[0]])
-                    {
-                        NotesSentForPanic[eventOUT.Values[0]] = false;
-                    }
-                }
-                else
-                {
-                    //problème : par exemple, le keystep envoie 2 messages IN mais 1 seul message out : on empêche la nouvelle note d'arriver
-                    if (!NotesSentForPanic[eventOUT.Values[0]])
-                    {
-                        NotesSentForPanic[eventOUT.Values[0]] = true;
-                    }
+                    NotesSentForPanic[eventOUT.Values[0]] = true;
                 }
             }
             else
@@ -268,98 +403,69 @@ namespace MidiTools
         {
             List<MidiEvent> newNotes = new List<MidiEvent>();
 
-            if (eventOUT.Type == TypeEvent.NOTE_ON && eventOUT.Values[1] > 0)
+            if (eventOUT.Type == TypeEvent.NOTE_ON)
             {
-
-                if (_noteHarmony > 0)
-                {
-                    NotesSentForPanic[_noteHarmony] = false;
-                    newNotes.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { _noteHarmony, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
-                    _noteHarmony = 0;
-                }
-
                 NotesSentForPanic[eventOUT.Values[0]] = true;
 
-                int iPlayedNotes = NotesSentForPanic.Count(n => n == true);
+                List<int> NotesPlayed = CurrentNotesPlayed;
+                while (NotesPlayed.Count > 3)
+                {
+                    NotesPlayed.RemoveAt(0);
+                }
+
+                //int iPlayedNotes = NotesPlayed.Count;
+                //List<int> closestNotes = FindClosestNumbers(NotesPlayed, 3);
 
                 List<int> bChord = new List<int>();
                 //on collecte toutes les notes actives
-                for (int i = 0; i < 128; i++)
+                for (int i = 0; i < NotesPlayed.Count; i++)
                 {
-                    if (NotesSentForPanic[i] && !bChord.Contains(i % 24))  //tout ramener sur 2 octaves 
+                    if (!bChord.Contains(NotesPlayed[i] % 24))  //tout ramener sur 2 octaves 
                     {
-                        bChord.Add(i % 24);
+                        bChord.Add(NotesPlayed[i] % 24);
                     }
                 }
 
-                if (iPlayedNotes > 2 && bChord.Count > 2)
+                //if (_noteHarmony > 0)
+                //{
+                //    newNotes.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { _noteHarmony, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
+                //    _noteHarmony = 0;
+                //}
+
+                var chordType = IsMinorChord(bChord);
+
+                if (chordType == null)
                 {
-                    var chordType = IsMinorChord(bChord);
+                    //debug pour trouver de nouvelles combinaisons
+                }
+                else
+                {
+                    if (_noteHarmony != Array.LastIndexOf(NotesSentForPanic, true) + chordType.Item2)
+                    {
+                        newNotes.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { _noteHarmony, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
+                        _noteHarmony = 0;
+                    }
+
                     _harmony = chordType.Item1 ? Harmony.MINOR : Harmony.MAJOR;
 
                     if (_harmony == Harmony.MINOR)
                     {
                         _noteHarmony = Array.LastIndexOf(NotesSentForPanic, true) + chordType.Item2;
-                        NotesSentForPanic[_noteHarmony] = true;
+                        //NotesSentForPanic[_noteHarmony] = true;
                         newNotes.Add(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { _noteHarmony, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
                     }
                     else
                     {
                         _noteHarmony = Array.LastIndexOf(NotesSentForPanic, true) + chordType.Item2;
-                        NotesSentForPanic[_noteHarmony] = true;
+                        //NotesSentForPanic[_noteHarmony] = true;
                         newNotes.Add(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { _noteHarmony, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
                     }
                 }
-
-                //int iLowestNote = Array.IndexOf(NotesSentForPanic, true);
-
-                ////if (iPlayedNotes > 2 && bChord.Count > 2)  // pour identifier la fondamentale il faut au moins la tierce (cas du MI - SOL qui a 3 demi-tons mais qui est à priori majeur)
-                //if (iPlayedNotes > 2 && bChord.Count > 2)
-                //{
-                //    //var bMinor = IsMinorChord(bChord);
-                //    //recherche d'un intervalle de tierce mineure (+3dm) dans l'ensemble des notes jouées
-                //    _harmony = Harmony.MAJOR;
-                //    int offsetOctave = 0;
-
-                //    for (int i = 0; i < NotesSentForPanic.Length; i++)
-                //    {
-                //        for (int iOct = 0; iOct < 5; iOct++)
-                //        {
-                //            if (NotesSentForPanic[i] && ((iLowestNote + (12 * iOct)) + 3) == i)
-                //            {
-                //                offsetOctave = iOct;
-                //                _harmony = Harmony.MINOR;
-                //                break;
-                //            }
-                //        }
-                //    }
-
-                //    if (_noteHarmony > 0)
-                //    {
-                //        NotesSentForPanic[_noteHarmony] = false;
-                //        newNotes.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { _noteHarmony, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
-                //        _noteHarmony = 0;
-                //    }
-
-                //    if (_harmony == Harmony.MINOR)
-                //    {
-                //        _noteHarmony = iLowestNote + (offsetOctave * 12) + 3;
-                //        NotesSentForPanic[_noteHarmony] = true;
-                //        newNotes.Add(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { _noteHarmony, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
-                //    }
-                //    else
-                //    {
-                //        _noteHarmony = iLowestNote + (offsetOctave * 12) + 4;
-                //        NotesSentForPanic[_noteHarmony] = true;
-                //        newNotes.Add(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { _noteHarmony, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
-                //    }
-                //}
             }
             else
             {
                 if (_noteHarmony > 0 && NotesSentForPanic.Count(n => n == true) <= 2)
                 {
-                    NotesSentForPanic[_noteHarmony] = false;
                     newNotes.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { _noteHarmony, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
                     _noteHarmony = 0;
                 }
@@ -371,67 +477,188 @@ namespace MidiTools
             return newNotes;
         }
 
-        static Tuple<bool, int> IsMinorChord(List<int> suite)
+        static List<int> FindClosestNumbers(List<int> numbers, int count)
         {
-            int[] MinorChordsIntervals = new int[16] { 9, -4, -3, -4, -4, -5, -4, 4, -5, 9, -5, -3, 5, 4, -9, 5 };
-            int[] MajorChordsIntervals = new int[16] { -4, -3, -4, -6, 7, -4, -5, -4, -3, 7, -3, -5, -7, 3, 5, -9 };
-            int iOffset = 0;
-
-            for (int i = 0; i < MinorChordsIntervals.Length; i += 2)
+            if (count >= numbers.Count)
             {
-                if (suite[0] - suite[1] == MinorChordsIntervals[i] && suite[1] - suite[2] == MinorChordsIntervals[i + 1])
+                return numbers;
+            }
+
+            List<int> sortedNumbers = numbers.OrderBy(x => x).ToList();
+
+            int minDifference = int.MaxValue;
+            List<int> closestNumbers = new List<int>();
+
+            for (int i = 0; i <= sortedNumbers.Count - count; i++)
+            {
+                int difference = sortedNumbers[i + count - 1] - sortedNumbers[i];
+                if (difference < minDifference)
                 {
-                    switch (i)
-                    {
-                        case 0:
-                        case 2:
-                            iOffset = 5;
-                            break;
-                        case 4:
-                        case 6:
-                            iOffset = 3;
-                            break;
-                        case 8:
-                        case 10:
-                            iOffset = 4;
-                            break;
-                        case 12:
-                            iOffset = -3;
-                            break;
-                        case 14:
-                            iOffset = -4;
-                            break;
-                    }
-                    return new Tuple<bool, int>(true, iOffset);
-                }
-                else if (suite[0] - suite[1] == MajorChordsIntervals[i] && suite[1] - suite[2] == MajorChordsIntervals[i + 1])
-                {
-                    switch (i)
-                    {
-                        case 0:
-                        case 2:
-                            iOffset = 5;
-                            break;
-                        case 4:
-                        case 6:
-                            iOffset = 3;
-                            break;
-                        case 8:
-                        case 10:
-                            iOffset = 4;
-                            break;
-                        case 12:
-                            iOffset = -4;
-                            break;
-                        case 14:
-                            iOffset = 3;
-                            break;
-                    }
-                    return new Tuple<bool, int>(false, iOffset);
+                    minDifference = difference;
+                    closestNumbers = sortedNumbers.GetRange(i, count);
                 }
             }
 
-            return new Tuple<bool, int>(false, 0);
+            return closestNumbers;
+        }
+
+        internal Tuple<bool, int> IsMinorChord(List<int> suite)
+        {
+            bool bFound = false;
+            int iOffset = 0;
+            Tuple<bool, int> Chord = new Tuple<bool, int>(false, 0);
+
+            for (int i = 0; i < MinorChordsIntervals.Length; i += 2)
+            {
+                for (int iS = 0; iS < suite.Count - 2; iS++)
+                {
+                    if (suite[iS] - suite[iS + 1] == MinorChordsIntervals[i] && suite[iS + 1] - suite[iS + 2] == MinorChordsIntervals[i + 1])
+                    {
+                        switch (i)
+                        {
+                            case 0:
+                            case 2:
+                                iOffset = 5;
+                                break;
+                            case 4:
+                            case 6:
+                                iOffset = 3;
+                                break;
+                            case 8:
+                            case 10:
+                                iOffset = 4;
+                                break;
+                            case 12:
+                                iOffset = -3;
+                                break;
+                            case 14:
+                                iOffset = -4;
+                                break;
+                            case 16:
+                                iOffset = -3;
+                                break;
+                            case 18:
+                            case 20:
+                                iOffset = 4;
+                                break;
+                            case 22:
+                                iOffset = 4;
+                                break;
+                            case 24:
+                                iOffset = 5;
+                                break;
+                            case 26:
+                                iOffset = 3;
+                                break;
+                            case 28:
+                                iOffset = 4;
+                                break;
+                            case 30:
+                                iOffset = 4;
+                                break;
+                        }
+                        Chord = new Tuple<bool, int>(true, iOffset);
+                        bFound = true;
+                    }
+                    else if (!Chord.Item1 && suite[iS] - suite[iS + 1] == MajorChordsIntervals[i] && suite[iS + 1] - suite[iS + 2] == MajorChordsIntervals[i + 1])
+                    {
+                        switch (i)
+                        {
+                            case 0:
+                            case 2:
+                                iOffset = 5;
+                                break;
+                            case 4:
+                                iOffset = 0;
+                                break;
+                            case 6:
+                                iOffset = 3;
+                                break;
+                            case 8:
+                            case 10:
+                                iOffset = 4;
+                                break;
+                            case 12:
+                                iOffset = -4;
+                                break;
+                            case 14:
+                                iOffset = 3;
+                                break;
+                            case 16:
+                                iOffset = 4;
+                                break;
+                            case 18:
+                                iOffset = 4;
+                                break;
+                            case 20:
+                                iOffset = 3;
+                                break;
+                            case 22:
+                                iOffset = 3;
+                                break;
+                            case 24:
+                                iOffset = 5;
+                                break; ;
+                            case 26:
+                                break;
+                            case 28:
+                                iOffset = 4;
+                                break;
+                            case 30:
+                                iOffset = 3;
+                                break;
+                        }
+                        Chord = new Tuple<bool, int>(false, iOffset);
+                        bFound = true;
+                    }
+                    else if (!Chord.Item1 && suite[iS] - suite[iS + 1] == OtherIntervals[i] && suite[iS + 1] - suite[iS + 2] == OtherIntervals[i + 1])
+                    {
+                        switch (i)
+                        {
+                            case 0:
+                                iOffset = 2;
+                                break;
+                            case 2:
+                                iOffset = 3;
+                                break;
+                            case 4:
+                                iOffset = 3;
+                                break;
+                            case 6:
+                                iOffset = 3;
+                                break;
+                            case 8:
+                                iOffset = 5;
+                                break;
+                            case 10:
+                                iOffset = 7;
+                                break;
+                            case 12:
+                                iOffset = 7;
+                                break;
+                            case 14:
+                                iOffset = 3;
+                                break;
+                            case 16:
+                                iOffset = 3;
+                                break;
+                            case 18:
+                                iOffset = 3;
+                                break;
+                            case 20:
+                                iOffset = 3;
+                                break;
+                            case 22:
+                                iOffset = 5;
+                                break;
+                        }
+                        Chord = new Tuple<bool, int>(false, iOffset);
+                        bFound = true;
+                    }
+                }
+            }
+
+            return bFound ? Chord : null;
             //int[] copy = new int[suite.Count];
             //suite.CopyTo(copy);
 
@@ -664,9 +891,8 @@ namespace MidiTools
             _eventsProcessedIN += 1;
 
             //mémorisation de la note pressée la plus grave
-            if (ev.Type == TypeEvent.NOTE_ON && ev.Values[0] < _lowestNotePlayed && ev.Values[1] > 0) { _lowestNotePlayed = ev.Values[0]; }
+            if (ev.Type == TypeEvent.NOTE_ON && ev.Values[0] < _lowestNotePlayed) { _lowestNotePlayed = ev.Values[0]; }
             else if (ev.Type == TypeEvent.NOTE_OFF && ev.Values[0] == _lowestNotePlayed) { _lowestNotePlayed = -1; }
-            else if (ev.Type == TypeEvent.NOTE_ON && ev.Values[0] == _lowestNotePlayed && ev.Values[1] == 0) { _lowestNotePlayed = -1; }
 
             IncomingMidiMessage?.Invoke(ev);
 
@@ -805,22 +1031,13 @@ namespace MidiTools
 
                                 var eventout = new MidiEvent(evIN.Type, new List<int> { iNote, iVelocity }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name);
 
-                                if (iVelocity == 0) //le genos n'envoie pas de note off mais que des ON à 0
+                                if (routing.NotesSentForPanic[eventout.Values[0]])
                                 {
-                                    routing.CurrentATValue = 0;
-                                    _eventsOUT = eventout;
+                                    //on n'envoie aucun nouvel évènement
                                 }
                                 else
                                 {
-                                    //problème : par exemple, le keystep envoie 2 messages IN mais 1 seul message out : on empêche la nouvelle note d'arriver
-                                    if (routing.NotesSentForPanic[eventout.Values[0]])
-                                    {
-                                        //on n'envoie aucun nouvel évènement
-                                    }
-                                    else
-                                    {
-                                        _eventsOUT = eventout;
-                                    }
+                                    _eventsOUT = eventout;
                                 }
                             }
                         }
@@ -933,12 +1150,24 @@ namespace MidiTools
                                 routing.MemorizeNotesPlayed(eventOUT);
                                 break;
                             case PlayModes.MONO_HIGH:
-                                EventsToProcess.AddRange(routing.SetPlayMono(true, eventOUT));
+                                EventsToProcess.AddRange(routing.SetPlayMono(1, eventOUT));
                                 bMono = EventsToProcess.Count > 0 ? true : false;
                                 break;
                             case PlayModes.MONO_LOW:
-                                EventsToProcess.AddRange(routing.SetPlayMono(false, eventOUT));
+                                EventsToProcess.AddRange(routing.SetPlayMono(2, eventOUT));
                                 bMono = EventsToProcess.Count > 0 ? true : false;
+                                break;
+                            case PlayModes.MONO_INTERMEDIATE_HIGH:
+                                EventsToProcess.AddRange(routing.SetPlayMono(3, eventOUT));
+                                bMono = EventsToProcess.Count > 0 ? true : false;
+                                break;
+                            case PlayModes.MONO_INTERMEDIATE_LOW:
+                                EventsToProcess.AddRange(routing.SetPlayMono(4, eventOUT));
+                                bMono = EventsToProcess.Count > 0 ? true : false;
+                                break;
+                            case PlayModes.MONO_IN_BETWEEN:
+                                EventsToProcess.AddRange(routing.SetPlayMono(5, eventOUT));
+                                bMono = true;
                                 break;
                             case PlayModes.HARMONY:
                                 var newev = routing.SetHarmony(eventOUT);
@@ -956,7 +1185,7 @@ namespace MidiTools
                             {
                                 Random random = new Random();
 
-                                if (eventOUT.Type == TypeEvent.NOTE_ON && eventOUT.Values[1] > 0)
+                                if (eventOUT.Type == TypeEvent.NOTE_ON)
                                 {
                                     int randomWaitON = random.Next(1, 40);
                                     int randomPB = random.Next(8192 - 400, 8192 + 400);
@@ -1203,6 +1432,7 @@ namespace MidiTools
         private bool MidiTranslator(MatrixItem routing, MidiEvent ev)
         {
             bool bMustTranslate = false;
+            int iPbDirection = -1;
 
             if (routing.DeviceOut != null)
             {
@@ -1325,13 +1555,37 @@ namespace MidiTools
                                 { bMustTranslate = true; }
                             }
                             break;
+                        case TypeEvent.PB:
+                            matchIN = Regex.Match(translate[0], "(\\[)(IN)=(PB#)(\\d{1})(:)(-?\\d{1,4})((-)(-?\\d{1,4}))(\\])");
+                            if (matchIN.Success) //le message arrive entre 0 et 16384
+                            {
+                                string sPB = matchIN.Groups[4].Value;
+                                string sVal1 = matchIN.Groups[6].Value;
+                                string sVal2 = matchIN.Groups[9].Value;
+                                if (sPB.Equals("0")) //up only
+                                {
+                                    if (ev.Values[0] > 0 && ev.Values[0] <= Convert.ToInt32(sVal2 + 8192) && ev.Values[0] >= Convert.ToInt32(sVal1 + 8192))
+                                    { iPbDirection = 0; bMustTranslate = true; }
+                                }
+                                else if (sPB.Equals("1")) //down only
+                                {
+                                    if (ev.Values[0] > 0 && ev.Values[0] <= Convert.ToInt32(sVal2 + 8192) && ev.Values[0] >= Convert.ToInt32(sVal1 + 8192))
+                                    { iPbDirection = 1; bMustTranslate = true; }
+                                }
+                                else //both directions
+                                {
+                                    if (ev.Values[0] <= Convert.ToInt32(sVal2 + 8192) && ev.Values[0] >= Convert.ToInt32(sVal1 + 8192))
+                                    { iPbDirection = 2; bMustTranslate = true; }
+                                }
+                            }
+                            break;
                     }
 
                     if (bMustTranslate)
                     {
                         Match matchOUT = null;
                         //lecture du message OUT qui doit être construit
-                        Match mType = Regex.Match(translate[0], "(\\[)(OUT)=(SYS#|PC#|CC#|KEY#)");
+                        Match mType = Regex.Match(translate[0], "(\\[)(OUT)=(SYS#|PC#|CC#|KEY#|PB#)");
                         if (mType.Success)
                         {
                             switch (mType.Groups[3].Value)
@@ -1354,11 +1608,20 @@ namespace MidiTools
                                     else //valeur IN
                                     {
                                         int iPrgValue = 0;
-                                        if (ev.Type == TypeEvent.NOTE_ON) { iPrgValue = Convert.ToInt32(ev.Values[0]); }
-                                        else if (ev.Type == TypeEvent.CC) { iPrgValue = Convert.ToInt32(ev.Values[1]); }
-                                        else if (ev.Type == TypeEvent.PC) { iPrgValue = Convert.ToInt32(ev.Values[0]); }
-                                        else if (ev.Type == TypeEvent.CH_PRES) { iPrgValue = Convert.ToInt32(ev.Values[0]); }
+                                        if (ev.Type == TypeEvent.NOTE_ON) { iPrgValue = ev.Values[0]; }
+                                        else if (ev.Type == TypeEvent.CC) { iPrgValue = ev.Values[1]; }
+                                        else if (ev.Type == TypeEvent.PC) { iPrgValue = ev.Values[0]; }
+                                        else if (ev.Type == TypeEvent.CH_PRES) { iPrgValue = ev.Values[0]; }
                                         else if (ev.Type == TypeEvent.SYSEX) { iPrgValue = 0; } //absurde.
+                                        else if (ev.Type == TypeEvent.PB)
+                                        {
+                                            if (iPbDirection == 0)
+                                            { iPrgValue = ev.Values[0] / 128; }
+                                            else if (iPbDirection == 1)
+                                            { iPrgValue = ev.Values[0] / 64; }
+                                            else //0=64, 8192=128, -9192=0
+                                            { iPrgValue = (ev.Values[0] + 8192) / 256; }
+                                        }
 
                                         routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 0, Convert.ToInt32(sMsb) }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
                                         routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 32, Convert.ToInt32(sLsb) }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
@@ -1381,11 +1644,20 @@ namespace MidiTools
                                     else //la valeur suit la valeur d'entrée
                                     {
                                         int iCCValue = 0;
-                                        if (ev.Type == TypeEvent.NOTE_ON) { iCCValue = Convert.ToInt32(ev.Values[0]); }
-                                        else if (ev.Type == TypeEvent.CC) { iCCValue = Convert.ToInt32(ev.Values[1]); }
-                                        else if (ev.Type == TypeEvent.PC) { iCCValue = Convert.ToInt32(ev.Values[0]); }
-                                        else if (ev.Type == TypeEvent.CH_PRES) { iCCValue = Convert.ToInt32(ev.Values[0]); }
+                                        if (ev.Type == TypeEvent.NOTE_ON) { iCCValue = ev.Values[0]; }
+                                        else if (ev.Type == TypeEvent.CC) { iCCValue = ev.Values[1]; }
+                                        else if (ev.Type == TypeEvent.PC) { iCCValue = ev.Values[0]; }
+                                        else if (ev.Type == TypeEvent.CH_PRES) { iCCValue = ev.Values[0]; }
                                         else if (ev.Type == TypeEvent.SYSEX) { iCCValue = 0; } //absurde.
+                                        else if (ev.Type == TypeEvent.PB)
+                                        {
+                                            if (iPbDirection == 0)
+                                            { iCCValue = ev.Values[0] / 128; }
+                                            else if (iPbDirection == 1)
+                                            { iCCValue = ev.Values[0] / 64; }
+                                            else //0=64, 8192=128, -9192=0
+                                            { iCCValue = (ev.Values[0] + 8192) / 256; }
+                                        }
 
                                         routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { Convert.ToInt32(sCC), iCCValue }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
                                         _eventsProcessedOUT += 1;
@@ -1423,11 +1695,20 @@ namespace MidiTools
                                         }
                                         else //note fixe MAIS vélocité dépendante de la valeur entrante
                                         {
-                                            if (ev.Type == TypeEvent.NOTE_ON) { iVelo = Convert.ToInt32(ev.Values[0]); }
-                                            else if (ev.Type == TypeEvent.CC) { iVelo = Convert.ToInt32(ev.Values[1]); }
-                                            else if (ev.Type == TypeEvent.PC) { iVelo = Convert.ToInt32(ev.Values[0]); }
-                                            else if (ev.Type == TypeEvent.CH_PRES) { iVelo = Convert.ToInt32(ev.Values[0]); }
+                                            if (ev.Type == TypeEvent.NOTE_ON) { iVelo = ev.Values[0]; }
+                                            else if (ev.Type == TypeEvent.CC) { iVelo = ev.Values[1]; }
+                                            else if (ev.Type == TypeEvent.PC) { iVelo = ev.Values[0]; }
+                                            else if (ev.Type == TypeEvent.CH_PRES) { iVelo = ev.Values[0]; }
                                             else if (ev.Type == TypeEvent.SYSEX) { iVelo = 64; } //absurde.
+                                            else if (ev.Type == TypeEvent.PB)
+                                            {
+                                                if (iPbDirection == 0)
+                                                { iVelo = ev.Values[0] / 128; }
+                                                else if (iPbDirection == 1)
+                                                { iVelo = ev.Values[0] / 64; }
+                                                else //0=64, 8192=128, -9192=0
+                                                { iVelo = (ev.Values[0] + 8192) / 256; }
+                                            }
 
                                             Task.Factory.StartNew(() =>
                                             {
@@ -1444,11 +1725,20 @@ namespace MidiTools
                                         {
                                             iVelo = Convert.ToInt32(sVelo1);
 
-                                            if (ev.Type == TypeEvent.NOTE_ON) { iNote = Convert.ToInt32(ev.Values[0]); }
-                                            else if (ev.Type == TypeEvent.CC) { iNote = Convert.ToInt32(ev.Values[1]); }
-                                            else if (ev.Type == TypeEvent.PC) { iNote = Convert.ToInt32(ev.Values[0]); }
-                                            else if (ev.Type == TypeEvent.CH_PRES) { iNote = Convert.ToInt32(ev.Values[0]); }
+                                            if (ev.Type == TypeEvent.NOTE_ON) { iNote = ev.Values[0]; }
+                                            else if (ev.Type == TypeEvent.CC) { iNote = ev.Values[1]; }
+                                            else if (ev.Type == TypeEvent.PC) { iNote = ev.Values[0]; }
+                                            else if (ev.Type == TypeEvent.CH_PRES) { iNote = ev.Values[0]; }
                                             else if (ev.Type == TypeEvent.SYSEX) { iNote = 64; } //absurde.
+                                            else if (ev.Type == TypeEvent.PB)
+                                            {
+                                                if (iPbDirection == 0)
+                                                { iNote = ev.Values[0] / 128; }
+                                                else if (iPbDirection == 1)
+                                                { iNote = ev.Values[0] / 64; }
+                                                else //0=64, 8192=128, -9192=0
+                                                { iNote = (ev.Values[0] + 8192) / 256; }
+                                            }
 
                                             Task.Factory.StartNew(() =>
                                             {
@@ -1460,11 +1750,20 @@ namespace MidiTools
                                         }
                                         else //note mobile ET vélocité mobile (un peu débile)
                                         {
-                                            if (ev.Type == TypeEvent.NOTE_ON) { iNote = Convert.ToInt32(ev.Values[0]); iVelo = Convert.ToInt32(ev.Values[0]); }
-                                            else if (ev.Type == TypeEvent.CC) { iNote = Convert.ToInt32(ev.Values[1]); iVelo = Convert.ToInt32(ev.Values[1]); }
-                                            else if (ev.Type == TypeEvent.PC) { iNote = Convert.ToInt32(ev.Values[0]); iVelo = Convert.ToInt32(ev.Values[0]); }
-                                            else if (ev.Type == TypeEvent.CH_PRES) { iNote = Convert.ToInt32(ev.Values[0]); iVelo = Convert.ToInt32(ev.Values[0]); } //absurde.
+                                            if (ev.Type == TypeEvent.NOTE_ON) { iNote = ev.Values[0]; iVelo = ev.Values[0]; }
+                                            else if (ev.Type == TypeEvent.CC) { iNote = ev.Values[1]; iVelo = ev.Values[1]; }
+                                            else if (ev.Type == TypeEvent.PC) { iNote = ev.Values[0]; iVelo = ev.Values[0]; }
+                                            else if (ev.Type == TypeEvent.CH_PRES) { iNote = ev.Values[0]; iVelo = ev.Values[0]; } //absurde.
                                             else if (ev.Type == TypeEvent.SYSEX) { iNote = 64; iVelo = 64; } //absurde.
+                                            else if (ev.Type == TypeEvent.PB)
+                                            {
+                                                if (iPbDirection == 0)
+                                                { iNote = ev.Values[0] / 128; iVelo = ev.Values[0] / 128; }
+                                                else if (iPbDirection == 1)
+                                                { iNote = ev.Values[0] / 64; iVelo = ev.Values[0] / 64; }
+                                                else //0=64, 8192=128, -9192=0
+                                                { iNote = (ev.Values[0] + 8192) / 256; iVelo = (ev.Values[0] + 8192) / 256; }
+                                            }
 
                                             Task.Factory.StartNew(() =>
                                             {
@@ -1496,15 +1795,64 @@ namespace MidiTools
                                     else //valeur IN
                                     {
                                         int iATValue = 0;
-                                        if (ev.Type == TypeEvent.NOTE_ON) { iATValue = Convert.ToInt32(ev.Values[0]); }
-                                        else if (ev.Type == TypeEvent.CC) { iATValue = Convert.ToInt32(ev.Values[1]); }
-                                        else if (ev.Type == TypeEvent.PC) { iATValue = Convert.ToInt32(ev.Values[0]); }
-                                        else if (ev.Type == TypeEvent.CH_PRES) { iATValue = Convert.ToInt32(ev.Values[0]); }
+                                        if (ev.Type == TypeEvent.NOTE_ON) { iATValue = ev.Values[0]; }
+                                        else if (ev.Type == TypeEvent.CC) { iATValue = ev.Values[1]; }
+                                        else if (ev.Type == TypeEvent.PC) { iATValue = ev.Values[0]; }
+                                        else if (ev.Type == TypeEvent.CH_PRES) { iATValue = ev.Values[0]; }
                                         else if (ev.Type == TypeEvent.SYSEX) { iATValue = 0; } //absurde.
+                                        else if (ev.Type == TypeEvent.PB)
+                                        {
+                                            if (iPbDirection == 0)
+                                            { iATValue = ev.Values[0] / 128; }
+                                            else if (iPbDirection == 1)
+                                            { iATValue = ev.Values[0] / 64; }
+                                            else //0=64, 8192=128, -9192=0
+                                            { iATValue = (ev.Values[0] + 8192) / 256; }
+                                        }
 
                                         routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CH_PRES, new List<int> { iATValue }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
                                         _eventsProcessedOUT += 1;
                                     }
+                                    break;
+                                case "PB#":
+                                    //[OUT=PB#1:0:8192]
+                                    //[OUT= PB#0:0:8192]
+                                    matchOUT = Regex.Match(translate[0], "(\\[)(OUT)=(PB#)(\\d{1})((:)(\\d{1,4})-(\\d{1,4}))(\\])");
+                                    string sDirection = matchOUT.Groups[2].Value;
+                                    string sPB1 = matchOUT.Groups[4].Value;
+                                    string sPB2 = matchOUT.Groups[7].Value;
+
+                                    int iPBValue = 0;
+                                    if (ev.Type == TypeEvent.NOTE_ON) { iPBValue = ev.Values[0]; }
+                                    else if (ev.Type == TypeEvent.CC) { iPBValue = ev.Values[1]; }
+                                    else if (ev.Type == TypeEvent.PC) { iPBValue = ev.Values[0]; }
+                                    else if (ev.Type == TypeEvent.CH_PRES) { iPBValue = ev.Values[0]; }
+                                    else if (ev.Type == TypeEvent.SYSEX) { iPBValue = 0; } //absurde.
+                                    else if (ev.Type == TypeEvent.PB)
+                                    {
+                                        if (iPbDirection == 0)
+                                        { iPBValue = ev.Values[0] / 128; }
+                                        else if (iPbDirection == 1)
+                                        { iPBValue = ev.Values[0] / 64; }
+                                        else //0=64, 8192=128, -9192=0
+                                        { iPBValue = (ev.Values[0] + 8192) / 256; }
+                                    }
+                                    if (sDirection.Equals("0"))
+                                    {
+                                        iPBValue = iPBValue * 128;
+                                    }
+                                    else if (sDirection.Equals("1"))
+                                    {
+                                        iPBValue = iPBValue * 64;
+                                    }
+                                    else
+                                    {
+                                        iPBValue = iPBValue >= 64 ? iPBValue * 128 : iPBValue * 64;
+                                    }
+
+                                    routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.PB, new List<int> { iPBValue }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
+                                    _eventsProcessedOUT += 1;
+
                                     break;
                             }
                         }

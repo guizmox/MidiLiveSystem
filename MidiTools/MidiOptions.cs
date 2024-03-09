@@ -10,7 +10,10 @@ namespace MidiTools
         AFTERTOUCH = 2,
         MONO_LOW = 3,
         MONO_HIGH = 4,
-        HARMONY = 5
+        MONO_INTERMEDIATE_HIGH = 5,
+        MONO_INTERMEDIATE_LOW = 6,
+        HARMONY = 7,
+        MONO_IN_BETWEEN = 8
     }
 
     public enum Harmony
