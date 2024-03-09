@@ -10,7 +10,8 @@
 
     <Grid Margin="5,5,5,5" >
         <Grid.RowDefinitions>
-            <RowDefinition Height="80*" />
+            <RowDefinition Height="65*" />
+            <RowDefinition Height="15*" />
             <RowDefinition Height="20*" />
         </Grid.RowDefinitions>
         <DockPanel Grid.Row="0">
@@ -125,7 +126,32 @@
             </Grid>
         </DockPanel>
 
-        <Border Grid.Row="1" BorderThickness="1" BorderBrush="Black" />
+        <Border Grid.Row="1" Grid.RowSpan="2" BorderThickness="1" BorderBrush="Black" />
+
+        <StackPanel Grid.Row="2">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="15*"/>
+                    <ColumnDefinition Width="15*"/>
+                    <ColumnDefinition Width="15*"/>
+                    <ColumnDefinition Width="15*"/>
+                    <ColumnDefinition Width="15*"/>
+                    <ColumnDefinition Width="15*"/>
+                    <ColumnDefinition Width="15*"/>
+                    <ColumnDefinition Width="15*"/>
+                </Grid.ColumnDefinitions>
+                <Button x:Name="btnSaveUIState1" FontSize="8" Width="80" Height="20" Grid.Column="0" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState2" FontSize="8" Width="80" Height="20" Grid.Column="1" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState3" FontSize="8" Width="80" Height="20" Grid.Column="2" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState4" FontSize="8" Width="80" Height="20" Grid.Column="3" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState5" FontSize="8" Width="80" Height="20" Grid.Column="4" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState6" FontSize="8" Width="80" Height="20" Grid.Column="5" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState7" FontSize="8" Width="80" Height="20" Grid.Column="6" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState8" FontSize="8" Width="80" Height="20" Grid.Column="7" Content="Save UI State" Click="btnSaveUIState_Click"/>
+            </Grid>
+
+        </StackPanel>
+        
         <StackPanel Grid.Row="1">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -260,6 +286,7 @@
                 </ComboBox>
 
             </Grid>
+
         </StackPanel>
     </Grid>
 </Window>

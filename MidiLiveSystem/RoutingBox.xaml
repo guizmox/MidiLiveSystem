@@ -242,33 +242,37 @@
                             </Grid>
                         </StackPanel>
                         
-                        <StackPanel Name="pnlNoteRange" Grid.Column="1" Grid.ColumnSpan="3" Grid.Row="4" Visibility="Visible" >
+                        <StackPanel Name="pnlNoteRange" Grid.Column="1" Grid.ColumnSpan="4" Grid.Row="4" Visibility="Visible" >
                             <Grid>
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="25*" />
+                                    <ColumnDefinition Width="15*" />
+                                    <ColumnDefinition Width="25*" />
+                                    <ColumnDefinition Width="15*" />
                                     <ColumnDefinition Width="30*" />
-                                    <ColumnDefinition Width="20*" />
-                                    <ColumnDefinition Width="30*" />
-                                    <ColumnDefinition Width="20*" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="Low"/>
                                 <TextBox Name="tbFilterLowNote" Grid.Column="1" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
                                 <TextBlock Grid.Column="2" Text="High"/>
                                 <TextBox Name="tbFilterHighNote" Grid.Column="3" MaxLength="3" Text="127" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                                <CheckBox x:Name="ckTransposeNoteRange" Grid.Column="4" Content="Octaver" />
                             </Grid>
                         </StackPanel>
                         <TextBlock Name="tbVelocityRangeLabel" Grid.Column="0" Grid.Row="5" Text="VELOCITY RANGE"/>
-                        <StackPanel Name="pnlVelocityRange"  Grid.Column="1" Grid.Row="5" Grid.ColumnSpan="3" Visibility="Visible" >
+                        <StackPanel Name="pnlVelocityRange"  Grid.Column="1" Grid.Row="5" Grid.ColumnSpan="4" Visibility="Visible" >
                             <Grid>
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="25*" />
+                                    <ColumnDefinition Width="15*" />
+                                    <ColumnDefinition Width="25*" />
+                                    <ColumnDefinition Width="15*" />
                                     <ColumnDefinition Width="30*" />
-                                    <ColumnDefinition Width="20*" />
-                                    <ColumnDefinition Width="30*" />
-                                    <ColumnDefinition Width="20*" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="Low"/>
                                 <TextBox Name="tbFilterLowVelo" Grid.Column="1" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
                                 <TextBlock Grid.Column="2" Text="High"/>
-                                <TextBox Name="tbFilterHighVelo" Grid.Column="3" MaxLength="3" Text="127" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                                <TextBox Name="tbFilterHighVelo" Grid.Column="3" ToolTip="Checking this will octave-transpose the notes that are below or above the range" MaxLength="3" Text="127" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                                <CheckBox x:Name="ckCompressVelocityRange" ToolTip="Checking this will still play notes that are below or above the valocity range but with the limited velocity" Grid.Column="4" Content="Limiter" />
                             </Grid>
                         </StackPanel>
                         <TextBlock Grid.Column="0" Grid.Row="6" Text="INIT CC VALUES"/>

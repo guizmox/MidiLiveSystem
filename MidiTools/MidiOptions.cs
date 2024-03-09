@@ -25,6 +25,8 @@ namespace MidiTools
     [Serializable]
     public class MidiOptions
     {
+        public bool Active = true;
+
         private int _TranspositionOffset = 0;
 
         private int _VelocityFilterLow = 0;
@@ -87,6 +89,9 @@ namespace MidiTools
                 if (_NoteFilterHigh < _NoteFilterLow) { _NoteFilterHigh = 127; }
             }
         }
+
+        public bool TransposeNoteRange = false;
+        public bool CompressVelocityRange = false;
 
         public NoteGenerator PlayNote;
         public bool PlayNote_LowestNote = false;

@@ -55,6 +55,7 @@ namespace MidiLiveSystem
         public Guid RoutingGuid { get; set; }
         public bool Detached { get; internal set; } = false;
         public int GridPosition = 0;
+        public int CurrentPreset = 1;
 
         public Guid BoxGuid = Guid.NewGuid();
         public string BoxName = "Routing Box";
@@ -203,6 +204,8 @@ namespace MidiLiveSystem
             {
                 int iPreset = Convert.ToInt32(itemNEW.Tag);
                 LoadPreset(Convert.ToInt32(iPreset));
+
+                CurrentPreset = iPreset + 1;
             }
         }
 
@@ -315,6 +318,7 @@ namespace MidiLiveSystem
                 OnUIEvent?.Invoke(BoxGuid, "MUTE", true);
                 tbMute.Background = Brushes.IndianRed;
             }
+            GetOptions();
         }
 
         private void cbChannelMidiOut_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -455,6 +459,7 @@ namespace MidiLiveSystem
         private void btnPreset_Click(object sender, RoutedEventArgs e)
         {
             string sNew = ((Button)sender).Tag.ToString();
+            CurrentPreset = Convert.ToInt32(sNew + 1);
             cbPresetButton.SelectedValue = sNew;
             PresetButtonPushed();
         }
@@ -494,7 +499,6 @@ namespace MidiLiveSystem
 
         public void PresetButtonPushed()
         {
-
             if (pnlInternalGenerator.Visibility == Visibility.Visible)
             {
                 OnUIEvent?.Invoke(BoxGuid, "PLAY_NOTE", GetOptions());
@@ -696,6 +700,14 @@ namespace MidiLiveSystem
 
         private void FillUI(BoxPreset bp, bool bIsFirst)
         {
+            if (bp.MidiOptions.Active)
+            {
+                tbMute.Background = Brushes.DarkGray;
+            }
+            else
+            {
+                tbMute.Background = Brushes.IndianRed;
+            }
             //if (bIsFirst)
             //{
             //    cbMidiIn.IsEnabled = true;
@@ -738,6 +750,9 @@ namespace MidiLiveSystem
             if (!tbFilterLowNote.IsFocused) { tbFilterLowNote.Text = bp.MidiOptions.NoteFilterLow.ToString(); }
             if (!tbFilterHighVelo.IsFocused) { tbFilterHighVelo.Text = bp.MidiOptions.VelocityFilterHigh.ToString(); }
             if (!tbFilterLowVelo.IsFocused) { tbFilterLowVelo.Text = bp.MidiOptions.VelocityFilterLow.ToString(); }
+
+            ckCompressVelocityRange.IsChecked = bp.MidiOptions.CompressVelocityRange;
+            ckTransposeNoteRange.IsChecked = bp.MidiOptions.TransposeNoteRange;
 
             ckAllowAftertouch.IsChecked = bp.MidiOptions.AllowAftertouch;
             ckAllowAllCC.IsChecked = bp.MidiOptions.AllowAllCC;
@@ -863,6 +878,8 @@ namespace MidiLiveSystem
             NumberStyles style = NumberStyles.AllowDecimalPoint | NumberStyles.AllowThousands;
             CultureInfo culture = CultureInfo.InvariantCulture; // ou utilisez la culture appropriée selon vos besoins
 
+            options.Active = tbMute.Background == Brushes.IndianRed ? false : true;
+
             var midiin = cbMidiIn.SelectedValue;
 
             if (midiin != null && midiin.ToString().Equals(Tools.INTERNAL_GENERATOR))
@@ -908,6 +925,9 @@ namespace MidiLiveSystem
                 options.VelocityFilterLow = TextParser(tbFilterLowVelo.Text);
                 tbFilterLowVelo.Text = options.VelocityFilterLow.ToString();
             }
+
+            options.CompressVelocityRange = ckCompressVelocityRange.IsChecked.Value;
+            options.TransposeNoteRange = ckTransposeNoteRange.IsChecked.Value;
 
             options.AllowAftertouch = ckAllowAftertouch.IsChecked.Value;
             options.AllowAllCC = ckAllowAllCC.IsChecked.Value;

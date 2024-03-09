@@ -42,7 +42,6 @@ namespace MidiTools
             }
         }
 
-        internal bool Active { get; set; } = true;
         internal int ChannelIn = 1;
         internal int ChannelOut = 0;
 
@@ -436,15 +435,20 @@ namespace MidiTools
 
                 if (chordType == null)
                 {
-                    //debug pour trouver de nouvelles combinaisons
-                }
-                else
-                {
-                    if (_noteHarmony != Array.LastIndexOf(NotesSentForPanic, true) + chordType.Item2)
+                    if (_noteHarmony > 0)
                     {
+                        //debug pour trouver de nouvelles combinaisons
                         newNotes.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { _noteHarmony, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
                         _noteHarmony = 0;
                     }
+                }
+                else
+                {
+                    //if (_noteHarmony != Array.LastIndexOf(NotesSentForPanic, true) + chordType.Item2)
+                    //{
+                        newNotes.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { _noteHarmony, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
+                        _noteHarmony = 0;
+                    //}
 
                     _harmony = chordType.Item1 ? Harmony.MINOR : Harmony.MAJOR;
 
@@ -913,7 +917,7 @@ namespace MidiTools
 
             if (routingOUT == null)
             {
-                matrix = MidiMatrix.Where(i => i.DeviceOut != null && i.Active && i.DeviceIn != null && i.DeviceIn.Name == ev.Device && Tools.GetChannel(i.ChannelIn) == ev.Channel).ToList();
+                matrix = MidiMatrix.Where(i => i.DeviceOut != null && i.Options.Active && i.DeviceIn != null && i.DeviceIn.Name == ev.Device && Tools.GetChannel(i.ChannelIn) == ev.Channel).ToList();
             }
             else //c'est un message déjà OUT (ne venant pas d'un MIDI IN mais d'une invocation UI)
             {
@@ -1939,10 +1943,13 @@ namespace MidiTools
 
             if (devIN != null && UsedDevicesIN.Count(d => d.Name.Equals(sDeviceIn)) == 0)
             {
-                var device = new MidiDevice(devIN);
-                device.UsedForRouting = true;
-                device.OnMidiEvent += DeviceIn_OnMidiEvent;
-                UsedDevicesIN.Add(device);
+                if (!sDeviceIn.Equals(Tools.INTERNAL_GENERATOR))
+                {
+                    var device = new MidiDevice(devIN);
+                    device.UsedForRouting = true;
+                    device.OnMidiEvent += DeviceIn_OnMidiEvent;
+                    UsedDevicesIN.Add(device);
+                }
             }
             if (devOUT != null && UsedDevicesOUT.Count(d => d.Name.Equals(sDeviceOut)) == 0)
             {
@@ -1956,6 +1963,11 @@ namespace MidiTools
             if (iChIn >= 0 && iChIn <= 16 && iChOut >= 0 && iChOut <= 16)
             {
                 MidiMatrix.Add(new MatrixItem(UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDeviceIn)), UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut)), iChIn, iChOut, options, preset));
+
+                if (sDeviceIn.Equals(Tools.INTERNAL_GENERATOR))
+                {
+                    MidiMatrix.Last().Options.Active = false;
+                }
 
                 CheckAndCloseUnusedDevices();
                 //hyper important d'être à la fin !
@@ -1993,8 +2005,8 @@ namespace MidiTools
 
                 if (bINChanged)
                 {
-                    bool active = routing.Active;
-                    routing.Active = false;
+                    bool active = routing.Options.Active;
+                    routing.Options.Active = false;
 
                     if (!sDeviceIn.Equals(Tools.INTERNAL_GENERATOR))
                     {
@@ -2006,16 +2018,21 @@ namespace MidiTools
                             UsedDevicesIN.Add(device);
                         }
                         routing.DeviceIn = UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDeviceIn));
+                        routing.Options.Active = active;
+                    }
+                    else
+                    {
+                        routing.DeviceIn = null;
                     }
 
-                    routing.Active = active;
+                    routing.Options.Active = active;
 
                     CheckAndCloseUnusedDevices();
                 }
                 if (bOUTChanged)
                 {
-                    bool active = routing.Active;
-                    routing.Active = false;
+                    bool active = routing.Options.Active;
+                    routing.Options.Active = false;
 
                     if (sDeviceOut.Length > 0 && UsedDevicesOUT.Count(d => d.Name.Equals(sDeviceOut)) == 0)
                     {
@@ -2025,11 +2042,11 @@ namespace MidiTools
                         UsedDevicesOUT.Add(device);
 
                         routing.DeviceOut = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut));
-                        routing.Active = active;
+                        routing.Options.Active = active;
                     }
                     else
                     {
-                        routing.Active = active;
+                        routing.Options.Active = active;
                         routing.DeviceOut = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut));
                     }
 
@@ -2061,14 +2078,14 @@ namespace MidiTools
 
             if (routingOn != null)
             {
-                routingOn.Active = true;
+                routingOn.Options.Active = true;
             }
 
             var routingOff = MidiMatrix.Where(m => m.RoutingGuid != routingGuid);
             foreach (var r in routingOff)
             {
                 RemovePendingNotes(r);
-                r.Active = false;
+                r.Options.Active = false;
             }
         }
 
@@ -2078,7 +2095,7 @@ namespace MidiTools
             if (routingOn != null)
             {
                 RemovePendingNotes(routingOn);
-                routingOn.Active = false;
+                routingOn.Options.Active = false;
             }
         }
 
@@ -2087,7 +2104,7 @@ namespace MidiTools
             var routingOff = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
             if (routingOff != null)
             {
-                routingOff.Active = true;
+                routingOff.Options.Active = true;
             }
         }
 
@@ -2095,7 +2112,7 @@ namespace MidiTools
         {
             foreach (var r in MidiMatrix)
             {
-                r.Active = true;
+                r.Options.Active = true;
             }
         }
 

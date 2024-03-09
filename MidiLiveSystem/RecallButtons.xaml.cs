@@ -328,5 +328,48 @@ namespace MidiLiveSystem
                 else if (iValue == 7) { PresetChange(btnRecall8); }
             }
         }
+
+        private void btnSaveUIState_Click(object sender, RoutedEventArgs e)
+        {
+            string sName = ((Button)sender).Name;
+
+            ComboBox cb = null;
+
+            switch (sName)
+            {
+                case "btnSaveUIState1":
+                    cb = cbRecallSet1;
+                    break;
+                case "btnSaveUIState2":
+                    cb = cbRecallSet2;
+                    break;
+                case "btnSaveUIState3":
+                    cb = cbRecallSet3;
+                    break;
+                case "btnSaveUIState4":
+                    cb = cbRecallSet4;
+                    break;
+                case "btnSaveUIState5":
+                    cb = cbRecallSet5;
+                    break;
+                case "btnSaveUIState6":
+                    cb = cbRecallSet6;
+                    break;
+                case "btnSaveUIState7":
+                    cb = cbRecallSet7;
+                    break;
+                case "btnSaveUIState8":
+                    cb = cbRecallSet8;
+                    break;
+            }
+
+            ComboBoxCustomItem cbi = null;
+
+            for (int i = 0; i < Boxes.Count; i++)
+            {
+                cbi = (ComboBoxCustomItem)cb.Items[i];
+                cbi.Value = Boxes[i].CurrentPreset.ToString();
+            }
+        }
     }
 }

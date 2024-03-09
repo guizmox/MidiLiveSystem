@@ -635,7 +635,7 @@ namespace MidiLiveSystem
 
                         Project = project.Item2;
 
-                        Boxes = project.Item3.GetBoxes(Project);
+                        Boxes = project.Item3.GetBoxes(Project, Routing);
 
                         RecordedSequence = project.Item4;
 
@@ -980,7 +980,7 @@ namespace MidiLiveSystem
 
         }
 
-        internal List<RoutingBox> GetBoxes(ProjectConfiguration project)
+        internal List<RoutingBox> GetBoxes(ProjectConfiguration project, MidiRouting routing)
         {
             IEnumerable<Guid> distinctValues = AllPresets.Select(arr => arr.BoxGuid).Distinct();
             List<RoutingBox> boxes = new List<RoutingBox>();
@@ -1003,7 +1003,6 @@ namespace MidiLiveSystem
                     box.BoxGuid = g;
                     box.BoxName = presetsample.BoxName;
                     box.RoutingGuid = presetsample.RoutingGuid;
-                    //box.RoutingGuid = presetsample.RoutingGuid;
                     box.LoadMemory(AllPresets.Where(p => p.BoxGuid == g).ToArray());
                     boxes.Add(box);
                 }

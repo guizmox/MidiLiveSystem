@@ -97,8 +97,33 @@ namespace MidiTools
 
             if (options != null)
             {
-                if (key >= options.NoteFilterLow && key <= options.NoteFilterHigh
-                    && (vel == 0 || (vel >= options.VelocityFilterLow && vel <= options.VelocityFilterHigh))) //attention, la vélocité d'un noteoff est souvent à 0 (dépend des devices mais généralement)
+                if (options.CompressVelocityRange)
+                {
+                    if (vel > options.VelocityFilterHigh)
+                    { vel = options.VelocityFilterHigh; }
+                    else if (vel < options.VelocityFilterLow)
+                    { vel = options.VelocityFilterLow; }
+                }
+
+                if (options.TransposeNoteRange)
+                {
+                    if (key < options.NoteFilterLow)
+                    {
+                        while (key < options.NoteFilterLow)
+                        {
+                            key += 12;
+                        }
+                    }
+                    else if (key > options.NoteFilterHigh)
+                    {
+                        while (key > options.NoteFilterHigh)
+                        {
+                            key -= 12;
+                        }
+                    }
+                }
+
+                if (key >= options.NoteFilterLow && key <= options.NoteFilterHigh && (vel == 0 || (vel >= options.VelocityFilterLow && vel <= options.VelocityFilterHigh))) //attention, la vélocité d'un noteoff est souvent à 0 (dépend des devices mais généralement)
                 {
                     iNote = key + options.TranspositionOffset;
                 }
