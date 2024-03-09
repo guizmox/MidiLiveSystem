@@ -53,7 +53,7 @@ namespace MidiLiveSystem
             TreeViewItem tvi = (TreeViewItem)e.NewValue;
             if (tvi != null)
             {
-                if (!tvi.Tag.ToString().Equals("")) //c'est une catégorie
+                if (tvi.Tag.ToString().IndexOf("-") > -1) //c'est une catégorie
                 {
                     string idx = tvi.Tag.ToString();
                     ChangePreset(idx);
