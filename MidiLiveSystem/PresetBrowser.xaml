@@ -55,8 +55,14 @@
             </Grid>
 
         </StackPanel>
-        
-        <TreeView x:Name="tvPresets" FontSize="14" Grid.Row="2" SelectedValuePath="Tag" SelectedItemChanged="tvPresets_SelectedItemChanged"/>
+
+        <TreeView x:Name="tvPresets" FontSize="14" Grid.Row="2" SelectedValuePath="Tag" SelectedItemChanged="tvPresets_SelectedItemChanged">
+            <TreeView.Resources>
+                <Style TargetType="ScrollBar">
+                    <Setter Property="MinWidth" Value="40"/>
+                </Style>
+            </TreeView.Resources>
+        </TreeView>
         <Label Name="lblCaption"  Grid.Row="0" Content="Select a Preset" FontWeight="Bold" Foreground="Red"/>
 
         <Border Grid.Row="3" BorderThickness="1" BorderBrush="Black"/>

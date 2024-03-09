@@ -9,8 +9,11 @@
         Title="Project Configuration" Height="500" Width="600"
         Closed="Window_Closed" WindowStyle="ToolWindow" ResizeMode="NoResize" WindowStartupLocation="CenterScreen">
 
-
     <Window.Resources>
+        <Style TargetType="ScrollBar">
+            <Setter Property="MinWidth" Value="40"/>
+        </Style>
+        
         <Style TargetType="Label">
             <Setter Property="Foreground" Value="Red"/>
             <!-- Couleur du texte rouge -->

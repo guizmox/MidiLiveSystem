@@ -97,6 +97,8 @@ namespace MidiLiveSystem
             TreeViewItem catFav = new TreeViewItem();
             catFav.Header = "- FAVOURITES -";
             catFav.Tag = "0";
+            catFav.FontWeight = FontWeights.Bold;
+            catFav.Foreground = Brushes.IndianRed;
 
             foreach (var g in instr.Categories)
             {
@@ -107,6 +109,8 @@ namespace MidiLiveSystem
                         TreeViewItem presetItem = new TreeViewItem();
                         presetItem.Header = p.PresetName;
                         presetItem.Tag = p.Id;
+                        presetItem.FontWeight = FontWeights.Normal;
+                        presetItem.Foreground = Brushes.Black;
                         catFav.Items.Add(presetItem);
                     }
                 }
@@ -119,6 +123,8 @@ namespace MidiLiveSystem
                 TreeViewItem categoryItem = new TreeViewItem();
                 categoryItem.Header = g.Category;
                 categoryItem.Tag = g.IndexInFile.ToString();
+                categoryItem.FontWeight = FontWeights.Normal;
+                categoryItem.Foreground = Brushes.DarkBlue;
 
                 //if (g.Category.Equals("Orchestral Woodwinds"))
                 //{
@@ -132,6 +138,8 @@ namespace MidiLiveSystem
                         TreeViewItem presetItem = new TreeViewItem();
                         presetItem.Header = p.PresetName;
                         presetItem.Tag = p.Id;
+                        presetItem.FontWeight = FontWeights.Normal;
+                        presetItem.Foreground = Brushes.Black;
                         categoryItem.Items.Add(presetItem);
                     }
                 }

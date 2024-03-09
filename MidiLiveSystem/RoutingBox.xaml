@@ -19,6 +19,9 @@
             <MenuItem Header="Move To Previous Slot" Tag="MOVE_PREVIOUS" Click="MenuItem_Click"/>
             <MenuItem Header="Help" Tag="HELP" Click="MenuItem_Click"/>
         </ContextMenu>
+        <Style TargetType="ScrollBar">
+            <Setter Property="MinWidth" Value="40"/>
+        </Style>
         <Style x:Key="TabControlHeaderStyle" TargetType="{x:Type TabItem}">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
@@ -277,6 +280,7 @@
                         </StackPanel>
                         <TextBlock Grid.Column="0" Grid.Row="6" Text="INIT CC VALUES"/>
                         <ComboBox Name="cbCCDefaultValues" Grid.ColumnSpan="3"  BorderThickness="0" Grid.Column="1" Grid.Row="6"  SelectedValue="{Binding SelectedItem, Mode=TwoWay}" >
+ 
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
                                     <Grid>

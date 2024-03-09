@@ -8,6 +8,12 @@
         mc:Ignorable="d"
         Title="Recall Buttons" Background="Gray" Height="250" Width="1000" SizeToContent="WidthAndHeight"  WindowStyle="ToolWindow" WindowStartupLocation="CenterScreen" >
 
+    <Window.Resources>
+        <Style TargetType="ScrollBar">
+            <Setter Property="MinWidth" Value="40"/>
+        </Style>
+    </Window.Resources>
+    
     <Grid Margin="5,5,5,5" >
         <Grid.RowDefinitions>
             <RowDefinition Height="65*" />

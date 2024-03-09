@@ -190,7 +190,7 @@ namespace MidiTools
             // Conversion du délai en millisecondes
             double millisecondsPerMIDIClock = microsecondsPerMIDIClock / 1000;
 
-            return (int)millisecondsPerMIDIClock;
+            return (int)Math.Round(millisecondsPerMIDIClock);
         }
     }
 
