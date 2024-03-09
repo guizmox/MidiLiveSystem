@@ -463,7 +463,7 @@ namespace MidiLiveSystem
         private void btnPreset_Click(object sender, RoutedEventArgs e)
         {
             string sNew = ((Button)sender).Tag.ToString();
-            CurrentPreset = Convert.ToInt32(sNew + 1);
+            CurrentPreset = Convert.ToInt32(sNew) + 1;
             cbPresetButton.SelectedValue = sNew;
             PresetButtonPushed();
         }
@@ -721,7 +721,7 @@ namespace MidiLiveSystem
 
             //remplissage des champs
             if (!tbPresetName.IsFocused) { tbPresetName.Text = bp.PresetName; }
-            if (!tbRoutingName.IsFocused) { tbRoutingName.Text = bp.BoxName; }
+            if (!tbRoutingName.IsFocused && bIsFirst) { tbRoutingName.Text = bp.BoxName; }
 
             if (bp.MidiOptions.PlayNote != null)
             {
@@ -865,7 +865,7 @@ namespace MidiLiveSystem
 
         public MidiOptions GetOptions()
         {
-            var options = TempMemory[CurrentPreset - 1].MidiOptions;
+            var options = new MidiOptions();
 
             int iNoteGen = -1;
             int iVeloGen = -1;
