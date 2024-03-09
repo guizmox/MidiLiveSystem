@@ -9,6 +9,7 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -125,7 +126,7 @@ namespace MidiLiveSystem
                 if (i > 0) { cbChannelMidiOut.Items.Add(new ComboBoxItem() { Tag = i, Content = "Ch." + i.ToString() }); }
             }
             cbChannelMidiIn.SelectedIndex = 1;
-            
+
             cbChannelMidiOut.SelectedIndex = 0;
 
             for (int i = 1; i <= 8; i++)
@@ -311,14 +312,17 @@ namespace MidiLiveSystem
             if (tbMute.Background == Brushes.IndianRed)
             {
                 OnUIEvent?.Invoke(BoxGuid, "MUTE", false);
+                TempMemory[CurrentPreset - 1].MidiOptions.Active = true;
+                TempMemory[CurrentPreset - 1].Muted = false;
                 tbMute.Background = Brushes.DarkGray;
             }
             else
             {
                 OnUIEvent?.Invoke(BoxGuid, "MUTE", true);
+                TempMemory[CurrentPreset - 1].MidiOptions.Active = false;
+                TempMemory[CurrentPreset - 1].Muted = true;
                 tbMute.Background = Brushes.IndianRed;
             }
-            GetOptions();
         }
 
         private void cbChannelMidiOut_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -700,14 +704,6 @@ namespace MidiLiveSystem
 
         private void FillUI(BoxPreset bp, bool bIsFirst)
         {
-            if (bp.MidiOptions.Active)
-            {
-                tbMute.Background = Brushes.DarkGray;
-            }
-            else
-            {
-                tbMute.Background = Brushes.IndianRed;
-            }
             //if (bIsFirst)
             //{
             //    cbMidiIn.IsEnabled = true;
@@ -737,10 +733,10 @@ namespace MidiLiveSystem
 
             //if (bIsFirst)
             //{
-                cbMidiIn.SelectedValue = bp.DeviceIn;
-                cbMidiOut.SelectedValue = bp.DeviceOut;
-                cbChannelMidiIn.SelectedValue = bp.ChannelIn;
-                cbChannelMidiOut.SelectedValue = bp.ChannelOut;
+            cbMidiIn.SelectedValue = bp.DeviceIn;
+            cbMidiOut.SelectedValue = bp.DeviceOut;
+            cbChannelMidiIn.SelectedValue = bp.ChannelIn;
+            cbChannelMidiOut.SelectedValue = bp.ChannelOut;
             //}
 
             lbPreset.Text = bp.MidiPreset.PresetName;
@@ -869,7 +865,7 @@ namespace MidiLiveSystem
 
         public MidiOptions GetOptions()
         {
-            var options = new MidiOptions();
+            var options = TempMemory[CurrentPreset - 1].MidiOptions;
 
             int iNoteGen = -1;
             int iVeloGen = -1;
@@ -878,9 +874,9 @@ namespace MidiLiveSystem
             NumberStyles style = NumberStyles.AllowDecimalPoint | NumberStyles.AllowThousands;
             CultureInfo culture = CultureInfo.InvariantCulture; // ou utilisez la culture appropriée selon vos besoins
 
-            options.Active = tbMute.Background == Brushes.IndianRed ? false : true;
-
             var midiin = cbMidiIn.SelectedValue;
+
+            //options.Active = tbMute.Background == Brushes.IndianRed ? false : true;
 
             if (midiin != null && midiin.ToString().Equals(Tools.INTERNAL_GENERATOR))
             {
@@ -1072,11 +1068,36 @@ namespace MidiLiveSystem
                 });
             }
         }
+
+        public void SetMute(bool bMute)
+        {
+            if (bMute)
+            {
+                TempMemory[CurrentPreset - 1].Muted = true;
+                tbMute.Background = Brushes.IndianRed;
+                tbSolo.Background = Brushes.DarkGray;
+            }
+            else
+            {
+                if (TempMemory[CurrentPreset - 1].MidiOptions.Active)
+                {
+                    TempMemory[CurrentPreset - 1].Muted = false;
+                    tbMute.Background = Brushes.DarkGray;
+                }
+                else
+                {
+                    TempMemory[CurrentPreset - 1].Muted = true;
+                    tbMute.Background = Brushes.IndianRed;
+                }
+                tbSolo.Background = Brushes.DarkGray;
+            }
+        }
     }
 
     [Serializable]
     public class BoxPreset
     {
+        internal bool Muted = false;
         public Guid RoutingGuid { get; set; } = Guid.Empty;
         public Guid BoxGuid { get; set; } = Guid.Empty;
         public string BoxName { get; set; } = "Routing Name";

@@ -14,6 +14,7 @@ namespace MidiTools
         public int Lsb = 0;
         public string PresetName = "";
         public int Channel = 1;
+        public bool IsFavourite = false;
 
         public string Id { get { return string.Concat(Prg, "-", Msb, "-", Lsb); } }
 

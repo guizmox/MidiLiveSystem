@@ -279,6 +279,7 @@ namespace MidiLiveSystem
                     AddAllRoutingBoxes();
                 }
                 Project = config;
+                SaveTemplate();
 
                 //rename des box
                 if (config.BoxNames != null)
@@ -414,10 +415,19 @@ namespace MidiLiveSystem
                             if ((bool)sValue)
                             {
                                 Routing.SetSolo(box.RoutingGuid);
+                                box.SetMute(false);
+                                foreach (var b in Boxes.Where(b => !b.BoxGuid.Equals(box.BoxGuid)))
+                                {
+                                    b.SetMute(true);
+                                }
                             }
                             else
                             {
                                 Routing.UnmuteAllRouting();
+                                foreach (var b in Boxes.Where(b => !b.BoxGuid.Equals(box.BoxGuid)))
+                                {
+                                    b.SetMute(false);
+                                }
                             }
                         }
                         break;
@@ -599,6 +609,7 @@ namespace MidiLiveSystem
             if (Boxes.Count > 0)
             {
                 SaveTemplate();
+                if (RecallWindow != null) { RecallWindow.SaveRecallsToProject(); }
 
                 try
                 {
@@ -965,8 +976,8 @@ namespace MidiLiveSystem
                                            box.GetOptions(), box.GetPreset());
 
                 }
-                Routing.SetClock(Project.ClockActivated, Project.BPM, Project.ClockDevice);
             }
+            Routing.SetClock(Project.ClockActivated, Project.BPM, Project.ClockDevice);
         }
     }
 

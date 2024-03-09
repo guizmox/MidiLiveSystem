@@ -51,6 +51,9 @@ namespace MidiTools
         internal MidiOptions Options { get; set; } = new MidiOptions();
         internal MidiDevice DeviceIn;
         internal MidiDevice DeviceOut;
+
+        internal bool TempMuted = false; //utilisé pour muter provisoirement le routing à partir de l'UI
+
         internal MidiPreset Preset { get; set; }
         internal Guid RoutingGuid { get; private set; }
 
@@ -789,7 +792,7 @@ namespace MidiTools
 
             MidiClock = new System.Timers.Timer();
             MidiClock.Elapsed += MidiClock_OnEvent;
-            MidiClock.Interval = 60000.0 / 120; //valeur par défaut
+            MidiClock.Interval = Tools.GetMidiClockInterval(ClockBPM); //valeur par défaut
 
             InstrumentData.OnSysExInitializerChanged += InstrumentData_OnSysExInitializerChanged;
         }
@@ -2078,6 +2081,7 @@ namespace MidiTools
 
             if (routingOn != null)
             {
+                routingOn.TempMuted = routingOn.Options.Active;
                 routingOn.Options.Active = true;
             }
 
@@ -2085,7 +2089,9 @@ namespace MidiTools
             foreach (var r in routingOff)
             {
                 RemovePendingNotes(r);
+                r.TempMuted = r.Options.Active;
                 r.Options.Active = false;
+
             }
         }
 
@@ -2095,6 +2101,7 @@ namespace MidiTools
             if (routingOn != null)
             {
                 RemovePendingNotes(routingOn);
+                routingOn.TempMuted = routingOn.Options.Active;
                 routingOn.Options.Active = false;
             }
         }
@@ -2104,7 +2111,7 @@ namespace MidiTools
             var routingOff = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
             if (routingOff != null)
             {
-                routingOff.Options.Active = true;
+                routingOff.Options.Active = routingOff.TempMuted;
             }
         }
 
@@ -2112,7 +2119,7 @@ namespace MidiTools
         {
             foreach (var r in MidiMatrix)
             {
-                r.Options.Active = true;
+                r.Options.Active = r.TempMuted;
             }
         }
 
@@ -2320,6 +2327,7 @@ namespace MidiTools
             if (bChanged)
             {
                 MidiClock.Stop(); //coupure de l'horloge interne
+                MidiClock.Enabled = false;
 
                 foreach (var device in UsedDevicesIN)  //coupure des horloges externes
                 {
@@ -2329,9 +2337,18 @@ namespace MidiTools
 
                 if (bActivated)
                 {
-                    var masterdevice = UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDevice));
-                    masterdevice.EnableClock();
-                    masterdevice.OnMidiClockEvent += MidiClock_OnEvent;
+                    if (sDevice.Equals(Tools.INTERNAL_GENERATOR))
+                    {
+                        MidiClock.Interval = Tools.GetMidiClockInterval(iBPM); //valeur par défaut
+                        MidiClock.Start(); //coupure de l'horloge interne
+                        MidiClock.Enabled = true;
+                    }
+                    else
+                    {
+                        var masterdevice = UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDevice));
+                        masterdevice.EnableClock();
+                        masterdevice.OnMidiClockEvent += MidiClock_OnEvent;
+                    }
                 }
             }
 

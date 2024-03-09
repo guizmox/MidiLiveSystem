@@ -68,11 +68,14 @@ namespace MidiLiveSystem
 
         private void tbPrg_SelectionChanged(object sender, RoutedEventArgs e)
         {
-            if (tbPrg != null && tbMsb != null & tbLsb != null && InstrumentPresets != null)
+            if (InstrumentPresets != null)
             {
-                if (tbPrg.IsFocused || tbMsb.IsFocused || tbLsb.IsFocused)
+                if (tbPrg != null && tbMsb != null & tbLsb != null)
                 {
-                    FilterTreeViewByPrg(tbPrg.Text.Trim(), tbMsb.Text.Trim(), tbLsb.Text.Trim());
+                    if (tbPrg.IsFocused || tbMsb.IsFocused || tbLsb.IsFocused)
+                    {
+                        FilterTreeViewByPrg(tbPrg.Text.Trim(), tbMsb.Text.Trim(), tbLsb.Text.Trim());
+                    }
                 }
             }
         }
@@ -90,6 +93,25 @@ namespace MidiLiveSystem
             string sL2 = "";
             string sL3 = "";
             string sL4 = "";
+
+            TreeViewItem catFav = new TreeViewItem();
+            catFav.Header = "- FAVOURITES -";
+            catFav.Tag = "0";
+
+            foreach (var g in instr.Categories)
+            {
+                foreach (var p in g.Presets)
+                {
+                    if (p.IsFavourite)
+                    {
+                        TreeViewItem presetItem = new TreeViewItem();
+                        presetItem.Header = p.PresetName;
+                        presetItem.Tag = p.Id;
+                        catFav.Items.Add(presetItem);
+                    }
+                }
+            }
+            tvPresets.Items.Add(catFav);
 
             foreach (var g in instr.Categories)
             {
@@ -176,6 +198,7 @@ namespace MidiLiveSystem
                 tbLsb.Text = mp.Lsb.ToString();
                 tbPrg.Text = mp.Prg.ToString();
                 tbName.Text = mp.PresetName.ToString();
+                ckSetFavorite.IsChecked = mp.IsFavourite;
                 OnPresetChanged?.Invoke(mp);
             }
         }
@@ -222,46 +245,49 @@ namespace MidiLiveSystem
 
         private void FilterTreeViewByString(string filterText)
         {
-            if (string.IsNullOrWhiteSpace(filterText))
+            if (InstrumentPresets != null)
             {
-                PopulateHierarchyTree(InstrumentPresets);
-            }
-            else
-            {
-                var filter = new InstrumentData();
-                filter.CubaseFile = InstrumentPresets.CubaseFile;
-                filter.Device = InstrumentPresets.Device;
-                foreach (PresetHierarchy category in InstrumentPresets.Categories)
+                if (string.IsNullOrWhiteSpace(filterText))
                 {
-                    PresetHierarchy cat = new PresetHierarchy();
-                    cat.IndexInFile = category.IndexInFile;
-                    cat.Category = category.Category;
-                    cat.Level = 1;
-                    cat.Raw = category.Raw;
-                    cat.Presets = new List<MidiPreset>();
-
-                    foreach (var preset in category.Presets)
+                    PopulateHierarchyTree(InstrumentPresets);
+                }
+                else
+                {
+                    var filter = new InstrumentData();
+                    filter.CubaseFile = InstrumentPresets.CubaseFile;
+                    filter.Device = InstrumentPresets.Device;
+                    foreach (PresetHierarchy category in InstrumentPresets.Categories)
                     {
-                        if (preset.PresetName.Contains(filterText.Trim(), StringComparison.InvariantCultureIgnoreCase))
-                        {
-                            MidiPreset p = new MidiPreset();
-                            p.PresetName = preset.PresetName;
-                            p.Prg = preset.Prg;
-                            p.Lsb = preset.Lsb;
-                            p.Msb = preset.Msb;
-                            p.InstrumentGroup = preset.InstrumentGroup;
-                            p.Channel = preset.Channel;
+                        PresetHierarchy cat = new PresetHierarchy();
+                        cat.IndexInFile = category.IndexInFile;
+                        cat.Category = category.Category;
+                        cat.Level = 1;
+                        cat.Raw = category.Raw;
+                        cat.Presets = new List<MidiPreset>();
 
-                            cat.Presets.Add(p);
+                        foreach (var preset in category.Presets)
+                        {
+                            if (preset.PresetName.Contains(filterText.Trim(), StringComparison.InvariantCultureIgnoreCase))
+                            {
+                                MidiPreset p = new MidiPreset();
+                                p.PresetName = preset.PresetName;
+                                p.Prg = preset.Prg;
+                                p.Lsb = preset.Lsb;
+                                p.Msb = preset.Msb;
+                                p.InstrumentGroup = preset.InstrumentGroup;
+                                p.Channel = preset.Channel;
+
+                                cat.Presets.Add(p);
+                            }
+                        }
+
+                        if (cat.Presets.Count > 0)
+                        {
+                            filter.Categories.Add(cat);
                         }
                     }
-
-                    if (cat.Presets.Count > 0)
-                    {
-                        filter.Categories.Add(cat);
-                    }
+                    PopulateHierarchyTree(filter);
                 }
-                PopulateHierarchyTree(filter);
             }
         }
 
@@ -298,5 +324,27 @@ namespace MidiLiveSystem
             OnPresetChanged?.Invoke(mp);
         }
 
+        private void ckSetFavorite_Click(object sender, RoutedEventArgs e)
+        {
+            if (InstrumentPresets != null)
+            {
+                if (tvPresets.SelectedValue.ToString().IndexOf("-") > -1) //c'est une catégorie
+                {
+                    if (!((CheckBox)sender).IsChecked.Value)
+                    {
+                        string idx = tvPresets.SelectedValue.ToString();
+                        MidiPreset p = InstrumentPresets.GetPreset(idx);
+                        p.IsFavourite = false;
+                    }
+                    else
+                    {
+                        string idx = tvPresets.SelectedValue.ToString();
+                        MidiPreset p = InstrumentPresets.GetPreset(idx);
+                        p.IsFavourite = true;
+                    }
+                    PopulateHierarchyTree(InstrumentPresets);
+                }
+            }
+        }
     }
 }

@@ -176,6 +176,22 @@ namespace MidiTools
 
             return list;
         }
+
+        internal static int GetMidiClockInterval(int iTempo)
+        {
+
+            // Nombre de MIDI Clocks par quart de note
+            int midiClocksPerQuarterNote = 24;
+
+            // Calcul du délai entre chaque MIDI Clock en microsecondes
+            double microsecondsPerQuarterNote = 60000000.0 / iTempo;
+            double microsecondsPerMIDIClock = microsecondsPerQuarterNote / midiClocksPerQuarterNote;
+
+            // Conversion du délai en millisecondes
+            double millisecondsPerMIDIClock = microsecondsPerMIDIClock / 1000;
+
+            return (int)millisecondsPerMIDIClock;
+        }
     }
 
 }

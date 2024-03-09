@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:MidiLiveSystem"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
-        Title="Recall Buttons" Background="Gray" Height="150" Width="Auto" SizeToContent="Width"  WindowStyle="ToolWindow" WindowStartupLocation="CenterScreen" >
+        Title="Recall Buttons" Background="Gray" Height="250" Width="1000" SizeToContent="WidthAndHeight"  WindowStyle="ToolWindow" WindowStartupLocation="CenterScreen" >
 
     <Grid Margin="5,5,5,5" >
         <Grid.RowDefinitions>
@@ -27,7 +27,7 @@
                     <ColumnDefinition Width="12*"/>
                 </Grid.ColumnDefinitions>
 
-                <Button Name="btnRecall1" Height="Auto" Width="Auto"  Grid.Column="0" Background="CadetBlue" Click="btnPreset_Click" >
+                <Button Name="btnRecall1" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="0" Background="CadetBlue" Click="btnPreset_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -39,7 +39,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnRecall2" Height="Auto" Width="Auto" Grid.Column="1" Background="CadetBlue" Click="btnPreset_Click" >
+                <Button Name="btnRecall2" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="1" Background="CadetBlue" Click="btnPreset_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -51,7 +51,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnRecall3" Height="Auto" Width="Auto" Grid.Column="2" Background="CadetBlue" Click="btnPreset_Click" >
+                <Button Name="btnRecall3" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="2" Background="CadetBlue" Click="btnPreset_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -63,7 +63,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnRecall4" Height="Auto" Width="Auto" Grid.Column="3" Background="CadetBlue" Click="btnPreset_Click" >
+                <Button Name="btnRecall4" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="3" Background="CadetBlue" Click="btnPreset_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -75,7 +75,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnRecall5" Height="Auto" Width="Auto" Grid.Column="4" Background="CadetBlue" Click="btnPreset_Click" >
+                <Button Name="btnRecall5" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="4" Background="CadetBlue" Click="btnPreset_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -87,7 +87,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnRecall6" Height="Auto" Width="Auto" Grid.Column="5" Background="CadetBlue" Click="btnPreset_Click" >
+                <Button Name="btnRecall6" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="5" Background="CadetBlue" Click="btnPreset_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -99,7 +99,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnRecall7" Height="Auto" Width="Auto" Grid.Column="6" Background="CadetBlue" Click="btnPreset_Click" >
+                <Button Name="btnRecall7" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="6" Background="CadetBlue" Click="btnPreset_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -111,7 +111,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnRecall8" Height="Auto" Width="Auto"  Grid.Column="7" Background="CadetBlue" Click="btnPreset_Click" >
+                <Button Name="btnRecall8" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="7" Background="CadetBlue" Click="btnPreset_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -129,7 +129,7 @@
         <Border Grid.Row="1" Grid.RowSpan="2" BorderThickness="1" BorderBrush="Black" />
 
         <StackPanel Grid.Row="2">
-            <Grid>
+            <Grid >
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="15*"/>
                     <ColumnDefinition Width="15*"/>
@@ -140,14 +140,14 @@
                     <ColumnDefinition Width="15*"/>
                     <ColumnDefinition Width="15*"/>
                 </Grid.ColumnDefinitions>
-                <Button x:Name="btnSaveUIState1" FontSize="8" Width="80" Height="20" Grid.Column="0" Content="Save UI State" Click="btnSaveUIState_Click"/>
-                <Button x:Name="btnSaveUIState2" FontSize="8" Width="80" Height="20" Grid.Column="1" Content="Save UI State" Click="btnSaveUIState_Click"/>
-                <Button x:Name="btnSaveUIState3" FontSize="8" Width="80" Height="20" Grid.Column="2" Content="Save UI State" Click="btnSaveUIState_Click"/>
-                <Button x:Name="btnSaveUIState4" FontSize="8" Width="80" Height="20" Grid.Column="3" Content="Save UI State" Click="btnSaveUIState_Click"/>
-                <Button x:Name="btnSaveUIState5" FontSize="8" Width="80" Height="20" Grid.Column="4" Content="Save UI State" Click="btnSaveUIState_Click"/>
-                <Button x:Name="btnSaveUIState6" FontSize="8" Width="80" Height="20" Grid.Column="5" Content="Save UI State" Click="btnSaveUIState_Click"/>
-                <Button x:Name="btnSaveUIState7" FontSize="8" Width="80" Height="20" Grid.Column="6" Content="Save UI State" Click="btnSaveUIState_Click"/>
-                <Button x:Name="btnSaveUIState8" FontSize="8" Width="80" Height="20" Grid.Column="7" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState1" Margin="2,2,2,2" FontSize="8" Grid.Column="0" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState2" Margin="2,2,2,2" FontSize="8" Grid.Column="1" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState3" Margin="2,2,2,2" FontSize="8" Grid.Column="2" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState4" Margin="2,2,2,2" FontSize="8" Grid.Column="3" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState5" Margin="2,2,2,2" FontSize="8" Grid.Column="4" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState6" Margin="2,2,2,2" FontSize="8" Grid.Column="5" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState7" Margin="2,2,2,2" FontSize="8" Grid.Column="6" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState8" Margin="2,2,2,2" FontSize="8" Grid.Column="7" Content="Save UI State" Click="btnSaveUIState_Click"/>
             </Grid>
 
         </StackPanel>

@@ -30,43 +30,45 @@
         <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="5,5,5,5" >
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="10*"/>
-                    <ColumnDefinition Width="90*"/>
+                    <ColumnDefinition Width="8*"/>
+                    <ColumnDefinition Width="17*"/>
+                    <ColumnDefinition Width="8*"/>
+                    <ColumnDefinition Width="8*"/>
+                    <ColumnDefinition Width="8*"/>
+                    <ColumnDefinition Width="8*"/>
+                    <ColumnDefinition Width="8*"/>
+                    <ColumnDefinition Width="8*"/>
+                    <ColumnDefinition Width="8*"/>
+                    <ColumnDefinition Width="30*"/>
                 </Grid.ColumnDefinitions>
                 <Label Grid.Column="0" Content="Filter :"/>
                 <TextBox x:Name="tbFilterTextBox" Background="LightGray" Grid.Column="1" Text="" Width="200" HorizontalAlignment="Left" TextChanged="FilterTextBox_TextChanged" />
+               
+                <Label Grid.Column="2" Content="LSB :" VerticalAlignment="Center"/>
+                <TextBox Name="tbLsb" Grid.Column="3" MaxLength="3" Text="" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed" SelectionChanged="tbPrg_SelectionChanged" />
+                <Label Grid.Column="4" Content="MSB :" VerticalAlignment="Center"/>
+                <TextBox Name="tbMsb" Grid.Column="5" MaxLength="3" Text="" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed" SelectionChanged="tbPrg_SelectionChanged" />
+                <Label Grid.Column="6" Content="PRG :" VerticalAlignment="Center"/>
+                <TextBox Name="tbPrg" Grid.Column="7" MaxLength="3" Text="" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed" SelectionChanged="tbPrg_SelectionChanged" />
+                <Label Grid.Column="8" Content="NAME :" VerticalAlignment="Center"/>
+                <TextBox Name="tbName" Text="Preset Name" Grid.Column="9" MaxLength="30" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
             </Grid>
 
         </StackPanel>
         
-        <TreeView x:Name="tvPresets" FontSize="14" Grid.Row="2" SelectedItemChanged="tvPresets_SelectedItemChanged"/>
+        <TreeView x:Name="tvPresets" FontSize="14" Grid.Row="2" SelectedValuePath="Tag" SelectedItemChanged="tvPresets_SelectedItemChanged"/>
         <Label Name="lblCaption"  Grid.Row="0" Content="Select a Preset" FontWeight="Bold" Foreground="Red"/>
 
         <Border Grid.Row="3" BorderThickness="1" BorderBrush="Black"/>
         <StackPanel Grid.Column="0" Grid.Row="3" Margin="5,5,5,5" VerticalAlignment="Center" Background="LightGray" >
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="10*" />
-                    <ColumnDefinition Width="6*" />
-                    <ColumnDefinition Width="5*" />
-                    <ColumnDefinition Width="6*" />
-                    <ColumnDefinition Width="5*" />
-                    <ColumnDefinition Width="6*" />
-                    <ColumnDefinition Width="5*" />
-                    <ColumnDefinition Width="8*" />
-                    <ColumnDefinition Width="26*" />
-                    <ColumnDefinition Width="10*" />
+                    <ColumnDefinition Width="30*" />
+                    <ColumnDefinition Width="30*" />
+                    <ColumnDefinition Width="30*" />
                 </Grid.ColumnDefinitions>
                 <Label Name="lblPresetInfo" Grid.Column="0"  Content="Data :" Foreground="Red" VerticalAlignment="Center"/>
-                <Label Grid.Column="1" Content="LSB :" VerticalAlignment="Center"/>
-                <TextBox Name="tbLsb" Grid.Column="2" MaxLength="3" Text="" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed" SelectionChanged="tbPrg_SelectionChanged" />
-                <Label Grid.Column="3" Content="MSB :" VerticalAlignment="Center"/>
-                <TextBox Name="tbMsb" Grid.Column="4" MaxLength="3" Text="" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed" SelectionChanged="tbPrg_SelectionChanged" />
-                <Label Grid.Column="5" Content="PRG :" VerticalAlignment="Center"/>
-                <TextBox Name="tbPrg" Grid.Column="6" MaxLength="3" Text="" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed" SelectionChanged="tbPrg_SelectionChanged" />
-                <Label Grid.Column="7" Content="NAME :" VerticalAlignment="Center"/>
-                <TextBox Name="tbName" Text="Preset Name" Grid.Column="8" MaxLength="30" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-
+                <CheckBox x:Name="ckSetFavorite" Grid.Column="1" Content="Add to favourites category" Click="ckSetFavorite_Click"/>
                 <Button Name="btnClose" Grid.Row="3" Grid.Column="9" Content="OK" Width="50" Margin="5,0,5,0" HorizontalAlignment="Right" Click="btnClose_Click" />
             </Grid>
         </StackPanel>
