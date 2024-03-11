@@ -244,7 +244,6 @@ namespace MidiLiveSystem
             gdButtons.Children.Add(rtbButton);
         }
 
-
         private int[] TranscodePanVolumeToGrid(RoutingBox box)
         {
             MidiOptions opt = box.GetOptions();

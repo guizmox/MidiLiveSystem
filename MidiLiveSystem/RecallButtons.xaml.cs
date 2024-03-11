@@ -368,7 +368,7 @@ namespace MidiLiveSystem
             for (int i = 0; i < Boxes.Count; i++)
             {
                 cbi = (ComboBoxCustomItem)cb.Items[i];
-                cbi.Value = Boxes[i].CurrentPreset.ToString();
+                cbi.Value = (Boxes[i].CurrentPreset + 1).ToString();
             }
         }
     }

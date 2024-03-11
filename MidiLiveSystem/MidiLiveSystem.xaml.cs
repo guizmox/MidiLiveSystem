@@ -412,13 +412,13 @@ namespace MidiLiveSystem
                     case "SOLO":
                         if (box.RoutingGuid != Guid.Empty)
                         {
+                            SaveTemplate();
                             if ((bool)sValue)
                             {
                                 Routing.SetSolo(box.RoutingGuid);
-                                box.SetMute(false);
                                 foreach (var b in Boxes.Where(b => !b.BoxGuid.Equals(box.BoxGuid)))
                                 {
-                                    b.SetMute(true);
+                                    b.SetMute(true, false);
                                 }
                             }
                             else
@@ -426,7 +426,7 @@ namespace MidiLiveSystem
                                 Routing.UnmuteAllRouting();
                                 foreach (var b in Boxes.Where(b => !b.BoxGuid.Equals(box.BoxGuid)))
                                 {
-                                    b.SetMute(false);
+                                    b.SetMute(false, Routing.GetActiveStatus(b.RoutingGuid));
                                 }
                             }
                         }
@@ -453,7 +453,8 @@ namespace MidiLiveSystem
                             Routing.ModifyRouting(box.RoutingGuid, sDevIn, sDevOut,
                                                    Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
                                                    Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
-                                                   box.GetOptions(), box.GetPreset());
+                                                   (MidiOptions)sValue, box.GetPreset());
+
                             Routing.SendNote(box.RoutingGuid, ((MidiOptions)sValue).PlayNote);
                         }
                         break;
@@ -466,7 +467,7 @@ namespace MidiLiveSystem
                             Routing.ModifyRouting(box.RoutingGuid, sDevIn, sDevOut,
                                                    Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
                                                    Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
-                                                   box.GetOptions(), box.GetPreset());
+                                                   box.GetOptions(), (MidiPreset)sValue);
                         }
                         break;
                     case "COPY_PRESET":
@@ -494,7 +495,7 @@ namespace MidiLiveSystem
                             });
                         }
 
-                        SaveTemplate(); //pour obtenir une version propre de ce qui a été saisi et enregistré sur les box
+                        //SaveTemplate(); //pour obtenir une version propre de ce qui a été saisi et enregistré sur les box
                         break;
                 }
             }

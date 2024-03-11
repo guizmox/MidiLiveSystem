@@ -52,7 +52,7 @@ namespace MidiTools
         internal MidiDevice DeviceIn;
         internal MidiDevice DeviceOut;
 
-        internal bool TempMuted = false; //utilisé pour muter provisoirement le routing à partir de l'UI
+        internal bool TempActive = false; //utilisé pour muter provisoirement le routing à partir de l'UI
 
         internal MidiPreset Preset { get; set; }
         internal Guid RoutingGuid { get; private set; }
@@ -1253,7 +1253,7 @@ namespace MidiTools
 
         }
 
-        void ChangeOptions(MatrixItem routing, MidiOptions newop, bool bInit)
+        private void ChangeOptions(MatrixItem routing, MidiOptions newop, bool bInit)
         {
             bool bChanges = false;
 
@@ -2081,7 +2081,7 @@ namespace MidiTools
 
             if (routingOn != null)
             {
-                routingOn.TempMuted = routingOn.Options.Active;
+                routingOn.TempActive = routingOn.Options.Active;
                 routingOn.Options.Active = true;
             }
 
@@ -2089,9 +2089,8 @@ namespace MidiTools
             foreach (var r in routingOff)
             {
                 RemovePendingNotes(r);
-                r.TempMuted = r.Options.Active;
+                r.TempActive = r.Options.Active;
                 r.Options.Active = false;
-
             }
         }
 
@@ -2101,7 +2100,7 @@ namespace MidiTools
             if (routingOn != null)
             {
                 RemovePendingNotes(routingOn);
-                routingOn.TempMuted = routingOn.Options.Active;
+                routingOn.TempActive = true;
                 routingOn.Options.Active = false;
             }
         }
@@ -2111,7 +2110,8 @@ namespace MidiTools
             var routingOff = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
             if (routingOff != null)
             {
-                routingOff.Options.Active = routingOff.TempMuted;
+                routingOff.TempActive = false;
+                routingOff.Options.Active = true;
             }
         }
 
@@ -2119,7 +2119,7 @@ namespace MidiTools
         {
             foreach (var r in MidiMatrix)
             {
-                r.Options.Active = r.TempMuted;
+                r.Options.Active = r.TempActive;
             }
         }
 
@@ -2418,6 +2418,16 @@ namespace MidiTools
                 exists.CloseDevice();
                 UsedDevicesIN.Remove(exists);
             }
+        }
+
+        public bool GetActiveStatus(Guid routingGuid)
+        {
+            var routing = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
+            if (routing != null)
+            {
+                return routing.Options.Active;
+            }
+            else { return true; }
         }
 
         #endregion

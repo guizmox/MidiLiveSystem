@@ -204,9 +204,8 @@ namespace MidiLiveSystem
             if (itemNEW != null)
             {
                 int iPreset = Convert.ToInt32(itemNEW.Tag);
-                LoadPreset(Convert.ToInt32(iPreset));
-
-                CurrentPreset = iPreset + 1;
+                CurrentPreset = iPreset;
+                PresetButtonPushed();
             }
         }
 
@@ -311,16 +310,14 @@ namespace MidiLiveSystem
         {
             if (tbMute.Background == Brushes.IndianRed)
             {
+                TempMemory[CurrentPreset].MidiOptions.Active = true;
                 OnUIEvent?.Invoke(BoxGuid, "MUTE", false);
-                TempMemory[CurrentPreset - 1].MidiOptions.Active = true;
-                TempMemory[CurrentPreset - 1].Muted = false;
                 tbMute.Background = Brushes.DarkGray;
             }
             else
             {
+                TempMemory[CurrentPreset].MidiOptions.Active = false;
                 OnUIEvent?.Invoke(BoxGuid, "MUTE", true);
-                TempMemory[CurrentPreset - 1].MidiOptions.Active = false;
-                TempMemory[CurrentPreset - 1].Muted = true;
                 tbMute.Background = Brushes.IndianRed;
             }
         }
@@ -462,10 +459,7 @@ namespace MidiLiveSystem
 
         private void btnPreset_Click(object sender, RoutedEventArgs e)
         {
-            string sNew = ((Button)sender).Tag.ToString();
-            CurrentPreset = Convert.ToInt32(sNew) + 1;
-            cbPresetButton.SelectedValue = sNew;
-            PresetButtonPushed();
+            cbPresetButton.SelectedIndex = Convert.ToInt32(((Button)sender).Tag);
         }
 
         private void btnCopyPreset_Click(object sender, RoutedEventArgs e)
@@ -505,10 +499,12 @@ namespace MidiLiveSystem
         {
             if (pnlInternalGenerator.Visibility == Visibility.Visible)
             {
+                LoadPreset(CurrentPreset);
                 OnUIEvent?.Invoke(BoxGuid, "PLAY_NOTE", GetOptions());
             }
             else
             {
+                LoadPreset(CurrentPreset);
                 OnUIEvent?.Invoke(BoxGuid, "PRESET_CHANGE", GetPreset());
             }
         }
@@ -672,13 +668,8 @@ namespace MidiLiveSystem
         public void Snapshot()
         {
             var bp = MemCurrentPreset();
-            var item = (ComboBoxItem)cbPresetButton.SelectedItem;
-            if (item != null)
-            {
-                int idxOut = Convert.ToInt32(item.Tag.ToString());
-                TempMemory[idxOut] = bp;
-                LoadPreset(idxOut);
-            }
+            TempMemory[CurrentPreset] = bp;
+            LoadPreset(CurrentPreset);
         }
 
         private BoxPreset MemCurrentPreset()
@@ -718,6 +709,7 @@ namespace MidiLiveSystem
             //    cbChannelMidiIn.IsEnabled = false;
             //    cbChannelMidiOut.IsEnabled = false;
             //}
+            tbMute.Background = bp.MidiOptions.Active ? Brushes.DarkGray : Brushes.IndianRed;
 
             //remplissage des champs
             if (!tbPresetName.IsFocused) { tbPresetName.Text = bp.PresetName; }
@@ -866,6 +858,11 @@ namespace MidiLiveSystem
         public MidiOptions GetOptions()
         {
             var options = new MidiOptions();
+
+            options.Active = tbMute.Background == Brushes.IndianRed ? false : true;
+            //options.Active = .Active;
+
+            //options.Active = tbMute.Background == Brushes.IndianRed ? false : true;
 
             int iNoteGen = -1;
             int iVeloGen = -1;
@@ -1069,24 +1066,21 @@ namespace MidiLiveSystem
             }
         }
 
-        public void SetMute(bool bMute)
+        public void SetMute(bool bMute, bool bActiveState)
         {
             if (bMute)
             {
-                TempMemory[CurrentPreset - 1].Muted = true;
                 tbMute.Background = Brushes.IndianRed;
                 tbSolo.Background = Brushes.DarkGray;
             }
             else
             {
-                if (TempMemory[CurrentPreset - 1].MidiOptions.Active)
+                if (bActiveState)
                 {
-                    TempMemory[CurrentPreset - 1].Muted = false;
                     tbMute.Background = Brushes.DarkGray;
                 }
                 else
                 {
-                    TempMemory[CurrentPreset - 1].Muted = true;
                     tbMute.Background = Brushes.IndianRed;
                 }
                 tbSolo.Background = Brushes.DarkGray;
@@ -1097,7 +1091,6 @@ namespace MidiLiveSystem
     [Serializable]
     public class BoxPreset
     {
-        internal bool Muted = false;
         public Guid RoutingGuid { get; set; } = Guid.Empty;
         public Guid BoxGuid { get; set; } = Guid.Empty;
         public string BoxName { get; set; } = "Routing Name";
