@@ -527,146 +527,149 @@ namespace MidiLiveSystem
 
         private void LoadPreset(int iNew)
         {
-            int iPrec = -1;
+            Dispatcher.Invoke(() =>
+            {
+                int iPrec = -1;
 
-            //identification du preset en cours
-            if (btnPreset1.Background == Brushes.IndianRed) { iPrec = 0; }
-            else if (btnPreset2.Background == Brushes.IndianRed) { iPrec = 1; }
-            else if (btnPreset3.Background == Brushes.IndianRed) { iPrec = 2; }
-            else if (btnPreset4.Background == Brushes.IndianRed) { iPrec = 3; }
-            else if (btnPreset5.Background == Brushes.IndianRed) { iPrec = 4; }
-            else if (btnPreset6.Background == Brushes.IndianRed) { iPrec = 5; }
-            else if (btnPreset7.Background == Brushes.IndianRed) { iPrec = 6; }
-            else if (btnPreset8.Background == Brushes.IndianRed) { iPrec = 7; }
+                //identification du preset en cours
+                if (btnPreset1.Background == Brushes.IndianRed) { iPrec = 0; }
+                else if (btnPreset2.Background == Brushes.IndianRed) { iPrec = 1; }
+                else if (btnPreset3.Background == Brushes.IndianRed) { iPrec = 2; }
+                else if (btnPreset4.Background == Brushes.IndianRed) { iPrec = 3; }
+                else if (btnPreset5.Background == Brushes.IndianRed) { iPrec = 4; }
+                else if (btnPreset6.Background == Brushes.IndianRed) { iPrec = 5; }
+                else if (btnPreset7.Background == Brushes.IndianRed) { iPrec = 6; }
+                else if (btnPreset8.Background == Brushes.IndianRed) { iPrec = 7; }
 
-            if (TempMemory[iNew] != null)
-            {
-                FillUI(TempMemory[iNew], iNew > 0 ? false : true);
-            }
-            else
-            {
-                MessageBox.Show("Unable to recall Preset");
-            }
+                if (TempMemory[iNew] != null)
+                {
+                    FillUI(TempMemory[iNew], iNew > 0 ? false : true);
+                }
+                else
+                {
+                    MessageBox.Show("Unable to recall Preset");
+                }
 
-            switch (iPrec)
-            {
-                case 0:
-                    btnPreset1.Content = TempMemory[iPrec].PresetName;
-                    break;
-                case 1:
-                    btnPreset2.Content = TempMemory[iPrec].PresetName;
-                    break;
-                case 2:
-                    btnPreset3.Content = TempMemory[iPrec].PresetName;
-                    break;
-                case 3:
-                    btnPreset4.Content = TempMemory[iPrec].PresetName;
-                    break;
-                case 4:
-                    btnPreset5.Content = TempMemory[iPrec].PresetName;
-                    break;
-                case 5:
-                    btnPreset6.Content = TempMemory[iPrec].PresetName;
-                    break;
-                case 6:
-                    btnPreset7.Content = TempMemory[iPrec].PresetName;
-                    break;
-                case 7:
-                    btnPreset8.Content = TempMemory[iPrec].PresetName;
-                    break;
-            }
-            //maj couleur boutons
-            switch (iNew)
-            {
-                case 0:
-                    btnPreset1.Content = tbPresetName.Text;
-                    btnPreset1.Background = Brushes.IndianRed;
-                    btnPreset2.Background = Brushes.MediumPurple;
-                    btnPreset3.Background = Brushes.MediumPurple;
-                    btnPreset4.Background = Brushes.MediumPurple;
-                    btnPreset5.Background = Brushes.MediumPurple;
-                    btnPreset6.Background = Brushes.MediumPurple;
-                    btnPreset7.Background = Brushes.MediumPurple;
-                    btnPreset8.Background = Brushes.MediumPurple;
-                    break;
-                case 1:
-                    btnPreset2.Content = tbPresetName.Text;
-                    btnPreset1.Background = Brushes.MediumPurple;
-                    btnPreset2.Background = Brushes.IndianRed;
-                    btnPreset3.Background = Brushes.MediumPurple;
-                    btnPreset4.Background = Brushes.MediumPurple;
-                    btnPreset5.Background = Brushes.MediumPurple;
-                    btnPreset6.Background = Brushes.MediumPurple;
-                    btnPreset7.Background = Brushes.MediumPurple;
-                    btnPreset8.Background = Brushes.MediumPurple;
-                    break;
-                case 2:
-                    btnPreset3.Content = tbPresetName.Text;
-                    btnPreset1.Background = Brushes.MediumPurple;
-                    btnPreset2.Background = Brushes.MediumPurple;
-                    btnPreset3.Background = Brushes.IndianRed;
-                    btnPreset4.Background = Brushes.MediumPurple;
-                    btnPreset5.Background = Brushes.MediumPurple;
-                    btnPreset6.Background = Brushes.MediumPurple;
-                    btnPreset7.Background = Brushes.MediumPurple;
-                    btnPreset8.Background = Brushes.MediumPurple;
-                    break;
-                case 3:
-                    btnPreset4.Content = tbPresetName.Text;
-                    btnPreset1.Background = Brushes.MediumPurple;
-                    btnPreset2.Background = Brushes.MediumPurple;
-                    btnPreset3.Background = Brushes.MediumPurple;
-                    btnPreset4.Background = Brushes.IndianRed;
-                    btnPreset5.Background = Brushes.MediumPurple;
-                    btnPreset6.Background = Brushes.MediumPurple;
-                    btnPreset7.Background = Brushes.MediumPurple;
-                    btnPreset8.Background = Brushes.MediumPurple;
-                    break;
-                case 4:
-                    btnPreset5.Content = tbPresetName.Text;
-                    btnPreset1.Background = Brushes.MediumPurple;
-                    btnPreset2.Background = Brushes.MediumPurple;
-                    btnPreset3.Background = Brushes.MediumPurple;
-                    btnPreset4.Background = Brushes.MediumPurple;
-                    btnPreset5.Background = Brushes.IndianRed;
-                    btnPreset6.Background = Brushes.MediumPurple;
-                    btnPreset7.Background = Brushes.MediumPurple;
-                    btnPreset8.Background = Brushes.MediumPurple;
-                    break;
-                case 5:
-                    btnPreset6.Content = tbPresetName.Text;
-                    btnPreset1.Background = Brushes.MediumPurple;
-                    btnPreset2.Background = Brushes.MediumPurple;
-                    btnPreset3.Background = Brushes.MediumPurple;
-                    btnPreset4.Background = Brushes.MediumPurple;
-                    btnPreset5.Background = Brushes.MediumPurple;
-                    btnPreset6.Background = Brushes.IndianRed;
-                    btnPreset7.Background = Brushes.MediumPurple;
-                    btnPreset8.Background = Brushes.MediumPurple;
-                    break;
-                case 6:
-                    btnPreset7.Content = tbPresetName.Text;
-                    btnPreset1.Background = Brushes.MediumPurple;
-                    btnPreset2.Background = Brushes.MediumPurple;
-                    btnPreset3.Background = Brushes.MediumPurple;
-                    btnPreset4.Background = Brushes.MediumPurple;
-                    btnPreset5.Background = Brushes.MediumPurple;
-                    btnPreset6.Background = Brushes.MediumPurple;
-                    btnPreset7.Background = Brushes.IndianRed;
-                    btnPreset8.Background = Brushes.MediumPurple;
-                    break;
-                case 7:
-                    btnPreset8.Content = tbPresetName.Text;
-                    btnPreset1.Background = Brushes.MediumPurple;
-                    btnPreset2.Background = Brushes.MediumPurple;
-                    btnPreset3.Background = Brushes.MediumPurple;
-                    btnPreset4.Background = Brushes.MediumPurple;
-                    btnPreset5.Background = Brushes.MediumPurple;
-                    btnPreset6.Background = Brushes.MediumPurple;
-                    btnPreset7.Background = Brushes.MediumPurple;
-                    btnPreset8.Background = Brushes.IndianRed;
-                    break;
-            }
+                switch (iPrec)
+                {
+                    case 0:
+                        btnPreset1.Content = TempMemory[iPrec].PresetName;
+                        break;
+                    case 1:
+                        btnPreset2.Content = TempMemory[iPrec].PresetName;
+                        break;
+                    case 2:
+                        btnPreset3.Content = TempMemory[iPrec].PresetName;
+                        break;
+                    case 3:
+                        btnPreset4.Content = TempMemory[iPrec].PresetName;
+                        break;
+                    case 4:
+                        btnPreset5.Content = TempMemory[iPrec].PresetName;
+                        break;
+                    case 5:
+                        btnPreset6.Content = TempMemory[iPrec].PresetName;
+                        break;
+                    case 6:
+                        btnPreset7.Content = TempMemory[iPrec].PresetName;
+                        break;
+                    case 7:
+                        btnPreset8.Content = TempMemory[iPrec].PresetName;
+                        break;
+                }
+                //maj couleur boutons
+                switch (iNew)
+                {
+                    case 0:
+                        btnPreset1.Content = tbPresetName.Text;
+                        btnPreset1.Background = Brushes.IndianRed;
+                        btnPreset2.Background = Brushes.MediumPurple;
+                        btnPreset3.Background = Brushes.MediumPurple;
+                        btnPreset4.Background = Brushes.MediumPurple;
+                        btnPreset5.Background = Brushes.MediumPurple;
+                        btnPreset6.Background = Brushes.MediumPurple;
+                        btnPreset7.Background = Brushes.MediumPurple;
+                        btnPreset8.Background = Brushes.MediumPurple;
+                        break;
+                    case 1:
+                        btnPreset2.Content = tbPresetName.Text;
+                        btnPreset1.Background = Brushes.MediumPurple;
+                        btnPreset2.Background = Brushes.IndianRed;
+                        btnPreset3.Background = Brushes.MediumPurple;
+                        btnPreset4.Background = Brushes.MediumPurple;
+                        btnPreset5.Background = Brushes.MediumPurple;
+                        btnPreset6.Background = Brushes.MediumPurple;
+                        btnPreset7.Background = Brushes.MediumPurple;
+                        btnPreset8.Background = Brushes.MediumPurple;
+                        break;
+                    case 2:
+                        btnPreset3.Content = tbPresetName.Text;
+                        btnPreset1.Background = Brushes.MediumPurple;
+                        btnPreset2.Background = Brushes.MediumPurple;
+                        btnPreset3.Background = Brushes.IndianRed;
+                        btnPreset4.Background = Brushes.MediumPurple;
+                        btnPreset5.Background = Brushes.MediumPurple;
+                        btnPreset6.Background = Brushes.MediumPurple;
+                        btnPreset7.Background = Brushes.MediumPurple;
+                        btnPreset8.Background = Brushes.MediumPurple;
+                        break;
+                    case 3:
+                        btnPreset4.Content = tbPresetName.Text;
+                        btnPreset1.Background = Brushes.MediumPurple;
+                        btnPreset2.Background = Brushes.MediumPurple;
+                        btnPreset3.Background = Brushes.MediumPurple;
+                        btnPreset4.Background = Brushes.IndianRed;
+                        btnPreset5.Background = Brushes.MediumPurple;
+                        btnPreset6.Background = Brushes.MediumPurple;
+                        btnPreset7.Background = Brushes.MediumPurple;
+                        btnPreset8.Background = Brushes.MediumPurple;
+                        break;
+                    case 4:
+                        btnPreset5.Content = tbPresetName.Text;
+                        btnPreset1.Background = Brushes.MediumPurple;
+                        btnPreset2.Background = Brushes.MediumPurple;
+                        btnPreset3.Background = Brushes.MediumPurple;
+                        btnPreset4.Background = Brushes.MediumPurple;
+                        btnPreset5.Background = Brushes.IndianRed;
+                        btnPreset6.Background = Brushes.MediumPurple;
+                        btnPreset7.Background = Brushes.MediumPurple;
+                        btnPreset8.Background = Brushes.MediumPurple;
+                        break;
+                    case 5:
+                        btnPreset6.Content = tbPresetName.Text;
+                        btnPreset1.Background = Brushes.MediumPurple;
+                        btnPreset2.Background = Brushes.MediumPurple;
+                        btnPreset3.Background = Brushes.MediumPurple;
+                        btnPreset4.Background = Brushes.MediumPurple;
+                        btnPreset5.Background = Brushes.MediumPurple;
+                        btnPreset6.Background = Brushes.IndianRed;
+                        btnPreset7.Background = Brushes.MediumPurple;
+                        btnPreset8.Background = Brushes.MediumPurple;
+                        break;
+                    case 6:
+                        btnPreset7.Content = tbPresetName.Text;
+                        btnPreset1.Background = Brushes.MediumPurple;
+                        btnPreset2.Background = Brushes.MediumPurple;
+                        btnPreset3.Background = Brushes.MediumPurple;
+                        btnPreset4.Background = Brushes.MediumPurple;
+                        btnPreset5.Background = Brushes.MediumPurple;
+                        btnPreset6.Background = Brushes.MediumPurple;
+                        btnPreset7.Background = Brushes.IndianRed;
+                        btnPreset8.Background = Brushes.MediumPurple;
+                        break;
+                    case 7:
+                        btnPreset8.Content = tbPresetName.Text;
+                        btnPreset1.Background = Brushes.MediumPurple;
+                        btnPreset2.Background = Brushes.MediumPurple;
+                        btnPreset3.Background = Brushes.MediumPurple;
+                        btnPreset4.Background = Brushes.MediumPurple;
+                        btnPreset5.Background = Brushes.MediumPurple;
+                        btnPreset6.Background = Brushes.MediumPurple;
+                        btnPreset7.Background = Brushes.MediumPurple;
+                        btnPreset8.Background = Brushes.IndianRed;
+                        break;
+                }
+            });
         }
 
         public void Snapshot()
@@ -838,208 +841,218 @@ namespace MidiLiveSystem
 
         public MidiPreset GetPreset()
         {
-            if (cbChannelMidiOut.SelectedItem != null)
+            MidiPreset mp = null;
+
+            Dispatcher.Invoke(() =>
             {
-                try
+                if (cbChannelMidiOut.SelectedItem != null)
                 {
-                    int iPrg = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[0]);
-                    int iMsb = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[1]);
-                    int iLsb = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[2]);
-                    return new MidiPreset("", Convert.ToInt32(((ComboBoxItem)cbChannelMidiOut.SelectedItem).Tag.ToString()), iPrg, iMsb, iLsb, lbPreset.Text);
+                    try
+                    {
+                        int iPrg = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[0]);
+                        int iMsb = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[1]);
+                        int iLsb = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[2]);
+                        mp = new MidiPreset("", Convert.ToInt32(((ComboBoxItem)cbChannelMidiOut.SelectedItem).Tag.ToString()), iPrg, iMsb, iLsb, lbPreset.Text);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Invalid Program (" + ex.Message + ")");
+                        mp = new MidiPreset("", 1, 0, 0, 0, "Unknown Preset");
+                    }
                 }
-                catch (Exception ex)
+                else
                 {
-                    MessageBox.Show("Invalid Program (" + ex.Message + ")");
-                    return new MidiPreset("", 1, 0, 0, 0, "Unknown Preset");
+                    mp = new MidiPreset("", 1, 0, 0, 0, "Unknown Preset");
                 }
-            }
-            else
-            {
-                return new MidiPreset("", 1, 0, 0, 0, "Unknown Preset");
-            }
+            });
+
+            return mp;
         }
 
         public MidiOptions GetOptions()
         {
             var options = new MidiOptions();
 
-            options.Active = tbMute.Background == Brushes.IndianRed ? false : true;
-            //options.Active = .Active;
-
-            //options.Active = tbMute.Background == Brushes.IndianRed ? false : true;
-
-            int iNoteGen = -1;
-            int iVeloGen = -1;
-            int iChannel = -1;
-            decimal dLength = 0;
-            NumberStyles style = NumberStyles.AllowDecimalPoint | NumberStyles.AllowThousands;
-            CultureInfo culture = CultureInfo.InvariantCulture; // ou utilisez la culture appropriée selon vos besoins
-
-            var midiin = cbMidiIn.SelectedValue;
-
-            //options.Active = tbMute.Background == Brushes.IndianRed ? false : true;
-
-            if (midiin != null && midiin.ToString().Equals(Tools.INTERNAL_GENERATOR))
+            Dispatcher.Invoke(() =>
             {
-                int.TryParse(tbInternalGeneratorKey.Text, out iNoteGen);
-                int.TryParse(tbInternalGeneratorVelocity.Text, out iVeloGen);
-                int.TryParse(cbChannelMidiOut.SelectedValue.ToString(), out iChannel);
-                decimal.TryParse(tbInternalGeneratorLength.Text, style, culture, out dLength);
-                options.PlayNote = new NoteGenerator(iChannel, 0, iNoteGen, iVeloGen, dLength);
-                options.PlayNote_LowestNote = ckInternalGeneratorLowestKey.IsChecked.Value;
-            }
-            else
-            {
-                options.PlayNote = null;
-                options.PlayNote_LowestNote = false;
-            }
+                options.Active = tbMute.Background == Brushes.IndianRed ? false : true;
+                //options.Active = .Active;
 
-            if (options.PlayNote != null)
-            {
-                options.NoteFilterHigh = 127;
-                tbFilterHighNote.Text = options.NoteFilterHigh.ToString();
+                //options.Active = tbMute.Background == Brushes.IndianRed ? false : true;
 
-                options.NoteFilterLow = 0;
-                tbFilterLowNote.Text = options.NoteFilterLow.ToString();
+                int iNoteGen = -1;
+                int iVeloGen = -1;
+                int iChannel = -1;
+                decimal dLength = 0;
+                NumberStyles style = NumberStyles.AllowDecimalPoint | NumberStyles.AllowThousands;
+                CultureInfo culture = CultureInfo.InvariantCulture; // ou utilisez la culture appropriée selon vos besoins
 
-                options.VelocityFilterHigh = 127;
-                tbFilterHighVelo.Text = options.VelocityFilterHigh.ToString();
+                var midiin = cbMidiIn.SelectedValue;
 
-                options.VelocityFilterLow = 0;
-                tbFilterLowVelo.Text = options.VelocityFilterLow.ToString();
-            }
-            else
-            {
-                options.NoteFilterHigh = TextParser(tbFilterHighNote.Text);
-                tbFilterHighNote.Text = options.NoteFilterHigh.ToString();
+                //options.Active = tbMute.Background == Brushes.IndianRed ? false : true;
 
-                options.NoteFilterLow = TextParser(tbFilterLowNote.Text);
-                tbFilterLowNote.Text = options.NoteFilterLow.ToString();
-
-                options.VelocityFilterHigh = TextParser(tbFilterHighVelo.Text);
-                tbFilterHighVelo.Text = options.VelocityFilterHigh.ToString();
-
-                options.VelocityFilterLow = TextParser(tbFilterLowVelo.Text);
-                tbFilterLowVelo.Text = options.VelocityFilterLow.ToString();
-            }
-
-            options.CompressVelocityRange = ckCompressVelocityRange.IsChecked.Value;
-            options.TransposeNoteRange = ckTransposeNoteRange.IsChecked.Value;
-
-            options.AllowAftertouch = ckAllowAftertouch.IsChecked.Value;
-            options.AllowAllCC = ckAllowAllCC.IsChecked.Value;
-            options.AllowModulation = ckAllowModulation.IsChecked.Value;
-            options.AllowNotes = ckAllowNotes.IsChecked.Value;
-            options.AllowNrpn = ckAllowNrpn.IsChecked.Value;
-            options.AllowPitchBend = ckAllowPitchBend.IsChecked.Value;
-            options.AllowProgramChange = ckAllowProgramChange.IsChecked.Value;
-            options.AllowSysex = ckAllowSysex.IsChecked.Value;
-
-            foreach (ComboBoxCustomItem cb in cbCCDefaultValues.Items)
-            {
-                switch (cb.Id)
+                if (midiin != null && midiin.ToString().Equals(Tools.INTERNAL_GENERATOR))
                 {
-                    case "tbCC_Chorus":
-                        options.CC_Chorus_Value = TextParser(cb.Value);
-                        cb.Value = options.CC_Chorus_Value.ToString();
-                        break;
-                    case "tbCC_Pan":
-                        options.CC_Pan_Value = TextParser(cb.Value);
-                        cb.Value = options.CC_Pan_Value.ToString();
-                        break;
-                    case "tbCC_Volume":
-                        options.CC_Volume_Value = TextParser(cb.Value);
-                        cb.Value = options.CC_Volume_Value.ToString();
-                        break;
-                    case "tbCC_Attack":
-                        options.CC_Attack_Value = TextParser(cb.Value);
-                        cb.Value = options.CC_Attack_Value.ToString();
-                        break;
-                    case "tbCC_Decay":
-                        options.CC_Decay_Value = TextParser(cb.Value);
-                        cb.Value = options.CC_Decay_Value.ToString();
-                        break;
-                    case "tbCC_Release":
-                        options.CC_Release_Value = TextParser(cb.Value);
-                        cb.Value = options.CC_Release_Value.ToString();
-                        break;
-                    case "tbCC_Reverb":
-                        options.CC_Reverb_Value = TextParser(cb.Value);
-                        cb.Value = options.CC_Reverb_Value.ToString();
-                        break;
-                    case "tbCC_Timbre":
-                        options.CC_Timbre_Value = TextParser(cb.Value);
-                        cb.Value = options.CC_Timbre_Value.ToString();
-                        break;
-                    case "tbCC_CutOff":
-                        options.CC_FilterCutOff_Value = TextParser(cb.Value);
-                        cb.Value = options.CC_FilterCutOff_Value.ToString();
-                        break;
+                    int.TryParse(tbInternalGeneratorKey.Text, out iNoteGen);
+                    int.TryParse(tbInternalGeneratorVelocity.Text, out iVeloGen);
+                    int.TryParse(cbChannelMidiOut.SelectedValue.ToString(), out iChannel);
+                    decimal.TryParse(tbInternalGeneratorLength.Text, style, culture, out dLength);
+                    options.PlayNote = new NoteGenerator(iChannel, 0, iNoteGen, iVeloGen, dLength);
+                    options.PlayNote_LowestNote = ckInternalGeneratorLowestKey.IsChecked.Value;
                 }
-            }
-
-            Enum.TryParse<PlayModes>(cbPlayMode.SelectedValue.ToString(), out options.PlayMode);
-
-            //pour éviter que le volume soit à 0 après un click sur aftertouch
-            if (options.PlayMode == PlayModes.AFTERTOUCH && options.CC_Volume_Value > 0)
-            { options.CC_Volume_Value = -1; }
-            else if (options.PlayMode != PlayModes.AFTERTOUCH && options.CC_Volume_Value == -1)
-            { options.CC_Volume_Value = 100; }
-
-            options.TranspositionOffset = TextParser(tbNoteTransposition.Text);
-
-            foreach (var item in cbCCConvert.Items)
-            {
-                string text = ((ComboBoxItem)item).Tag.ToString();
-                int iFrom = TextParser(text.Split('-')[0]);
-                int iTo = TextParser(text.Split('-')[1]);
-
-                if (iFrom != 999 && iTo != 999)
+                else
                 {
-                    bool bOK = options.AddCCConverter(iFrom, iTo);
-                    if (!bOK)
-                    { MessageBox.Show("Incorrect CC Converter Value (expecting values from 0 to 127) : " + iFrom + " - " + iTo); }
+                    options.PlayNote = null;
+                    options.PlayNote_LowestNote = false;
                 }
-            }
 
-            foreach (var item in cbNOTEConvert.Items)
-            {
-                string text = ((ComboBoxItem)item).Tag.ToString();
-                int iFrom = TextParser(text.Split('-')[0]);
-                int iTo = TextParser(text.Split('-')[1]);
-
-                if (iFrom != 999 && iTo != 999)
+                if (options.PlayNote != null)
                 {
-                    bool bOK = options.AddNoteConverter(iFrom, iTo);
-                    if (!bOK)
-                    { MessageBox.Show("Incorrect NOTE Converter Value (expecting values from 0 to 127) : " + iFrom + " - " + iTo); }
+                    options.NoteFilterHigh = 127;
+                    tbFilterHighNote.Text = options.NoteFilterHigh.ToString();
+
+                    options.NoteFilterLow = 0;
+                    tbFilterLowNote.Text = options.NoteFilterLow.ToString();
+
+                    options.VelocityFilterHigh = 127;
+                    tbFilterHighVelo.Text = options.VelocityFilterHigh.ToString();
+
+                    options.VelocityFilterLow = 0;
+                    tbFilterLowVelo.Text = options.VelocityFilterLow.ToString();
                 }
-            }
-
-            foreach (var item in cbTranslators.Items)
-            {
-                var translator = (ComboBoxItem)item;
-                options.AddTranslator(translator.Tag.ToString(), translator.Content.ToString());
-            }
-
-            int iSmooth = 0;
-            if (int.TryParse(tbSmoothCC.Text.Trim(), out iSmooth))
-            {
-                if (iSmooth >= 0 && iSmooth <= 5000)
+                else
                 {
-                    options.SmoothCCLength = iSmooth;
-                }
-            }
+                    options.NoteFilterHigh = TextParser(tbFilterHighNote.Text);
+                    tbFilterHighNote.Text = options.NoteFilterHigh.ToString();
 
-            int iDelay = 0;
-            if (int.TryParse(tbDelayNotes.Text.Trim(), out iDelay))
-            {
-                if (iDelay >= 0 && iDelay <= 1000)
+                    options.NoteFilterLow = TextParser(tbFilterLowNote.Text);
+                    tbFilterLowNote.Text = options.NoteFilterLow.ToString();
+
+                    options.VelocityFilterHigh = TextParser(tbFilterHighVelo.Text);
+                    tbFilterHighVelo.Text = options.VelocityFilterHigh.ToString();
+
+                    options.VelocityFilterLow = TextParser(tbFilterLowVelo.Text);
+                    tbFilterLowVelo.Text = options.VelocityFilterLow.ToString();
+                }
+
+                options.CompressVelocityRange = ckCompressVelocityRange.IsChecked.Value;
+                options.TransposeNoteRange = ckTransposeNoteRange.IsChecked.Value;
+
+                options.AllowAftertouch = ckAllowAftertouch.IsChecked.Value;
+                options.AllowAllCC = ckAllowAllCC.IsChecked.Value;
+                options.AllowModulation = ckAllowModulation.IsChecked.Value;
+                options.AllowNotes = ckAllowNotes.IsChecked.Value;
+                options.AllowNrpn = ckAllowNrpn.IsChecked.Value;
+                options.AllowPitchBend = ckAllowPitchBend.IsChecked.Value;
+                options.AllowProgramChange = ckAllowProgramChange.IsChecked.Value;
+                options.AllowSysex = ckAllowSysex.IsChecked.Value;
+
+                foreach (ComboBoxCustomItem cb in cbCCDefaultValues.Items)
                 {
-                    options.DelayNotesLength = iDelay;
+                    switch (cb.Id)
+                    {
+                        case "tbCC_Chorus":
+                            options.CC_Chorus_Value = TextParser(cb.Value);
+                            cb.Value = options.CC_Chorus_Value.ToString();
+                            break;
+                        case "tbCC_Pan":
+                            options.CC_Pan_Value = TextParser(cb.Value);
+                            cb.Value = options.CC_Pan_Value.ToString();
+                            break;
+                        case "tbCC_Volume":
+                            options.CC_Volume_Value = TextParser(cb.Value);
+                            cb.Value = options.CC_Volume_Value.ToString();
+                            break;
+                        case "tbCC_Attack":
+                            options.CC_Attack_Value = TextParser(cb.Value);
+                            cb.Value = options.CC_Attack_Value.ToString();
+                            break;
+                        case "tbCC_Decay":
+                            options.CC_Decay_Value = TextParser(cb.Value);
+                            cb.Value = options.CC_Decay_Value.ToString();
+                            break;
+                        case "tbCC_Release":
+                            options.CC_Release_Value = TextParser(cb.Value);
+                            cb.Value = options.CC_Release_Value.ToString();
+                            break;
+                        case "tbCC_Reverb":
+                            options.CC_Reverb_Value = TextParser(cb.Value);
+                            cb.Value = options.CC_Reverb_Value.ToString();
+                            break;
+                        case "tbCC_Timbre":
+                            options.CC_Timbre_Value = TextParser(cb.Value);
+                            cb.Value = options.CC_Timbre_Value.ToString();
+                            break;
+                        case "tbCC_CutOff":
+                            options.CC_FilterCutOff_Value = TextParser(cb.Value);
+                            cb.Value = options.CC_FilterCutOff_Value.ToString();
+                            break;
+                    }
                 }
-            }
 
+                Enum.TryParse<PlayModes>(cbPlayMode.SelectedValue.ToString(), out options.PlayMode);
+
+                //pour éviter que le volume soit à 0 après un click sur aftertouch
+                if (options.PlayMode == PlayModes.AFTERTOUCH && options.CC_Volume_Value > 0)
+                { options.CC_Volume_Value = -1; }
+                else if (options.PlayMode != PlayModes.AFTERTOUCH && options.CC_Volume_Value == -1)
+                { options.CC_Volume_Value = 100; }
+
+                options.TranspositionOffset = TextParser(tbNoteTransposition.Text);
+
+                foreach (var item in cbCCConvert.Items)
+                {
+                    string text = ((ComboBoxItem)item).Tag.ToString();
+                    int iFrom = TextParser(text.Split('-')[0]);
+                    int iTo = TextParser(text.Split('-')[1]);
+
+                    if (iFrom != 999 && iTo != 999)
+                    {
+                        bool bOK = options.AddCCConverter(iFrom, iTo);
+                        if (!bOK)
+                        { MessageBox.Show("Incorrect CC Converter Value (expecting values from 0 to 127) : " + iFrom + " - " + iTo); }
+                    }
+                }
+
+                foreach (var item in cbNOTEConvert.Items)
+                {
+                    string text = ((ComboBoxItem)item).Tag.ToString();
+                    int iFrom = TextParser(text.Split('-')[0]);
+                    int iTo = TextParser(text.Split('-')[1]);
+
+                    if (iFrom != 999 && iTo != 999)
+                    {
+                        bool bOK = options.AddNoteConverter(iFrom, iTo);
+                        if (!bOK)
+                        { MessageBox.Show("Incorrect NOTE Converter Value (expecting values from 0 to 127) : " + iFrom + " - " + iTo); }
+                    }
+                }
+
+                foreach (var item in cbTranslators.Items)
+                {
+                    var translator = (ComboBoxItem)item;
+                    options.AddTranslator(translator.Tag.ToString(), translator.Content.ToString());
+                }
+
+                int iSmooth = 0;
+                if (int.TryParse(tbSmoothCC.Text.Trim(), out iSmooth))
+                {
+                    if (iSmooth >= 0 && iSmooth <= 5000)
+                    {
+                        options.SmoothCCLength = iSmooth;
+                    }
+                }
+
+                int iDelay = 0;
+                if (int.TryParse(tbDelayNotes.Text.Trim(), out iDelay))
+                {
+                    if (iDelay >= 0 && iDelay <= 1000)
+                    {
+                        options.DelayNotesLength = iDelay;
+                    }
+                }
+
+            });
             return options;
         }
 

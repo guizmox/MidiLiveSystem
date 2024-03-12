@@ -351,154 +351,152 @@ namespace MidiLiveSystem
 
         private void RoutingBox_UIEvent(Guid gBox, string sControl, object sValue)
         {
-            var box = Boxes.FirstOrDefault(b => b.BoxGuid == gBox);
-            if (box != null)
+            Task.Factory.StartNew(() =>
             {
-                switch (sControl)
+                Dispatcher.Invoke(() =>
                 {
-                    case "HELP":
-                        if (HelpWindow != null)
-                        { HelpWindow.Close(); }
-                        HelpWindow = new ProgramHelp();
-                        HelpWindow.Show();
-                        break;
-                    case "MAXIMIZE":
-                        InitFrames(1, 1);
-                        AddRoutingBoxToFrame(box, false);
-                        break;
-                    case "MINIMIZE":
-                        InitFrames(Project.HorizontalGrid, Project.VerticalGrid);
-                        AddAllRoutingBoxes();
-                        break;
-                    case "DETACH":
-                        box.Detached = true;
-                        AddAllRoutingBoxes();
-                        break;
-                    case "REMOVE":
-                        var confirmation = MessageBox.Show("Are you sure ?", "Delete Box", MessageBoxButton.YesNo);
-                        if (confirmation == MessageBoxResult.Yes)
+                    var box = Boxes.FirstOrDefault(b => b.BoxGuid == gBox);
+                    if (box != null)
+                    {
+                        switch (sControl)
                         {
-                            Routing.DeleteRouting(box.RoutingGuid);
-                            Boxes.Remove(box);
-                            AddAllRoutingBoxes();
-                        }
-                        break;
-                    case "MOVE_NEXT":
-                        if (box.GridPosition == Boxes.Count - 1) //déjà en dernière position
-                        {
-
-                        }
-                        else
-                        {
-                            var next = Boxes.FirstOrDefault(b => b.GridPosition == box.GridPosition + 1);
-                            box.GridPosition++;
-                            next.GridPosition--;
-                            AddAllRoutingBoxes();
-                        }
-                        break;
-                    case "MOVE_PREVIOUS":
-                        if (box.GridPosition == 0) //déjà en premiète position
-                        {
-
-                        }
-                        else
-                        {
-                            var previous = Boxes.FirstOrDefault(b => b.GridPosition == box.GridPosition - 1);
-                            box.GridPosition--;
-                            previous.GridPosition++;
-                            AddAllRoutingBoxes();
-                        }
-                        break;
-                    case "SOLO":
-                        if (box.RoutingGuid != Guid.Empty)
-                        {
-                            SaveTemplate();
-                            if ((bool)sValue)
-                            {
-                                Routing.SetSolo(box.RoutingGuid);
-                                foreach (var b in Boxes.Where(b => !b.BoxGuid.Equals(box.BoxGuid)))
+                            case "HELP":
+                                if (HelpWindow != null)
+                                { HelpWindow.Close(); }
+                                HelpWindow = new ProgramHelp();
+                                HelpWindow.Show();
+                                break;
+                            case "MAXIMIZE":
+                                InitFrames(1, 1);
+                                AddRoutingBoxToFrame(box, false);
+                                break;
+                            case "MINIMIZE":
+                                InitFrames(Project.HorizontalGrid, Project.VerticalGrid);
+                                AddAllRoutingBoxes();
+                                break;
+                            case "DETACH":
+                                box.Detached = true;
+                                AddAllRoutingBoxes();
+                                break;
+                            case "REMOVE":
+                                var confirmation = MessageBox.Show("Are you sure ?", "Delete Box", MessageBoxButton.YesNo);
+                                if (confirmation == MessageBoxResult.Yes)
                                 {
-                                    b.SetMute(true, false);
+                                    Routing.DeleteRouting(box.RoutingGuid);
+                                    Boxes.Remove(box);
+                                    AddAllRoutingBoxes();
                                 }
-                            }
-                            else
-                            {
-                                Routing.UnmuteAllRouting();
-                                foreach (var b in Boxes.Where(b => !b.BoxGuid.Equals(box.BoxGuid)))
+                                break;
+                            case "MOVE_NEXT":
+                                if (box.GridPosition == Boxes.Count - 1) //déjà en dernière position
                                 {
-                                    b.SetMute(false, Routing.GetActiveStatus(b.RoutingGuid));
+
                                 }
-                            }
-                        }
-                        break;
-                    case "MUTE":
-                        if (box.RoutingGuid != Guid.Empty)
-                        {
-                            if ((bool)sValue)
-                            {
-                                Routing.MuteRouting(box.RoutingGuid);
-                            }
-                            else
-                            {
-                                Routing.UnmuteRouting(box.RoutingGuid);
-                            }
-                        }
-                        break;
-                    case "PLAY_NOTE":
-                        if (box.RoutingGuid != Guid.Empty)
-                        {
-                            string sDevIn = box.cbMidiIn.SelectedItem != null ? ((ComboBoxItem)box.cbMidiIn.SelectedItem).Tag.ToString() : "";
-                            string sDevOut = box.cbMidiOut.SelectedItem != null ? ((ComboBoxItem)box.cbMidiOut.SelectedItem).Tag.ToString() : "";
+                                else
+                                {
+                                    var next = Boxes.FirstOrDefault(b => b.GridPosition == box.GridPosition + 1);
+                                    box.GridPosition++;
+                                    next.GridPosition--;
+                                    AddAllRoutingBoxes();
+                                }
+                                break;
+                            case "MOVE_PREVIOUS":
+                                if (box.GridPosition == 0) //déjà en premiète position
+                                {
 
-                            Routing.ModifyRouting(box.RoutingGuid, sDevIn, sDevOut,
-                                                   Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
-                                                   Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
-                                                   (MidiOptions)sValue, box.GetPreset());
+                                }
+                                else
+                                {
+                                    var previous = Boxes.FirstOrDefault(b => b.GridPosition == box.GridPosition - 1);
+                                    box.GridPosition--;
+                                    previous.GridPosition++;
+                                    AddAllRoutingBoxes();
+                                }
+                                break;
+                            case "SOLO":
+                                if (box.RoutingGuid != Guid.Empty)
+                                {
+                                    SaveTemplate();
+                                    if ((bool)sValue)
+                                    {
+                                        Routing.SetSolo(box.RoutingGuid);
+                                        foreach (var b in Boxes.Where(b => !b.BoxGuid.Equals(box.BoxGuid)))
+                                        {
+                                            b.SetMute(true, false);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Routing.UnmuteAllRouting();
+                                        foreach (var b in Boxes.Where(b => !b.BoxGuid.Equals(box.BoxGuid)))
+                                        {
+                                            b.SetMute(false, Routing.GetActiveStatus(b.RoutingGuid));
+                                        }
+                                    }
+                                }
+                                break;
+                            case "MUTE":
+                                if (box.RoutingGuid != Guid.Empty)
+                                {
+                                    if ((bool)sValue)
+                                    {
+                                        Routing.MuteRouting(box.RoutingGuid);
+                                    }
+                                    else
+                                    {
+                                        Routing.UnmuteRouting(box.RoutingGuid);
+                                    }
+                                }
+                                break;
+                            case "PLAY_NOTE":
+                                if (box.RoutingGuid != Guid.Empty)
+                                {
+                                    string sDevIn = box.cbMidiIn.SelectedItem != null ? ((ComboBoxItem)box.cbMidiIn.SelectedItem).Tag.ToString() : "";
+                                    string sDevOut = box.cbMidiOut.SelectedItem != null ? ((ComboBoxItem)box.cbMidiOut.SelectedItem).Tag.ToString() : "";
 
-                            Routing.SendNote(box.RoutingGuid, ((MidiOptions)sValue).PlayNote);
-                        }
-                        break;
-                    case "PRESET_CHANGE":
-                        if (box.RoutingGuid != Guid.Empty)
-                        {
-                            string sDevIn = box.cbMidiIn.SelectedItem != null ? ((ComboBoxItem)box.cbMidiIn.SelectedItem).Tag.ToString() : "";
-                            string sDevOut = box.cbMidiOut.SelectedItem != null ? ((ComboBoxItem)box.cbMidiOut.SelectedItem).Tag.ToString() : "";
+                                    Routing.ModifyRouting(box.RoutingGuid, sDevIn, sDevOut,
+                                                           Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
+                                                           Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
+                                                           (MidiOptions)sValue, box.GetPreset());
 
-                            Routing.ModifyRouting(box.RoutingGuid, sDevIn, sDevOut,
-                                                   Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
-                                                   Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
-                                                   box.GetOptions(), (MidiPreset)sValue);
-                        }
-                        break;
-                    case "COPY_PRESET":
-                        CopiedPreset = (BoxPreset)sValue;
-                        break;
-                    case "CHECK_OUT_CHANNEL":
-                        string sDevice = ((string)sValue).Split("#|#")[0];
-                        int iChannelWanted = Convert.ToInt32(((string)sValue).Split("#|#")[1]);
+                                    Routing.SendNote(box.RoutingGuid, ((MidiOptions)sValue).PlayNote);
+                                }
+                                break;
+                            case "PRESET_CHANGE":
+                                if (box.RoutingGuid != Guid.Empty)
+                                {
+                                    string sDevIn = box.cbMidiIn.SelectedItem != null ? ((ComboBoxItem)box.cbMidiIn.SelectedItem).Tag.ToString() : "";
+                                    string sDevOut = box.cbMidiOut.SelectedItem != null ? ((ComboBoxItem)box.cbMidiOut.SelectedItem).Tag.ToString() : "";
 
-                        int iAvailable = Routing.GetFreeChannelForDevice(sDevice, iChannelWanted, false);
-                        if (iAvailable > 0)
-                        {
-                            Dispatcher.Invoke(() =>
-                            {
-                                //MessageBox.Show("Warning : The selected OUT Channel is already in use ! (" + iChannel.ToString() + ")");
-                                box.cbChannelMidiOut.SelectedValue = iAvailable;
-                            });
-                        }
-                        else
-                        {
-                            Dispatcher.Invoke(() =>
-                            {
-                                //MessageBox.Show("Warning : The selected OUT Channel is already in use ! (" + iChannel.ToString() + ")");
-                                MessageBox.Show("No more Channel available for this OUT device.");
-                            });
-                        }
+                                    Routing.ModifyRouting(box.RoutingGuid, sDevIn, sDevOut,
+                                                           Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
+                                                           Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
+                                                           box.GetOptions(), (MidiPreset)sValue);
+                                }
+                                break;
+                            case "COPY_PRESET":
+                                CopiedPreset = (BoxPreset)sValue;
+                                break;
+                            case "CHECK_OUT_CHANNEL":
+                                string sDevice = ((string)sValue).Split("#|#")[0];
+                                int iChannelWanted = Convert.ToInt32(((string)sValue).Split("#|#")[1]);
 
-                        //SaveTemplate(); //pour obtenir une version propre de ce qui a été saisi et enregistré sur les box
-                        break;
-                }
-            }
+                                int iAvailable = Routing.GetFreeChannelForDevice(sDevice, iChannelWanted, false);
+                                if (iAvailable > 0)
+                                {
+                                    box.cbChannelMidiOut.SelectedValue = iAvailable;
+                                }
+                                else
+                                {
+                                    MessageBox.Show("No more Channel available for this OUT device.");
+                                }
+
+                                //SaveTemplate(); //pour obtenir une version propre de ce qui a été saisi et enregistré sur les box
+                                break;
+                        }
+                    }
+                });
+            });
         }
 
         private void UIRefreshRate_Elapsed(object sender, System.Timers.ElapsedEventArgs e)

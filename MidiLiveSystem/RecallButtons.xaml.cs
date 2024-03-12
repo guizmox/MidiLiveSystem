@@ -4,6 +4,8 @@ using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -94,7 +96,7 @@ namespace MidiLiveSystem
                 {
                     string preset = "";
 
-                    for (int i = 0; i < item.BoxGuids.Count; i++) 
+                    for (int i = 0; i < item.BoxGuids.Count; i++)
                     {
                         if (cbitem.Id.Equals(item.BoxGuids[i].ToString()))
                         {
@@ -125,91 +127,27 @@ namespace MidiLiveSystem
             switch (btnPreset.Name)
             {
                 case "btnRecall1":
-                    btnRecall1.Background = Brushes.IndianRed;
-                    btnRecall2.Background = Brushes.CadetBlue;
-                    btnRecall3.Background = Brushes.CadetBlue;
-                    btnRecall4.Background = Brushes.CadetBlue;
-                    btnRecall5.Background = Brushes.CadetBlue;
-                    btnRecall6.Background = Brushes.CadetBlue;
-                    btnRecall7.Background = Brushes.CadetBlue;
-                    btnRecall8.Background = Brushes.CadetBlue;
                     cbPreset = cbRecallSet1;
                     break;
                 case "btnRecall2":
-                    btnRecall1.Background = Brushes.CadetBlue;
-                    btnRecall2.Background = Brushes.IndianRed;
-                    btnRecall3.Background = Brushes.CadetBlue;
-                    btnRecall4.Background = Brushes.CadetBlue;
-                    btnRecall5.Background = Brushes.CadetBlue;
-                    btnRecall6.Background = Brushes.CadetBlue;
-                    btnRecall7.Background = Brushes.CadetBlue;
-                    btnRecall8.Background = Brushes.CadetBlue;
                     cbPreset = cbRecallSet2;
                     break;
                 case "btnRecall3":
-                    btnRecall1.Background = Brushes.CadetBlue;
-                    btnRecall2.Background = Brushes.CadetBlue;
-                    btnRecall3.Background = Brushes.IndianRed;
-                    btnRecall4.Background = Brushes.CadetBlue;
-                    btnRecall5.Background = Brushes.CadetBlue;
-                    btnRecall6.Background = Brushes.CadetBlue;
-                    btnRecall7.Background = Brushes.CadetBlue;
-                    btnRecall8.Background = Brushes.CadetBlue;
                     cbPreset = cbRecallSet3;
                     break;
                 case "btnRecall4":
-                    btnRecall1.Background = Brushes.CadetBlue;
-                    btnRecall2.Background = Brushes.CadetBlue;
-                    btnRecall3.Background = Brushes.CadetBlue;
-                    btnRecall4.Background = Brushes.IndianRed;
-                    btnRecall5.Background = Brushes.CadetBlue;
-                    btnRecall6.Background = Brushes.CadetBlue;
-                    btnRecall7.Background = Brushes.CadetBlue;
-                    btnRecall8.Background = Brushes.CadetBlue;
                     cbPreset = cbRecallSet4;
                     break;
                 case "btnRecall5":
-                    btnRecall1.Background = Brushes.CadetBlue;
-                    btnRecall2.Background = Brushes.CadetBlue;
-                    btnRecall3.Background = Brushes.CadetBlue;
-                    btnRecall4.Background = Brushes.CadetBlue;
-                    btnRecall5.Background = Brushes.IndianRed;
-                    btnRecall6.Background = Brushes.CadetBlue;
-                    btnRecall7.Background = Brushes.CadetBlue;
-                    btnRecall8.Background = Brushes.CadetBlue;
                     cbPreset = cbRecallSet5;
                     break;
                 case "btnRecall6":
-                    btnRecall1.Background = Brushes.CadetBlue;
-                    btnRecall2.Background = Brushes.CadetBlue;
-                    btnRecall3.Background = Brushes.CadetBlue;
-                    btnRecall4.Background = Brushes.CadetBlue;
-                    btnRecall5.Background = Brushes.CadetBlue;
-                    btnRecall6.Background = Brushes.IndianRed;
-                    btnRecall7.Background = Brushes.CadetBlue;
-                    btnRecall8.Background = Brushes.CadetBlue;
                     cbPreset = cbRecallSet6;
                     break;
                 case "btnRecall7":
-                    btnRecall1.Background = Brushes.CadetBlue;
-                    btnRecall2.Background = Brushes.CadetBlue;
-                    btnRecall3.Background = Brushes.CadetBlue;
-                    btnRecall4.Background = Brushes.CadetBlue;
-                    btnRecall5.Background = Brushes.CadetBlue;
-                    btnRecall6.Background = Brushes.CadetBlue;
-                    btnRecall7.Background = Brushes.IndianRed;
-                    btnRecall8.Background = Brushes.CadetBlue;
                     cbPreset = cbRecallSet7;
                     break;
                 case "btnRecall8":
-                    btnRecall1.Background = Brushes.CadetBlue;
-                    btnRecall2.Background = Brushes.CadetBlue;
-                    btnRecall3.Background = Brushes.CadetBlue;
-                    btnRecall4.Background = Brushes.CadetBlue;
-                    btnRecall5.Background = Brushes.CadetBlue;
-                    btnRecall6.Background = Brushes.CadetBlue;
-                    btnRecall7.Background = Brushes.CadetBlue;
-                    btnRecall8.Background = Brushes.IndianRed;
                     cbPreset = cbRecallSet8;
                     break;
             }
@@ -226,12 +164,102 @@ namespace MidiLiveSystem
                     {
                         if (iPreset > 0)
                         {
-                            box.cbPresetButton.SelectedIndex = iPreset - 1;
-                            box.PresetButtonPushed();
+                            // Utilisation de Dispatcher.Invoke pour accéder au thread de l'interface utilisateur
+                            box.cbPresetButton.Dispatcher.Invoke(() =>
+                            {
+                                box.cbPresetButton.SelectedIndex = iPreset - 1;
+                            });
                         }
                     }
                 }
             }
+
+            Dispatcher.Invoke(() =>
+            {
+                switch (btnPreset.Name)
+                {
+                    case "btnRecall1":
+                        btnRecall1.Background = Brushes.IndianRed;
+                        btnRecall2.Background = Brushes.CadetBlue;
+                        btnRecall3.Background = Brushes.CadetBlue;
+                        btnRecall4.Background = Brushes.CadetBlue;
+                        btnRecall5.Background = Brushes.CadetBlue;
+                        btnRecall6.Background = Brushes.CadetBlue;
+                        btnRecall7.Background = Brushes.CadetBlue;
+                        btnRecall8.Background = Brushes.CadetBlue;
+                        break;
+                    case "btnRecall2":
+                        btnRecall1.Background = Brushes.CadetBlue;
+                        btnRecall2.Background = Brushes.IndianRed;
+                        btnRecall3.Background = Brushes.CadetBlue;
+                        btnRecall4.Background = Brushes.CadetBlue;
+                        btnRecall5.Background = Brushes.CadetBlue;
+                        btnRecall6.Background = Brushes.CadetBlue;
+                        btnRecall7.Background = Brushes.CadetBlue;
+                        btnRecall8.Background = Brushes.CadetBlue;
+                        break;
+                    case "btnRecall3":
+                        btnRecall1.Background = Brushes.CadetBlue;
+                        btnRecall2.Background = Brushes.CadetBlue;
+                        btnRecall3.Background = Brushes.IndianRed;
+                        btnRecall4.Background = Brushes.CadetBlue;
+                        btnRecall5.Background = Brushes.CadetBlue;
+                        btnRecall6.Background = Brushes.CadetBlue;
+                        btnRecall7.Background = Brushes.CadetBlue;
+                        btnRecall8.Background = Brushes.CadetBlue;
+                        break;
+                    case "btnRecall4":
+                        btnRecall1.Background = Brushes.CadetBlue;
+                        btnRecall2.Background = Brushes.CadetBlue;
+                        btnRecall3.Background = Brushes.CadetBlue;
+                        btnRecall4.Background = Brushes.IndianRed;
+                        btnRecall5.Background = Brushes.CadetBlue;
+                        btnRecall6.Background = Brushes.CadetBlue;
+                        btnRecall7.Background = Brushes.CadetBlue;
+                        btnRecall8.Background = Brushes.CadetBlue;
+                        break;
+                    case "btnRecall5":
+                        btnRecall1.Background = Brushes.CadetBlue;
+                        btnRecall2.Background = Brushes.CadetBlue;
+                        btnRecall3.Background = Brushes.CadetBlue;
+                        btnRecall4.Background = Brushes.CadetBlue;
+                        btnRecall5.Background = Brushes.IndianRed;
+                        btnRecall6.Background = Brushes.CadetBlue;
+                        btnRecall7.Background = Brushes.CadetBlue;
+                        btnRecall8.Background = Brushes.CadetBlue;
+                        break;
+                    case "btnRecall6":
+                        btnRecall1.Background = Brushes.CadetBlue;
+                        btnRecall2.Background = Brushes.CadetBlue;
+                        btnRecall3.Background = Brushes.CadetBlue;
+                        btnRecall4.Background = Brushes.CadetBlue;
+                        btnRecall5.Background = Brushes.CadetBlue;
+                        btnRecall6.Background = Brushes.IndianRed;
+                        btnRecall7.Background = Brushes.CadetBlue;
+                        btnRecall8.Background = Brushes.CadetBlue;
+                        break;
+                    case "btnRecall7":
+                        btnRecall1.Background = Brushes.CadetBlue;
+                        btnRecall2.Background = Brushes.CadetBlue;
+                        btnRecall3.Background = Brushes.CadetBlue;
+                        btnRecall4.Background = Brushes.CadetBlue;
+                        btnRecall5.Background = Brushes.CadetBlue;
+                        btnRecall6.Background = Brushes.CadetBlue;
+                        btnRecall7.Background = Brushes.IndianRed;
+                        btnRecall8.Background = Brushes.CadetBlue;
+                        break;
+                    case "btnRecall8":
+                        btnRecall1.Background = Brushes.CadetBlue;
+                        btnRecall2.Background = Brushes.CadetBlue;
+                        btnRecall3.Background = Brushes.CadetBlue;
+                        btnRecall4.Background = Brushes.CadetBlue;
+                        btnRecall5.Background = Brushes.CadetBlue;
+                        btnRecall6.Background = Brushes.CadetBlue;
+                        btnRecall7.Background = Brushes.CadetBlue;
+                        btnRecall8.Background = Brushes.IndianRed;
+                        break;
+                }
+            });
         }
 
         public void SaveRecallsToProject()
