@@ -1016,15 +1016,15 @@ namespace MidiTools
                     case TypeEvent.NOTE_OFF:
                         if (routing.Options.AllowNotes || bOutEvent)
                         {
-                            int iNote = Tools.GetNoteIndex(evIN.Values[0], evIN.Values[1], routing.Options);
+                            int[] iNoteAndVel = Tools.GetNoteIndex(evIN.Values[0], evIN.Values[1], routing.Options);
                             var convertedNote = routing.Options.Note_Converters.FirstOrDefault(i => i[0] == evIN.Values[0]);
-                            if (convertedNote != null) { iNote = convertedNote[1]; } //TODO DOUTE
+                            if (convertedNote != null) { iNoteAndVel[0] = convertedNote[1]; } //TODO DOUTE
 
-                            if (iNote > -1)
+                            if (iNoteAndVel[0] > -1)
                             {
                                 routing.CurrentATValue = 0;
 
-                                var eventout = new MidiEvent(evIN.Type, new List<int> { iNote, routing.Options.PlayMode == PlayModes.AFTERTOUCH ? 0 : evIN.Values[1] }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name);
+                                var eventout = new MidiEvent(evIN.Type, new List<int> { iNoteAndVel[0], routing.Options.PlayMode == PlayModes.AFTERTOUCH ? 0 : evIN.Values[1] }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name);
                                 _eventsOUT = eventout;
                             }
                         }
@@ -1032,16 +1032,14 @@ namespace MidiTools
                     case TypeEvent.NOTE_ON:
                         if (routing.Options.AllowNotes || bOutEvent)
                         {
-                            int iNote = Tools.GetNoteIndex(evIN.Values[0], evIN.Values[1], routing.Options);
+                            int[] iNoteAndVel = Tools.GetNoteIndex(evIN.Values[0], evIN.Values[1], routing.Options);
                             var convertedNote = routing.Options.Note_Converters.FirstOrDefault(i => i[0] == evIN.Values[0]);
-                            if (convertedNote != null) { iNote = convertedNote[1]; } //TODO DOUTE
+                            if (convertedNote != null) { iNoteAndVel[0] = convertedNote[1]; } //TODO DOUTE
 
-                            if (iNote > -1) //NOTE : il faut systématiquement mettre au moins une véolcité de 1 pour que la note se déclenche
+                            if (iNoteAndVel[0] > -1) //NOTE : il faut systématiquement mettre au moins une véolcité de 1 pour que la note se déclenche
                             {
                                 //int iVelocity = item.Options.AftertouchVolume && ev.Values[1] > 0 ? 1 : ev.Values[1];
-                                int iVelocity = evIN.Values[1];
-
-                                var eventout = new MidiEvent(evIN.Type, new List<int> { iNote, iVelocity }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name);
+                                var eventout = new MidiEvent(evIN.Type, new List<int> { iNoteAndVel[0], iNoteAndVel[1] }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name);
 
                                 if (routing.NotesSentForPanic[eventout.Values[0]])
                                 {

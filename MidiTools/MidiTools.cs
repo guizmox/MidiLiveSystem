@@ -91,7 +91,7 @@ namespace MidiTools
             }
         }
 
-        internal static int GetNoteIndex(int key, int vel, MidiOptions options)
+        internal static int[] GetNoteIndex(int key, int vel, MidiOptions options)
         {
             int iNote = -1;
 
@@ -129,7 +129,7 @@ namespace MidiTools
                 }
             }
 
-            return iNote;
+            return new int[] { iNote, vel };
         }
 
         internal static string GetSysExString(byte[] data)

@@ -241,7 +241,7 @@
                                 <TextBlock Grid.Column="2" Grid.Row="1"  Text="VELO."/>
                                 <TextBox Name="tbInternalGeneratorVelocity" Grid.Row="1" Grid.Column="3" MaxLength="3" Text="127" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
                                 <TextBlock Grid.Column="4" Grid.Row="1" Text="LEN.(ms)"/>
-                                <TextBox Name="tbInternalGeneratorLength" Grid.Row="1" Grid.Column="5" MaxLength="3" Text="1" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                                <TextBox Name="tbInternalGeneratorLength" Grid.Row="1" Grid.Column="5" MaxLength="4" Text="1" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
                             </Grid>
                         </StackPanel>
                         
