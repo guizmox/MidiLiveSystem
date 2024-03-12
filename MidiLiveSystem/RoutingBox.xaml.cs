@@ -191,21 +191,24 @@ namespace MidiLiveSystem
 
         private void cbPresetButton_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            var itemOLD = e.RemovedItems.Count > 0 ? (ComboBoxItem)e.RemovedItems[0] : null;
-            var itemNEW = e.AddedItems.Count > 0 ? (ComboBoxItem)e.AddedItems[0] : null;
-
-            if (itemOLD != null)
+            if (cbPresetButton.SelectedIndex > -1)
             {
-                var preset = MemCurrentPreset();
-                int iPreset = Convert.ToInt32(itemOLD.Tag);
-                TempMemory[Convert.ToInt32(iPreset)] = preset;
-            }
+                var itemOLD = e.RemovedItems.Count > 0 ? (ComboBoxItem)e.RemovedItems[0] : null;
+                var itemNEW = e.AddedItems.Count > 0 ? (ComboBoxItem)e.AddedItems[0] : null;
 
-            if (itemNEW != null)
-            {
-                int iPreset = Convert.ToInt32(itemNEW.Tag);
-                CurrentPreset = iPreset;
-                PresetButtonPushed();
+                if (itemOLD != null)
+                {
+                    var preset = MemCurrentPreset();
+                    int iPreset = Convert.ToInt32(itemOLD.Tag);
+                    TempMemory[Convert.ToInt32(iPreset)] = preset;
+                }
+
+                if (itemNEW != null)
+                {
+                    int iPreset = Convert.ToInt32(itemNEW.Tag);
+                    CurrentPreset = iPreset;
+                    PresetButtonPushed();
+                }
             }
         }
 
@@ -459,6 +462,7 @@ namespace MidiLiveSystem
 
         private void btnPreset_Click(object sender, RoutedEventArgs e)
         {
+            cbPresetButton.SelectedIndex = -1; //trick pour le forcer à bouger si on appuie 2 fois sur le même bouton
             cbPresetButton.SelectedIndex = Convert.ToInt32(((Button)sender).Tag);
         }
 
