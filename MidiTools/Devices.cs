@@ -269,7 +269,7 @@ namespace MidiTools
             MIDI_OutputEvents.SendEvent(midiEvent);
         }
 
-        public void SendSysExInitializer(InstrumentData instr)
+        internal void SendSysExInitializer(InstrumentData instr)
         {
             SendMidiEvent(new MidiEvent(TypeEvent.SYSEX, instr.SysExInitializer, Name));
         }

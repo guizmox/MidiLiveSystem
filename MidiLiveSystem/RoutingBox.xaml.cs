@@ -681,23 +681,30 @@ namespace MidiLiveSystem
 
         private BoxPreset MemCurrentPreset()
         {
-            try
+            BoxPreset boxPreset = null;
+
+            Dispatcher.Invoke(() =>
             {
-                //mémorisation des données en cours
-                var presetname = tbPresetName.Text.Trim();
-                var routingname = tbRoutingName.Text.Trim();
-                string sDeviceIn = cbMidiIn.SelectedItem == null ? "" : ((ComboBoxItem)cbMidiIn.SelectedItem).Tag.ToString();
-                string sDeviceOut = cbMidiOut.SelectedItem == null ? "" : ((ComboBoxItem)cbMidiOut.SelectedItem).Tag.ToString();
-                int iChannelIn = cbChannelMidiIn.SelectedItem == null ? 1 : Convert.ToInt32(((ComboBoxItem)cbChannelMidiIn.SelectedItem).Tag.ToString());
-                int iChannelOut = cbChannelMidiOut.SelectedItem == null ? 1 : Convert.ToInt32(((ComboBoxItem)cbChannelMidiOut.SelectedItem).Tag.ToString());
-                var options = GetOptions();
-                var preset = GetPreset();
+                try
+                {
+                    //mémorisation des données en cours
+                    var presetname = tbPresetName.Text.Trim();
+                    var routingname = tbRoutingName.Text.Trim();
+                    string sDeviceIn = cbMidiIn.SelectedItem == null ? "" : ((ComboBoxItem)cbMidiIn.SelectedItem).Tag.ToString();
+                    string sDeviceOut = cbMidiOut.SelectedItem == null ? "" : ((ComboBoxItem)cbMidiOut.SelectedItem).Tag.ToString();
+                    int iChannelIn = cbChannelMidiIn.SelectedItem == null ? 1 : Convert.ToInt32(((ComboBoxItem)cbChannelMidiIn.SelectedItem).Tag.ToString());
+                    int iChannelOut = cbChannelMidiOut.SelectedItem == null ? 1 : Convert.ToInt32(((ComboBoxItem)cbChannelMidiOut.SelectedItem).Tag.ToString());
+                    var options = GetOptions();
+                    var preset = GetPreset();
 
-                var bp = new BoxPreset(RoutingGuid, BoxGuid, routingname, presetname, options, preset, sDeviceIn, sDeviceOut, iChannelIn, iChannelOut);
+                    var bp = new BoxPreset(RoutingGuid, BoxGuid, routingname, presetname, options, preset, sDeviceIn, sDeviceOut, iChannelIn, iChannelOut);
 
-                return bp;
-            }
-            catch { throw; }
+                    boxPreset = bp;
+                }
+                catch { throw; }
+            });
+
+            return boxPreset;
         }
 
         private void FillUI(BoxPreset bp, bool bIsFirst)
