@@ -179,6 +179,8 @@
 
                 <Button Name="btnClose" Grid.Row="10" Grid.Column="3" Content="OK" Width="50" Margin="5,0,5,0" HorizontalAlignment="Right" Click="btnClose_Click" />
 
+                <Button Name="btnPanic" Grid.Row="10" Grid.Column="0" Content="MIDI PANIC" Background="IndianRed" Margin="5,0,5,0" HorizontalAlignment="Left" Click="btnPanic_Click" />
+
             </Grid>
         </DockPanel>
     </Grid>

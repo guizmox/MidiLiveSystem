@@ -15,9 +15,8 @@ namespace MidiTools
         public MidiOptions StartOptions;
         public Channel Channel;
         public string DeviceOUT;
-        public string DeviceIN;
         public Guid RoutingGuid;
-        public int Program;
+        public MidiPreset InitProgram;
 
 
         public LiveData()

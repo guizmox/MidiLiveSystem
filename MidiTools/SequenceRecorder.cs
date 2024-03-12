@@ -28,7 +28,7 @@ namespace MidiTools
         private List<MidiEvent> _eventsIN = new List<MidiEvent>();
         private List<MidiEvent> _eventsOUT = new List<MidiEvent>();
 
-        public List<MidiEvent> EventsIN { get { return _eventsIN; } }
+        public List<MidiEvent> EventsOUT { get { return _eventsOUT; } }
 
         public TimeSpan SequenceLength = TimeSpan.Zero;
         public bool IsStopped = true;
@@ -68,9 +68,16 @@ namespace MidiTools
                 sbInfo.AppendLine(string.Concat(s, " > ", sChannels));
             }
             sbInfo.AppendLine(Environment.NewLine);
-            sbInfo.AppendLine(string.Concat("MIDI IN event(s) : ", _eventsIN.Count));
-            sbInfo.AppendLine(Environment.NewLine);
-            sbInfo.AppendLine(string.Concat("MIDI OUT event(s) : " + _eventsOUT.Count, " (Tracks : ", iTracks.ToString(), ")"));
+            if (_eventsIN.Count > 0)
+            {
+                sbInfo.AppendLine(string.Concat("MIDI IN event(s) : ", _eventsIN.Count));
+                sbInfo.AppendLine(Environment.NewLine);
+            }
+            if (_eventsOUT.Count > 0)
+            {
+                sbInfo.AppendLine(string.Concat("MIDI OUT event(s) : " + _eventsOUT.Count, " (Tracks : ", iTracks.ToString(), ")"));
+            }
+
             return sbInfo.ToString();
         }
 
@@ -190,15 +197,13 @@ namespace MidiTools
             {
                 StartStopPlayerCounter(true);
 
-                routing.InitRouting(SequencerDefault);
-
-                PlaySequence(_eventsIN, routing);
+                PlaySequence(_eventsOUT, routing);
 
                 Thread.Sleep(2500);
 
                 StartStopPlayerCounter(false);
 
-                SequenceFinished?.Invoke(_eventsIN.Count.ToString() + " event(s) have been played.");
+                SequenceFinished?.Invoke(_eventsOUT.Count.ToString() + " event(s) have been played.");
             });
         }
 
@@ -206,9 +211,9 @@ namespace MidiTools
         {
             PlayStatus = 1;
 
-            int iPendingNotes = 0;
-
             Stopwatch stopwatch = new Stopwatch(); // Créer un chronomètre
+
+            routing.InitDevicesForSequencePlay(SequencerDefault);
 
             for (int i = 0; i < events.Count; i++)
             {
@@ -234,14 +239,12 @@ namespace MidiTools
                     stopwatch.Stop(); // Arrêter le chronomètre
                 }
 
-                if (eventtoplay.Type == TypeEvent.NOTE_ON) { iPendingNotes++; }
-                else if (eventtoplay.Type == TypeEvent.NOTE_OFF || (eventtoplay.Type == TypeEvent.NOTE_ON && eventtoplay.Values[1] == 0)) { iPendingNotes--; }
+                routing.SendSequencedEvent(eventtoplay);
 
-                routing.SendGenericMidiEvent(eventtoplay);
-
-                if (StopSequenceRequested && iPendingNotes == 0)
+                if (StopSequenceRequested)
                 {
-                    break; // Sortir de la boucle si l'arrêt est demandé et toutes les notes sont relâchées
+                    routing.Panic();
+                    break;
                 }
             }
 
@@ -251,11 +254,6 @@ namespace MidiTools
         public void StopSequence()
         {
             StopSequenceRequested = true;
-
-            while (PlayStatus > 0)
-            {
-                Thread.Sleep(300);
-            }
         }
     }
 }

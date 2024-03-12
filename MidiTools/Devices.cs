@@ -343,6 +343,8 @@ namespace MidiTools
 
         internal void SendEvent(MidiEvent ev)
         {
+            ev.EventDate = DateTime.Now; //à cause des problèmes de timing à la lecture d'une séquence
+
             switch (ev.Type)
             {
                 case TypeEvent.CLOCK:

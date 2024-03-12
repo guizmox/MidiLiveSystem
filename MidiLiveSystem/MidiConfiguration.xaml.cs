@@ -22,7 +22,8 @@ namespace MidiLiveSystem
 {
     public partial class MidiConfiguration : Window
     {
-        public ProjectConfiguration Configuration = new ProjectConfiguration();
+        internal ProjectConfiguration Configuration = new ProjectConfiguration();
+        private MidiRouting Routing;
 
         public MidiConfiguration()
         {
@@ -30,10 +31,11 @@ namespace MidiLiveSystem
             InitPage(false, null);
         }
 
-        public MidiConfiguration(ProjectConfiguration pc, List<RoutingBox> boxes)
+        public MidiConfiguration(ProjectConfiguration pc, List<RoutingBox> boxes, MidiRouting routing)
         {
             Configuration = pc;
-            Configuration = (ProjectConfiguration)this.Configuration.Clone();
+            Configuration = Configuration.Clone();
+            Routing = routing;
 
             InitializeComponent();
             InitPage(true, boxes);
@@ -390,6 +392,23 @@ namespace MidiLiveSystem
             }
         }
 
+        private void cbMidiOut_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+           ComboBoxItem cb = (ComboBoxItem)e.AddedItems[0];
+            if (cb != null)
+            {
+                InitCC(cb.Tag.ToString());
+            }
+        }
+
+        private void btnPanic_Click(object sender, RoutedEventArgs e)
+        {
+            if (Routing != null)
+            {
+                Routing.Panic();
+            }
+        }
+
         private void GetConfiguration()
         {
             string projectName = tbProjectName.Text.Trim();
@@ -498,14 +517,6 @@ namespace MidiLiveSystem
             }
         }
 
-        private void cbMidiOut_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-           ComboBoxItem cb = (ComboBoxItem)e.AddedItems[0];
-            if (cb != null)
-            {
-                InitCC(cb.Tag.ToString());
-            }
-        }
     }
 
     [Serializable]

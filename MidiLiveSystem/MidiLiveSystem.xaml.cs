@@ -551,7 +551,7 @@ namespace MidiLiveSystem
                 if (!ConfigWindow.IsActive)
                 {
                     ConfigWindow.Closed -= MainConfiguration_Closed;
-                    ConfigWindow = new MidiConfiguration(Project, Boxes);
+                    ConfigWindow = new MidiConfiguration(Project, Boxes, Routing);
                     ConfigWindow.Show();
                     ConfigWindow.Closed += MainConfiguration_Closed;
                 }
@@ -562,7 +562,7 @@ namespace MidiLiveSystem
             }
             else
             {
-                ConfigWindow = new MidiConfiguration(Project, Boxes);
+                ConfigWindow = new MidiConfiguration(Project, Boxes, Routing);
 
                 ConfigWindow.Show();
                 ConfigWindow.Closed += MainConfiguration_Closed;
@@ -765,7 +765,7 @@ namespace MidiLiveSystem
                 if (btnRecordSequence.Background == Brushes.Red)
                 {
                     btnRecordSequence.Background = Brushes.DarkGray;
-                    RecordedSequence.StopRecording(true, true);
+                    RecordedSequence.StopRecording(false, true);
 
                     if (Project == null)
                     {
@@ -778,12 +778,12 @@ namespace MidiLiveSystem
                 {
                     btnRecordSequence.Background = Brushes.Red;
 
-                    if (RecordedSequence.EventsIN.Count > 0)
+                    if (RecordedSequence.EventsOUT.Count > 0)
                     {
                         var confirm = MessageBox.Show("Would you like to erase the last recording ?", "Erase ?", MessageBoxButton.YesNo);
                         if (confirm == MessageBoxResult.Yes)
                         {
-                            RecordedSequence.StopRecording(true, true);
+                            RecordedSequence.StopRecording(false, true);
                             RecordedSequence.Clear();
 
                             bRecord = true;
@@ -820,7 +820,7 @@ namespace MidiLiveSystem
                 RecordedSequence.RecordCounter += PlayedSequence_RecordCounter;
                 RecordedSequence.SequenceFinished += Routing_SequenceFinished;
 
-                if (RecordedSequence.EventsIN.Count > 0)
+                if (RecordedSequence.EventsOUT.Count > 0)
                 {
                     if (btnPlaySequence.Background == Brushes.Green)
                     {
