@@ -73,7 +73,6 @@ namespace MidiLiveSystem
             RecallWindow.Closed += RecallWindow_Closed;
         }
 
-
         private void Keyboard_KeyPressed(string sKey)
         {
             Dispatcher.Invoke(() =>
@@ -93,9 +92,9 @@ namespace MidiLiveSystem
             });
         }
 
-        private void Routing_IncomingMidiMessage(MidiEvent ev)
+        private async void Routing_IncomingMidiMessage(MidiEvent ev)
         {
-            Dispatcher.Invoke(() =>
+            await Dispatcher.InvokeAsync(() =>
             {
                 if (ev.Type == MidiDevice.TypeEvent.CC)
                 {
@@ -131,23 +130,17 @@ namespace MidiLiveSystem
             });
         }
 
-        private void MidiRouting_InputMidiMessage(MidiEvent ev)
+        private async void MidiRouting_InputMidiMessage(MidiEvent ev)
         {
             if (RecallWindow != null && Project.TriggerRecallDevice.Equals(ev.Device))
             {
                 if (ev.Type == MidiDevice.TypeEvent.NOTE_ON && Project.TriggerRecallButtons.Equals("NOTE") && ev.Values[0] >= Project.TriggerRecallButtonsValue && ev.Values[0] <= Project.TriggerRecallButtonsValue + 8)
                 {
-                    Dispatcher.Invoke(() =>
-                    {
-                        RecallWindow.SetButton(true, Project.TriggerRecallButtonsValue, ev.Values[0]);
-                    });
+                    await RecallWindow.SetButton(true, Project.TriggerRecallButtonsValue, ev.Values[0]);
                 }
                 else if (ev.Type == MidiDevice.TypeEvent.NOTE_ON && Project.TriggerRecallButtons.Equals("CC") && ev.Values[1] < 8)
                 {
-                    Dispatcher.Invoke(() =>
-                    {
-                        RecallWindow.SetButton(false, Project.TriggerRecallButtonsValue, ev.Values[1]);
-                    });
+                    await RecallWindow.SetButton(false, Project.TriggerRecallButtonsValue, ev.Values[1]);
                 }
             }
         }
@@ -202,12 +195,11 @@ namespace MidiLiveSystem
             }
         }
 
-        private async void Window_Closed(object sender, EventArgs e)
+        private void Window_Closed(object sender, EventArgs e)
         {
+            UIRefreshRate.Enabled = false;
             UIRefreshRate.Elapsed -= UIRefreshRate_Elapsed;
             UIRefreshRate.Stop();
-
-            //Database.SaveProject(Boxes, Project, RecordedSequence);
 
             if (LogWindow != null)
             {
@@ -240,7 +232,7 @@ namespace MidiLiveSystem
             }
 
             Database.SaveInstruments(CubaseInstrumentData.Instruments);
-            await Routing.DeleteAllRouting();
+            Routing.DeleteAllRouting();
         }
 
         private void RecallWindow_Closed(object sender, EventArgs e)
@@ -276,7 +268,7 @@ namespace MidiLiveSystem
                 if (Project.VerticalGrid != CurrentVerticalGrid || Project.HorizontalGrid != CurrentHorizontalGrid)
                 {
                     Project = config;
-                    AddAllRoutingBoxes();
+                    await AddAllRoutingBoxes();
                 }
                 Project = config;
                 await SaveTemplate();
@@ -308,7 +300,7 @@ namespace MidiLiveSystem
             }
         }
 
-        private void DetachedBox_Closed(object sender, EventArgs e)
+        private async void DetachedBox_Closed(object sender, EventArgs e)
         {
             if (this.IsActive)
             {
@@ -318,7 +310,7 @@ namespace MidiLiveSystem
                 db.Closed -= DetachedBox_Closed;
                 DetachedWindows.Remove(db);
 
-                AddAllRoutingBoxes();
+                await AddAllRoutingBoxes();
             }
         }
 
@@ -327,9 +319,12 @@ namespace MidiLiveSystem
             Dispatcher.Invoke(() =>
             {
                 tbPlay.Text = "PLAY";
+                tbRecord.Text = "REC";
                 btnPlaySequence.Background = Brushes.DarkGray;
+                btnRecordSequence.Background = Brushes.DarkGray;
                 UIRefreshRate.Start();
             });
+
             await Routing.OpenUsedPorts(false);
         }
 
@@ -364,15 +359,15 @@ namespace MidiLiveSystem
                         break;
                     case "MAXIMIZE":
                         InitFrames(1, 1);
-                        AddRoutingBoxToFrame(box, false);
+                        await AddRoutingBoxToFrame(box, false);
                         break;
                     case "MINIMIZE":
                         InitFrames(Project.HorizontalGrid, Project.VerticalGrid);
-                        AddAllRoutingBoxes();
+                        await AddAllRoutingBoxes();
                         break;
                     case "DETACH":
                         box.Detached = true;
-                        AddAllRoutingBoxes();
+                        await AddAllRoutingBoxes();
                         break;
                     case "REMOVE":
                         var confirmation = MessageBox.Show("Are you sure ?", "Delete Box", MessageBoxButton.YesNo);
@@ -380,7 +375,7 @@ namespace MidiLiveSystem
                         {
                             await Routing.DeleteRouting(box.RoutingGuid);
                             Boxes.Remove(box);
-                            AddAllRoutingBoxes();
+                            await AddAllRoutingBoxes();
                         }
                         break;
                     case "MOVE_NEXT":
@@ -393,7 +388,7 @@ namespace MidiLiveSystem
                             var next = Boxes.FirstOrDefault(b => b.GridPosition == box.GridPosition + 1);
                             box.GridPosition++;
                             next.GridPosition--;
-                            AddAllRoutingBoxes();
+                            await AddAllRoutingBoxes();
                         }
                         break;
                     case "MOVE_PREVIOUS":
@@ -406,27 +401,34 @@ namespace MidiLiveSystem
                             var previous = Boxes.FirstOrDefault(b => b.GridPosition == box.GridPosition - 1);
                             box.GridPosition--;
                             previous.GridPosition++;
-                            AddAllRoutingBoxes();
+                            await AddAllRoutingBoxes();
                         }
                         break;
                     case "SOLO":
                         if (box.RoutingGuid != Guid.Empty)
                         {
-                            await SaveTemplate();
                             if ((bool)sValue)
                             {
                                 await Routing.SetSolo(box.RoutingGuid);
+
                                 foreach (var b in Boxes.Where(b => !b.BoxGuid.Equals(box.BoxGuid)))
                                 {
-                                    b.SetMute(true, false);
+                                    b.Dispatcher.Invoke(() =>
+                                    {
+                                        b.SetMute(true, false);
+                                    });
                                 }
                             }
                             else
                             {
                                 await Routing.UnmuteAllRouting();
+
                                 foreach (var b in Boxes.Where(b => !b.BoxGuid.Equals(box.BoxGuid)))
                                 {
-                                    b.SetMute(false, Routing.GetActiveStatus(b.RoutingGuid));
+                                    b.Dispatcher.Invoke(() =>
+                                    {
+                                        b.SetMute(false, Routing.GetActiveStatus(b.RoutingGuid));
+                                    });
                                 }
                             }
                         }
@@ -444,35 +446,42 @@ namespace MidiLiveSystem
                             }
                         }
                         break;
+
                     case "PLAY_NOTE":
-                        if (box.RoutingGuid != Guid.Empty)
+
+                        BoxPreset bp1 = (BoxPreset)sValue;
+
+                        string sDevIn1 = bp1.DeviceIn;
+                        string sDevOut1 = bp1.DeviceOut;
+                        int iChIn1 = bp1.ChannelIn;
+                        int iChOut1 = bp1.ChannelOut;
+
+                        if (bp1.RoutingGuid != Guid.Empty)
                         {
-                            string sDevIn = box.cbMidiIn.SelectedItem != null ? ((ComboBoxItem)box.cbMidiIn.SelectedItem).Tag.ToString() : "";
-                            string sDevOut = box.cbMidiOut.SelectedItem != null ? ((ComboBoxItem)box.cbMidiOut.SelectedItem).Tag.ToString() : "";
-
-                            await Routing.ModifyRouting(box.RoutingGuid, sDevIn, sDevOut,
-                                                   Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
-                                                   Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
-                                                   (MidiOptions)sValue, box.GetPreset());
-
-                            await Routing.SendNote(box.RoutingGuid, ((MidiOptions)sValue).PlayNote);
+                            await Routing.ModifyRouting(bp1.RoutingGuid, sDevIn1, sDevOut1, iChIn1, iChOut1, bp1.MidiOptions, bp1.MidiPreset);
+                            await Routing.SendNote(box.RoutingGuid, bp1.MidiOptions.PlayNote);
                         }
                         break;
+
                     case "PRESET_CHANGE":
-                        if (box.RoutingGuid != Guid.Empty)
-                        {
-                            string sDevIn = box.cbMidiIn.SelectedItem != null ? ((ComboBoxItem)box.cbMidiIn.SelectedItem).Tag.ToString() : "";
-                            string sDevOut = box.cbMidiOut.SelectedItem != null ? ((ComboBoxItem)box.cbMidiOut.SelectedItem).Tag.ToString() : "";
 
-                            await Routing.ModifyRouting(box.RoutingGuid, sDevIn, sDevOut,
-                                                   Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString()),
-                                                   Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString()),
-                                                   box.GetOptions(), (MidiPreset)sValue);
+                        BoxPreset bp2 = (BoxPreset)sValue;
+
+                        string sDevIn2 = bp2.DeviceIn;
+                        string sDevOut2 = bp2.DeviceOut;
+                        int iChIn2 = bp2.ChannelIn;
+                        int iChOut2 = bp2.ChannelOut;
+
+                        if (bp2.RoutingGuid != Guid.Empty)
+                        {
+                            await Routing.ModifyRouting(bp2.RoutingGuid, sDevIn2, sDevOut2, iChIn2, iChOut2, bp2.MidiOptions, bp2.MidiPreset);
                         }
                         break;
+
                     case "COPY_PRESET":
                         CopiedPreset = (BoxPreset)sValue;
                         break;
+
                     case "CHECK_OUT_CHANNEL":
                         string sDevice = ((string)sValue).Split("#|#")[0];
                         int iChannelWanted = Convert.ToInt32(((string)sValue).Split("#|#")[1]);
@@ -505,7 +514,7 @@ namespace MidiLiveSystem
             }
             else
             {
-                Dispatcher.Invoke(() =>
+                await tbNoteName.Dispatcher.InvokeAsync(() =>
                 {
                     tbNoteName.Text = "";
                 });
@@ -516,7 +525,7 @@ namespace MidiLiveSystem
             //    LogWindow.AddLog("UI", true, Routing.Events.ToString());
             //}
 
-            Dispatcher.Invoke(() =>
+            await Dispatcher.InvokeAsync(() =>
             {
                 this.Title = string.Concat("Midi Live System [", Routing.CyclesInfo, " - UI Refresh Rate : ", i, " Sec.]");
             });
@@ -529,9 +538,9 @@ namespace MidiLiveSystem
             }
         }
 
-        private void MidiRouting_NewLog(string sDevice, bool bIn, string sLog)
+        private async void MidiRouting_NewLog(string sDevice, bool bIn, string sLog)
         {
-            LogWindow.AddLog(sDevice, bIn, sLog);
+            await LogWindow.AddLog(sDevice, bIn, sLog);
         }
 
         private void btnSettings_Click(object sender, RoutedEventArgs e)
@@ -559,12 +568,13 @@ namespace MidiLiveSystem
             }
         }
 
-        private void btnAddBox_Click(object sender, RoutedEventArgs e)
+        private async void btnAddBox_Click(object sender, RoutedEventArgs e)
         {
             RoutingBox rtb = new RoutingBox(Project, MidiRouting.InputDevices, MidiRouting.OutputDevices, Boxes.Count);
             Boxes.Add(rtb);
 
-            AddRoutingBoxToFrame(rtb, true);
+            RecallWindow.UpdateBoxes();
+            await AddRoutingBoxToFrame(rtb, true);
         }
 
         private void btnConductor_Click(object sender, RoutedEventArgs e)
@@ -633,7 +643,9 @@ namespace MidiLiveSystem
                     var project = prj.Project;
                     if (project != null)
                     {
-                        await Routing.DeleteAllRouting();
+                        UIRefreshRate.Enabled = false;
+
+                        Routing.DeleteAllRouting();
 
                         Project = project.Item2;
 
@@ -652,8 +664,15 @@ namespace MidiLiveSystem
                                 CurrentHorizontalGrid = Project.HorizontalGrid;
                             }
 
-                            AddAllRoutingBoxes();
+                            await AddAllRoutingBoxes();
+
+                            foreach (var box in Boxes)
+                            {
+                                await ProcessBoxData(box, true);
+                            }
                         }
+
+                        UIRefreshRate.Enabled = true;
                     }
                     else
                     {
@@ -795,9 +814,9 @@ namespace MidiLiveSystem
                 RecordedSequence = new MidiSequence();
 
                 tbRecord.Text = "GO !";
-                RecordedSequence.StartRecording(true, true, Routing);
                 RecordedSequence.RecordCounter += RecordedSequence_RecordCounter;
                 RecordedSequence.SequenceFinished += Routing_SequenceFinished;
+                RecordedSequence.StartRecording(true, true, Routing);
             }
         }
 
@@ -856,73 +875,6 @@ namespace MidiLiveSystem
             }
         }
 
-        private void AddRoutingBoxToFrame(RoutingBox rtb, bool bCreate)
-        {
-            if (!GridFrames.Any(g => g.Tag.ToString().Equals("")))
-            {
-                if (Boxes.Count >= 20)
-                {
-                    MessageBox.Show("You can't add more Routing Boxes.");
-                }
-                else
-                {
-                    if (CurrentHorizontalGrid + 1 >= CurrentVerticalGrid)
-                    {
-                        CurrentVerticalGrid += 1;
-                        AddAllRoutingBoxes();
-                    }
-                    else
-                    {
-                        CurrentHorizontalGrid += 1;
-                        AddAllRoutingBoxes();
-                    }
-                }
-            }
-            else
-            {
-                var frame = GridFrames.FirstOrDefault(g => g.Tag.ToString().Equals(""));
-
-                if (rtb.Detached)
-                {
-                    var detached = DetachedWindows.FirstOrDefault(d => d.RoutingBox.BoxGuid == rtb.BoxGuid);
-                    if (detached != null)
-                    {
-                        detached.Focus();
-                    }
-                    else
-                    {
-                        DetachedBox db = new DetachedBox(rtb);
-                        db.Show();
-                        if (bCreate)
-                        {
-                            rtb.OnUIEvent += RoutingBox_UIEvent;
-                        }
-                        DetachedWindows.Add(db);
-                        db.Closed += DetachedBox_Closed;
-                    }
-                }
-                else
-                {
-                    frame.Tag = rtb.BoxGuid.ToString();
-                    frame.Navigate(rtb);
-                    if (bCreate)
-                    {
-                        rtb.OnUIEvent += RoutingBox_UIEvent;
-                    }
-                }
-            }
-        }
-
-        private void AddAllRoutingBoxes()
-        {
-            RemoveAllBoxes(CurrentHorizontalGrid, CurrentVerticalGrid);
-
-            foreach (var box in Boxes.OrderBy(b => b.GridPosition))
-            {
-                AddRoutingBoxToFrame(box, true);
-            }
-        }
-
         private void RemoveAllBoxes(int iRows, int iCols)
         {
             if (Boxes != null)
@@ -941,40 +893,130 @@ namespace MidiLiveSystem
             InitFrames(iRows, iCols);
         }
 
-        private async Task SaveTemplate()
+        private async Task AddAllRoutingBoxes()
         {
-            foreach (RoutingBox box in Boxes)
+            RemoveAllBoxes(CurrentHorizontalGrid, CurrentVerticalGrid);
+
+            List<Task> tasks = new List<Task>();
+
+            foreach (var box in Boxes.OrderBy(b => b.GridPosition))
             {
-                string sDevIn = "";
-                string sDevOut = "";
-                int iChIn = 0;
-                int iChOut = 0;
-                MidiOptions options = null;
-                MidiPreset preset = null;
+                tasks.Add(AddRoutingBoxToFrame(box, true));
+            }
 
-                Dispatcher.Invoke(() =>
+            await Task.WhenAll(tasks);
+        }
+
+        private async Task AddRoutingBoxToFrame(RoutingBox rtb, bool bCreate)
+        {
+            bool bFrame = false;
+
+            await Dispatcher.InvokeAsync(() =>
+            {
+                bFrame = GridFrames.Any(g => g.Tag.ToString().Equals(""));
+            });
+
+            if (!bFrame)
+            {
+                if (Boxes.Count >= 20)
                 {
-                    box.Snapshot(); //enregistrement du preset en cours
-
-                    sDevIn = box.cbMidiIn.SelectedItem != null ? ((ComboBoxItem)box.cbMidiIn.SelectedItem).Tag.ToString() : "";
-                    sDevOut = box.cbMidiOut.SelectedItem != null ? ((ComboBoxItem)box.cbMidiOut.SelectedItem).Tag.ToString() : "";
-                    iChIn = Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiIn.SelectedItem).Tag.ToString());
-                    iChOut = Convert.ToInt32(((ComboBoxItem)box.cbChannelMidiOut.SelectedItem).Tag.ToString());
-                    options = box.GetOptions();
-                    preset = box.GetPreset();
-                });
-
-                if (box.RoutingGuid == Guid.Empty)
-                {
-                    box.RoutingGuid = Routing.AddRouting(sDevIn, sDevOut, iChIn, iChOut, options, preset );
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        MessageBox.Show("You can't add more Routing Boxes.");
+                    });
                 }
                 else
                 {
-                    await Routing.ModifyRouting(box.RoutingGuid, sDevIn, sDevOut, iChIn, iChOut, options, preset);
+                    if (CurrentHorizontalGrid + 1 >= CurrentVerticalGrid)
+                    {
+                        CurrentVerticalGrid += 1;
+                        await AddAllRoutingBoxes();
+                    }
+                    else
+                    {
+                        CurrentHorizontalGrid += 1;
+                        await AddAllRoutingBoxes();
+                    }
                 }
             }
+            else
+            {
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    var frame = GridFrames.FirstOrDefault(g => g.Tag.ToString().Equals(""));
+
+                    if (rtb.Detached)
+                    {
+                        var detached = DetachedWindows.FirstOrDefault(d => d.RoutingBox.BoxGuid == rtb.BoxGuid);
+                        if (detached != null)
+                        {
+                            detached.Focus();
+                        }
+                        else
+                        {
+                            DetachedBox db = new DetachedBox(rtb);
+                            db.Show();
+                            if (bCreate)
+                            {
+                                rtb.OnUIEvent += RoutingBox_UIEvent;
+                            }
+                            DetachedWindows.Add(db);
+                            db.Closed += DetachedBox_Closed;
+                        }
+                    }
+                    else
+                    {
+                        frame.Tag = rtb.BoxGuid.ToString();
+                        frame.Navigate(rtb);
+                        if (bCreate)
+                        {
+                            rtb.OnUIEvent += RoutingBox_UIEvent;
+                        }
+                    }
+                });
+            }
+        }
+
+        private async Task SaveTemplate()
+        {
+            List<Task> tasks = new List<Task>();
+
+            for (int i = 0; i < Boxes.Count; i++)
+            {
+                tasks.Add(ProcessBoxData(Boxes[i], false));
+            }
+
+            await Task.WhenAll(tasks);
 
             await Routing.SetClock(Project.ClockActivated, Project.BPM, Project.ClockDevice);
+        }
+
+        private async Task ProcessBoxData(RoutingBox box, bool bFromSave)
+        {
+            string sDevIn = "";
+            string sDevOut = "";
+            int iChIn = 0;
+            int iChOut = 0;
+            MidiOptions options = null;
+            MidiPreset preset = null;
+
+            var snapshot = await box.Snapshot(); //enregistrement du preset en cours
+
+            sDevIn = snapshot.DeviceIn;
+            sDevOut = snapshot.DeviceOut;
+            iChIn = snapshot.ChannelIn;
+            iChOut = snapshot.ChannelOut;
+            options = snapshot.MidiOptions;
+            preset = snapshot.MidiPreset;
+
+            if (box.RoutingGuid == Guid.Empty || bFromSave)
+            {
+                box.RoutingGuid = await Routing.AddRouting(sDevIn, sDevOut, iChIn, iChOut, options, preset);
+            }
+            else
+            {
+                bool bModify = await Routing.ModifyRouting(snapshot.RoutingGuid, sDevIn, sDevOut, iChIn, iChOut, options, preset);
+            }
         }
     }
 

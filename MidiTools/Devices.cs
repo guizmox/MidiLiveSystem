@@ -11,6 +11,7 @@ using System.Threading;
 using System.Timers;
 using System.Linq;
 using System.IO;
+using System.Collections.Concurrent;
 
 namespace MidiTools
 {
@@ -101,8 +102,9 @@ namespace MidiTools
         }
 
         public string Name { get; internal set; }
+        public DateTime LastMessage { get; private set; }
 
-        private int MIDI_InOrOut; //IN = 1, OUT = 2
+        private readonly int MIDI_InOrOut; //IN = 1, OUT = 2
 
         private MidiInputDeviceEvents MIDI_InputEvents;
         private MidiOutputDeviceEvents MIDI_OutputEvents;
@@ -117,7 +119,6 @@ namespace MidiTools
 
         internal delegate void MidiClockEventHandler(object sender, ElapsedEventArgs e);
         internal event MidiClockEventHandler OnMidiClockEvent;
-
 
         internal delegate void MidiEventSequenceHandlerIN(MidiEvent ev);
         internal static event MidiEventSequenceHandlerIN OnMidiSequenceEventIN;
@@ -145,6 +146,8 @@ namespace MidiTools
 
         private void MIDI_InputEvents_OnMidiEvent(MidiEvent ev)
         {
+            LastMessage = DateTime.Now;
+
             //renvoyer l'évènement plus haut
             if (ev.Type == TypeEvent.CLOCK)
             {
@@ -159,6 +162,8 @@ namespace MidiTools
 
         private void MIDI_OutputEvents_OnMidiEvent(MidiEvent ev)
         {
+            LastMessage = DateTime.Now;
+
             //renvoyer l'évènement plus haut
             OnMidiEvent?.Invoke(false, ev);
             OnMidiSequenceEventOUT?.Invoke(ev);
@@ -266,7 +271,7 @@ namespace MidiTools
 
         internal void SendMidiEvent(MidiEvent midiEvent)
         {
-            MIDI_OutputEvents.SendEvent(midiEvent);
+            MIDI_OutputEvents.SendEvent(midiEvent); 
         }
 
         internal void SendSysExInitializer(InstrumentData instr)
@@ -289,6 +294,44 @@ namespace MidiTools
                 MIDI_InputEvents.EnableDisableMidiClockEvents(true);
             }
         }
+
+        internal int GetLiveCCValue(int channelOut, int iCC)
+        {
+            if (MIDI_OutputEvents != null)
+            {
+                return MIDI_OutputEvents.CCmemory[channelOut - 1, iCC];
+            }
+            else { return -1; }
+        }
+
+        internal List<int[]> GetLiveCCData(Channel iChannel)
+        {
+            List<int[]> ccval = new List<int[]>();
+
+            if (MIDI_OutputEvents != null)
+            {
+                int idxch = Tools.GetChannelInt(iChannel) - 1;
+
+                for (int i = 0; i < 128; i++)
+                {
+                    if (MIDI_OutputEvents.CCmemory[idxch, i] > -1)
+                    {
+                        ccval.Add(new int[2] { i, MIDI_OutputEvents.CCmemory[idxch, i] });
+                    }
+                }
+            }
+
+            return ccval;
+        }
+
+        internal bool GetLiveNOTEValue(int channelOut, int iNote)
+        {
+            if (MIDI_OutputEvents != null)
+            {
+                return MIDI_OutputEvents.NOTEmemory[channelOut - 1, iNote];
+            }
+            else { return false; }
+        }
     }
 
     internal class MidiOutputDeviceEvents
@@ -296,10 +339,21 @@ namespace MidiTools
         internal delegate void MidiEventHandler(MidiEvent ev);
         internal event MidiEventHandler OnMidiEvent;
 
+        internal int[,] CCmemory = new int[16,128];
+        internal bool[,] NOTEmemory = new bool[16, 128];
+
         private IMidiOutputDevice outputDevice;
 
         internal MidiOutputDeviceEvents(string sDevice)
         {
+            for (int i = 0; i < 16; i++)
+            {
+                for (int i2 = 0; i2 < 128; i2++)
+                {
+                    CCmemory[i, i2] = -1;
+                }
+            }
+
             SetMidiOUT(sDevice);
         }
 
@@ -358,6 +412,7 @@ namespace MidiTools
                 case TypeEvent.NOTE_ON:
                     if (outputDevice != null && outputDevice.IsOpen)
                     {
+                        NOTEmemory[Tools.GetChannelInt(ev.Channel) - 1, ev.Values[0]] = true;
                         NoteOnMessage msg = new NoteOnMessage(ev.Channel, ev.GetKey(), ev.Values[1]);
                         outputDevice.Send(msg);
                     }
@@ -366,6 +421,7 @@ namespace MidiTools
                 case TypeEvent.NOTE_OFF:
                     if (outputDevice != null && outputDevice.IsOpen)
                     {
+                        NOTEmemory[Tools.GetChannelInt(ev.Channel) - 1, ev.Values[0]] = false;
                         NoteOffMessage msg = new NoteOffMessage(ev.Channel, ev.GetKey(), ev.Values[1]);
                         outputDevice.Send(msg);
                     }
@@ -411,6 +467,7 @@ namespace MidiTools
                 case TypeEvent.CC:
                     if (outputDevice != null && outputDevice.IsOpen && ev.Values[1] > -1)
                     {
+                        CCmemory[Tools.GetChannelInt(ev.Channel) - 1, ev.Values[0]] = ev.Values[1];
                         ControlChangeMessage msg = new ControlChangeMessage(ev.Channel, ev.Values[0], ev.Values[1]);
                         outputDevice.Send(msg);
                     }

@@ -37,6 +37,15 @@ namespace MidiLiveSystem
 
         private void InitPage()
         {
+            cbRecallSet1.Items.Clear();
+            cbRecallSet2.Items.Clear();
+            cbRecallSet3.Items.Clear();
+            cbRecallSet4.Items.Clear();
+            cbRecallSet5.Items.Clear();
+            cbRecallSet6.Items.Clear();
+            cbRecallSet7.Items.Clear();
+            cbRecallSet8.Items.Clear();
+
             foreach (var box in Boxes)
             {
                 cbRecallSet1.Items.Add(new ComboBoxCustomItem() { Id = box.BoxGuid.ToString(), Description = box.BoxName + " - Preset : ", Value = "0" });
@@ -113,69 +122,47 @@ namespace MidiLiveSystem
             }
         }
 
-        private void btnPreset_Click(object sender, RoutedEventArgs e)
+        private async void btnPreset_Click(object sender, RoutedEventArgs e)
         {
             Button btnPreset = (sender) as Button;
 
-            PresetChange(btnPreset);
+            await PresetChange(btnPreset);
         }
 
-        private void PresetChange(Button btnPreset)
+        private async Task PresetChange(Button btnPreset)
         {
             ComboBox cbPreset = new ComboBox();
 
-            switch (btnPreset.Name)
+            await btnPreset.Dispatcher.InvokeAsync(() =>
             {
-                case "btnRecall1":
-                    cbPreset = cbRecallSet1;
-                    break;
-                case "btnRecall2":
-                    cbPreset = cbRecallSet2;
-                    break;
-                case "btnRecall3":
-                    cbPreset = cbRecallSet3;
-                    break;
-                case "btnRecall4":
-                    cbPreset = cbRecallSet4;
-                    break;
-                case "btnRecall5":
-                    cbPreset = cbRecallSet5;
-                    break;
-                case "btnRecall6":
-                    cbPreset = cbRecallSet6;
-                    break;
-                case "btnRecall7":
-                    cbPreset = cbRecallSet7;
-                    break;
-                case "btnRecall8":
-                    cbPreset = cbRecallSet8;
-                    break;
-            }
-
-            foreach (var item in cbPreset.Items)
-            {
-                ComboBoxCustomItem cb = (ComboBoxCustomItem)item;
-
-                var box = Boxes.FirstOrDefault(b => b.BoxGuid.ToString().Equals(cb.Id));
-                if (box != null)
+                switch (btnPreset.Name)
                 {
-                    int iPreset = 0;
-                    if (int.TryParse(cb.Value, out iPreset))
-                    {
-                        if (iPreset > 0)
-                        {
-                            // Utilisation de Dispatcher.Invoke pour accéder au thread de l'interface utilisateur
-                            box.cbPresetButton.Dispatcher.Invoke(() =>
-                            {
-                                box.cbPresetButton.SelectedIndex = iPreset - 1;
-                            });
-                        }
-                    }
+                    case "btnRecall1":
+                        cbPreset = cbRecallSet1;
+                        break;
+                    case "btnRecall2":
+                        cbPreset = cbRecallSet2;
+                        break;
+                    case "btnRecall3":
+                        cbPreset = cbRecallSet3;
+                        break;
+                    case "btnRecall4":
+                        cbPreset = cbRecallSet4;
+                        break;
+                    case "btnRecall5":
+                        cbPreset = cbRecallSet5;
+                        break;
+                    case "btnRecall6":
+                        cbPreset = cbRecallSet6;
+                        break;
+                    case "btnRecall7":
+                        cbPreset = cbRecallSet7;
+                        break;
+                    case "btnRecall8":
+                        cbPreset = cbRecallSet8;
+                        break;
                 }
-            }
 
-            Dispatcher.Invoke(() =>
-            {
                 switch (btnPreset.Name)
                 {
                     case "btnRecall1":
@@ -260,6 +247,32 @@ namespace MidiLiveSystem
                         break;
                 }
             });
+
+            List<Task> tasks = new List<Task>();
+
+            for (int i = 0; i < cbPreset.Items.Count; i++)
+            {
+                tasks.Add(ProcessBox((ComboBoxCustomItem)cbPreset.Items[i]));
+            }
+
+            await Task.WhenAll(tasks);
+
+        }
+
+        private async Task ProcessBox(ComboBoxCustomItem cb)
+        {
+            var box = Boxes.FirstOrDefault(b => b.BoxGuid.ToString().Equals(cb.Id));
+            if (box != null)
+            {
+                int iPreset = 0;
+                if (int.TryParse(cb.Value, out iPreset))
+                {
+                    if (iPreset > 0)
+                    {
+                        await box.ChangePreset(iPreset);
+                    }
+                }
+            }
         }
 
         public void SaveRecallsToProject()
@@ -331,29 +344,29 @@ namespace MidiLiveSystem
             }
         }
 
-        internal void SetButton(bool bNote, int iInitialValue, int iValue)
+        internal async Task SetButton(bool bNote, int iInitialValue, int iValue)
         {
             if (bNote)
             {
-                if (iValue == iInitialValue) { PresetChange(btnRecall1); }
-                else if (iValue == iInitialValue + 1) { PresetChange(btnRecall2); }
-                else if (iValue == iInitialValue + 2) { PresetChange(btnRecall3); }
-                else if (iValue == iInitialValue + 3) { PresetChange(btnRecall4); }
-                else if (iValue == iInitialValue + 4) { PresetChange(btnRecall5); }
-                else if (iValue == iInitialValue + 5) { PresetChange(btnRecall6); }
-                else if (iValue == iInitialValue + 6) { PresetChange(btnRecall7); }
-                else if (iValue == iInitialValue + 7) { PresetChange(btnRecall8); }
+                if (iValue == iInitialValue) { await PresetChange(btnRecall1); }
+                else if (iValue == iInitialValue + 1) { await PresetChange(btnRecall2); }
+                else if (iValue == iInitialValue + 2) { await PresetChange(btnRecall3); }
+                else if (iValue == iInitialValue + 3) { await PresetChange(btnRecall4); }
+                else if (iValue == iInitialValue + 4) { await PresetChange(btnRecall5); }
+                else if (iValue == iInitialValue + 5) { await PresetChange(btnRecall6); }
+                else if (iValue == iInitialValue + 6) { await PresetChange(btnRecall7); }
+                else if (iValue == iInitialValue + 7) { await PresetChange(btnRecall8); }
             }
             else
             {
-                if (iValue == 0) { PresetChange(btnRecall1); }
-                else if (iValue == 1) { PresetChange(btnRecall2); }
-                else if (iValue == 2) { PresetChange(btnRecall3); }
-                else if (iValue == 3) { PresetChange(btnRecall4); }
-                else if (iValue == 4) { PresetChange(btnRecall5); }
-                else if (iValue == 5) { PresetChange(btnRecall6); }
-                else if (iValue == 6) { PresetChange(btnRecall7); }
-                else if (iValue == 7) { PresetChange(btnRecall8); }
+                if (iValue == 0) { await PresetChange(btnRecall1); }
+                else if (iValue == 1) { await PresetChange(btnRecall2); }
+                else if (iValue == 2) { await PresetChange(btnRecall3); }
+                else if (iValue == 3) { await PresetChange(btnRecall4); }
+                else if (iValue == 4) { await PresetChange(btnRecall5); }
+                else if (iValue == 5) { await PresetChange(btnRecall6); }
+                else if (iValue == 6) { await PresetChange(btnRecall7); }
+                else if (iValue == 7) { await PresetChange(btnRecall8); }
             }
         }
 
@@ -393,11 +406,18 @@ namespace MidiLiveSystem
 
             ComboBoxCustomItem cbi = null;
 
-            for (int i = 0; i < Boxes.Count; i++)
+            int iBoxesCount = Boxes.Count;
+            for (int i = 0; i < iBoxesCount; i++)
             {
                 cbi = (ComboBoxCustomItem)cb.Items[i];
                 cbi.Value = (Boxes[i].CurrentPreset + 1).ToString();
             }
+        }
+
+        internal void UpdateBoxes()
+        {
+            InitPage();
+            GetRecallFromProject();
         }
     }
 }

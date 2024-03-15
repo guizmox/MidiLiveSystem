@@ -13,7 +13,9 @@ namespace MidiTools
         MONO_INTERMEDIATE_HIGH = 5,
         MONO_INTERMEDIATE_LOW = 6,
         HARMONY = 7,
-        MONO_IN_BETWEEN = 8
+        MONO_IN_BETWEEN = 8,
+        PIZZICATO_FAST = 9,
+        PIZZICATO_SLOW = 10
     }
 
     public enum Harmony

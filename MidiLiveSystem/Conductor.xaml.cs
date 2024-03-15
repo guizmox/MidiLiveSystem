@@ -246,7 +246,7 @@ namespace MidiLiveSystem
 
         private int[] TranscodePanVolumeToGrid(RoutingBox box)
         {
-            MidiOptions opt = box.GetOptions();
+            MidiOptions opt = box.GetOptions().Result;
 
             //dimension = 768 / 768
             //margin 0 = 64 

@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -42,7 +43,7 @@ namespace MidiLiveSystem
             cbMidiDevices.SelectedIndex = 0;
         }
 
-        internal void AddLog(string sDevice, bool bIn, string sLog)
+        internal async Task AddLog(string sDevice, bool bIn, string sLog)
         {
             if (!bIn && OnlyIN) //on ne veut voir que les signaux IN
             {
@@ -50,7 +51,7 @@ namespace MidiLiveSystem
             }
             else
             {
-                Dispatcher.Invoke(() =>
+                await Dispatcher.InvokeAsync(() =>
                 {
                     if (cbMidiDevices.SelectedIndex == 0 || cbMidiDevices.SelectedValue.ToString().Substring(2).Equals(sDevice))
                     {

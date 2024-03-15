@@ -307,21 +307,23 @@ namespace MidiLiveSystem
 
             int iErrors = 0;
 
-            try
+            mp.Msb = 0;
+            if (!int.TryParse(tbMsb.Text.Trim(), out mp.Msb))
             {
-                mp.Msb = Convert.ToInt32(tbMsb.Text.Trim());
+                iErrors++;
             }
-            catch { mp.Msb = 0; iErrors++; }
-            try
+
+            mp.Lsb = 0;
+            if (!int.TryParse(tbLsb.Text.Trim(), out mp.Lsb))
             {
-                mp.Lsb = Convert.ToInt32(tbLsb.Text.Trim());
+                iErrors++;
             }
-            catch { mp.Lsb = 0; iErrors++; }
-            try
+
+            mp.Prg = 0;
+            if (!int.TryParse(tbPrg.Text.Trim(), out mp.Prg))
             {
-                mp.Prg = Convert.ToInt32(tbPrg.Text.Trim());
+                iErrors++;
             }
-            catch { mp.Prg = 0; iErrors++; }
 
             if (iErrors == 3)
             {

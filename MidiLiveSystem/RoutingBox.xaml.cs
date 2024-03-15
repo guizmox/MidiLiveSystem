@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -189,7 +190,7 @@ namespace MidiLiveSystem
 
         }
 
-        private void cbPresetButton_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private async void cbPresetButton_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (cbPresetButton.SelectedIndex > -1)
             {
@@ -198,7 +199,7 @@ namespace MidiLiveSystem
 
                 if (itemOLD != null)
                 {
-                    var preset = MemCurrentPreset();
+                    var preset = await MemCurrentPreset();
                     int iPreset = Convert.ToInt32(itemOLD.Tag);
                     TempMemory[Convert.ToInt32(iPreset)] = preset;
                 }
@@ -207,7 +208,7 @@ namespace MidiLiveSystem
                 {
                     int iPreset = Convert.ToInt32(itemNEW.Tag);
                     CurrentPreset = iPreset;
-                    PresetButtonPushed();
+                    await PresetButtonPushed();
                 }
             }
         }
@@ -224,7 +225,7 @@ namespace MidiLiveSystem
             tbInternalGeneratorKey.Visibility = Visibility.Visible;
         }
 
-        private void tbChoosePreset_Click(object sender, RoutedEventArgs e)
+        private async void tbChoosePreset_Click(object sender, RoutedEventArgs e)
         {
             //charger la liste des presets de l'instrument
             if (cbMidiOut.SelectedValue != null)
@@ -245,8 +246,8 @@ namespace MidiLiveSystem
                     {
                         InstrumentPresets.OnPresetChanged -= PresetBrowser_OnPresetChanged;
                     }
-
-                    var preset = GetPreset();
+                    
+                    var preset = await GetPreset();
 
                     InstrumentPresets = new PresetBrowser(instr, preset);
                     InstrumentPresets.OnPresetChanged += PresetBrowser_OnPresetChanged;
@@ -282,7 +283,7 @@ namespace MidiLiveSystem
             }
         }
 
-        private void PresetBrowser_OnPresetChanged(MidiPreset mp)
+        private async void PresetBrowser_OnPresetChanged(MidiPreset mp)
         {
             if (!mp.PresetName.Equals("[ERROR]"))
             {
@@ -291,7 +292,9 @@ namespace MidiLiveSystem
 
                 tbPresetName.Text = mp.PresetName;
 
-                OnUIEvent?.Invoke(BoxGuid, "PRESET_CHANGE", GetPreset());
+                var preset = await MemCurrentPreset();
+
+                OnUIEvent?.Invoke(BoxGuid, "PRESET_CHANGE", preset);
             }
         }
 
@@ -466,11 +469,11 @@ namespace MidiLiveSystem
             cbPresetButton.SelectedIndex = Convert.ToInt32(((Button)sender).Tag);
         }
 
-        private void btnCopyPreset_Click(object sender, RoutedEventArgs e)
+        private async void btnCopyPreset_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                var bp = MemCurrentPreset();
+                var bp = await MemCurrentPreset();
                 OnUIEvent?.Invoke(BoxGuid, "COPY_PRESET", bp);
             }
             catch (Exception ex)
@@ -479,14 +482,14 @@ namespace MidiLiveSystem
             }
         }
 
-        private void btnPastePreset_Click(object sender, RoutedEventArgs e)
+        private async void btnPastePreset_Click(object sender, RoutedEventArgs e)
         {
             try
             {
                 var copied = MidiLiveSystem.MainWindow.CopiedPreset;
                 if (copied != null)
                 {
-                    FillUI(copied, cbPresetButton.SelectedIndex == 0 ? true : false);
+                    await FillUI(copied, cbPresetButton.SelectedIndex == 0 ? true : false);
                 }
                 else
                 {
@@ -499,38 +502,38 @@ namespace MidiLiveSystem
             }
         }
 
-        public void PresetButtonPushed()
+        public async Task PresetButtonPushed()
         {
-            if (pnlInternalGenerator.Visibility == Visibility.Visible)
+            if (TempMemory[CurrentPreset].DeviceIn.Equals(Tools.INTERNAL_GENERATOR))
             {
-                LoadPreset(CurrentPreset);
-                OnUIEvent?.Invoke(BoxGuid, "PLAY_NOTE", GetOptions());
+                OnUIEvent?.Invoke(BoxGuid, "PLAY_NOTE", TempMemory[CurrentPreset]);
+                await LoadPreset(CurrentPreset);
             }
             else
             {
-                LoadPreset(CurrentPreset);
-                OnUIEvent?.Invoke(BoxGuid, "PRESET_CHANGE", GetPreset());
+                OnUIEvent?.Invoke(BoxGuid, "PRESET_CHANGE", TempMemory[CurrentPreset]);
+                await LoadPreset(CurrentPreset);
             }
         }
 
-        public void LoadMemory(BoxPreset[] mem)
+        public async void LoadMemory(BoxPreset[] mem)
         {
             if (mem != null && mem.Length > 0)
             {
                 TempMemory = mem;
                 if (TempMemory != null && TempMemory.Length > 0)
                 {
-                    FillUI(TempMemory[0], true);
+                    await FillUI(TempMemory[0], true);
                 }
             }
         }
 
-        private void LoadPreset(int iNew)
+        private async Task LoadPreset(int iNew)
         {
-            Dispatcher.Invoke(() =>
-            {
-                int iPrec = -1;
+            int iPrec = -1;
 
+            await Dispatcher.InvokeAsync(() =>
+            {
                 //identification du preset en cours
                 if (btnPreset1.Background == Brushes.IndianRed) { iPrec = 0; }
                 else if (btnPreset2.Background == Brushes.IndianRed) { iPrec = 1; }
@@ -540,16 +543,22 @@ namespace MidiLiveSystem
                 else if (btnPreset6.Background == Brushes.IndianRed) { iPrec = 5; }
                 else if (btnPreset7.Background == Brushes.IndianRed) { iPrec = 6; }
                 else if (btnPreset8.Background == Brushes.IndianRed) { iPrec = 7; }
+            });
 
-                if (TempMemory[iNew] != null)
-                {
-                    FillUI(TempMemory[iNew], iNew > 0 ? false : true);
-                }
-                else
+            if (TempMemory[iNew] != null)
+            {
+                await FillUI(TempMemory[iNew], iNew > 0 ? false : true);
+            }
+            else
+            {
+                await Dispatcher.InvokeAsync(() =>
                 {
                     MessageBox.Show("Unable to recall Preset");
-                }
+                });
+            }
 
+            await Dispatcher.InvokeAsync(() =>
+            {
                 switch (iPrec)
                 {
                     case 0:
@@ -672,215 +681,228 @@ namespace MidiLiveSystem
             });
         }
 
-        public void Snapshot()
+        public async Task<BoxPreset> Snapshot()
         {
-            var bp = MemCurrentPreset();
+            var bp = await MemCurrentPreset();
             TempMemory[CurrentPreset] = bp;
-            LoadPreset(CurrentPreset);
+            await LoadPreset(CurrentPreset);
+            return bp;
         }
 
-        private BoxPreset MemCurrentPreset()
+        private async Task<BoxPreset> MemCurrentPreset()
         {
             BoxPreset boxPreset = null;
 
-            Dispatcher.Invoke(() =>
+            string presetname = "";
+            string routingname = "";
+            string sDeviceIn = "";
+            string sDeviceOut = "";
+            int iChannelIn = 0;
+            int iChannelOut = 0;
+
+            try
             {
-                try
+
+                await Dispatcher.InvokeAsync(() =>
                 {
                     //mémorisation des données en cours
-                    var presetname = tbPresetName.Text.Trim();
-                    var routingname = tbRoutingName.Text.Trim();
-                    string sDeviceIn = cbMidiIn.SelectedItem == null ? "" : ((ComboBoxItem)cbMidiIn.SelectedItem).Tag.ToString();
-                    string sDeviceOut = cbMidiOut.SelectedItem == null ? "" : ((ComboBoxItem)cbMidiOut.SelectedItem).Tag.ToString();
-                    int iChannelIn = cbChannelMidiIn.SelectedItem == null ? 1 : Convert.ToInt32(((ComboBoxItem)cbChannelMidiIn.SelectedItem).Tag.ToString());
-                    int iChannelOut = cbChannelMidiOut.SelectedItem == null ? 1 : Convert.ToInt32(((ComboBoxItem)cbChannelMidiOut.SelectedItem).Tag.ToString());
-                    var options = GetOptions();
-                    var preset = GetPreset();
+                    presetname = tbPresetName.Text.Trim();
+                    routingname = tbRoutingName.Text.Trim();
+                    sDeviceIn = cbMidiIn.SelectedItem == null ? "" : ((ComboBoxItem)cbMidiIn.SelectedItem).Tag.ToString();
+                    sDeviceOut = cbMidiOut.SelectedItem == null ? "" : ((ComboBoxItem)cbMidiOut.SelectedItem).Tag.ToString();
+                    iChannelIn = cbChannelMidiIn.SelectedItem == null ? 1 : Convert.ToInt32(((ComboBoxItem)cbChannelMidiIn.SelectedItem).Tag.ToString());
+                    iChannelOut = cbChannelMidiOut.SelectedItem == null ? 1 : Convert.ToInt32(((ComboBoxItem)cbChannelMidiOut.SelectedItem).Tag.ToString());
+                });
 
-                    var bp = new BoxPreset(RoutingGuid, BoxGuid, routingname, presetname, options, preset, sDeviceIn, sDeviceOut, iChannelIn, iChannelOut);
+                var options = await GetOptions();
+                var preset = await GetPreset();
 
-                    boxPreset = bp;
-                }
-                catch { throw; }
-            });
+                var bp = new BoxPreset(RoutingGuid, BoxGuid, routingname, presetname, options, preset, sDeviceIn, sDeviceOut, iChannelIn, iChannelOut);
+                boxPreset = bp;
+
+            }
+            catch { throw; }
 
             return boxPreset;
         }
 
-        private void FillUI(BoxPreset bp, bool bIsFirst)
+        private async Task FillUI(BoxPreset bp, bool bIsFirst)
         {
-            //if (bIsFirst)
-            //{
-            //    cbMidiIn.IsEnabled = true;
-            //    cbMidiOut.IsEnabled = true;
-            //    cbChannelMidiIn.IsEnabled = true;
-            //    cbChannelMidiOut.IsEnabled = true;
-            //}
-            //else
-            //{
-            //    cbMidiIn.IsEnabled = false;
-            //    cbMidiOut.IsEnabled = false;
-            //    cbChannelMidiIn.IsEnabled = false;
-            //    cbChannelMidiOut.IsEnabled = false;
-            //}
-            tbMute.Background = bp.MidiOptions.Active ? Brushes.DarkGray : Brushes.IndianRed;
-
-            //remplissage des champs
-            if (!tbPresetName.IsFocused) { tbPresetName.Text = bp.PresetName; }
-            if (!tbRoutingName.IsFocused && bIsFirst) { tbRoutingName.Text = bp.BoxName; }
-
-            if (bp.MidiOptions.PlayNote != null)
+            await Dispatcher.InvokeAsync(() =>
             {
-                if (!tbInternalGeneratorKey.IsFocused) { tbInternalGeneratorKey.Text = bp.MidiOptions.PlayNote.Note.ToString(); }
-                if (!tbInternalGeneratorVelocity.IsFocused) { tbInternalGeneratorVelocity.Text = bp.MidiOptions.PlayNote.Velocity.ToString(); }
-                if (!tbInternalGeneratorLength.IsFocused) { tbInternalGeneratorLength.Text = bp.MidiOptions.PlayNote.Length.ToString(); }
-            }
-            ckInternalGeneratorLowestKey.IsChecked = bp.MidiOptions.PlayNote_LowestNote;
+                //if (bIsFirst)
+                //{
+                //    cbMidiIn.IsEnabled = true;
+                //    cbMidiOut.IsEnabled = true;
+                //    cbChannelMidiIn.IsEnabled = true;
+                //    cbChannelMidiOut.IsEnabled = true;
+                //}
+                //else
+                //{
+                //    cbMidiIn.IsEnabled = false;
+                //    cbMidiOut.IsEnabled = false;
+                //    cbChannelMidiIn.IsEnabled = false;
+                //    cbChannelMidiOut.IsEnabled = false;
+                //}
+                tbMute.Background = bp.MidiOptions.Active ? Brushes.DarkGray : Brushes.IndianRed;
 
-            //if (bIsFirst)
-            //{
-            cbMidiIn.SelectedValue = bp.DeviceIn;
-            cbMidiOut.SelectedValue = bp.DeviceOut;
-            cbChannelMidiIn.SelectedValue = bp.ChannelIn;
-            cbChannelMidiOut.SelectedValue = bp.ChannelOut;
-            //}
+                //remplissage des champs
+                if (!tbPresetName.IsFocused) { tbPresetName.Text = bp.PresetName; }
+                if (!tbRoutingName.IsFocused && bIsFirst) { tbRoutingName.Text = bp.BoxName; }
 
-            lbPreset.Text = bp.MidiPreset.PresetName;
-            lbPreset.Tag = bp.MidiPreset.Tag;
-
-            if (!tbFilterHighNote.IsFocused) { tbFilterHighNote.Text = bp.MidiOptions.NoteFilterHigh.ToString(); }
-            if (!tbFilterLowNote.IsFocused) { tbFilterLowNote.Text = bp.MidiOptions.NoteFilterLow.ToString(); }
-            if (!tbFilterHighVelo.IsFocused) { tbFilterHighVelo.Text = bp.MidiOptions.VelocityFilterHigh.ToString(); }
-            if (!tbFilterLowVelo.IsFocused) { tbFilterLowVelo.Text = bp.MidiOptions.VelocityFilterLow.ToString(); }
-
-            ckCompressVelocityRange.IsChecked = bp.MidiOptions.CompressVelocityRange;
-            ckTransposeNoteRange.IsChecked = bp.MidiOptions.TransposeNoteRange;
-
-            ckAllowAftertouch.IsChecked = bp.MidiOptions.AllowAftertouch;
-            ckAllowAllCC.IsChecked = bp.MidiOptions.AllowAllCC;
-            ckAllowModulation.IsChecked = bp.MidiOptions.AllowModulation;
-            ckAllowNotes.IsChecked = bp.MidiOptions.AllowNotes;
-            ckAllowNrpn.IsChecked = bp.MidiOptions.AllowNrpn;
-            ckAllowPitchBend.IsChecked = bp.MidiOptions.AllowPitchBend;
-            ckAllowProgramChange.IsChecked = bp.MidiOptions.AllowProgramChange;
-            ckAllowSysex.IsChecked = bp.MidiOptions.AllowSysex;
-
-            cbPlayMode.SelectedValue = bp.MidiOptions.PlayMode;
-
-            if (!tbNoteTransposition.IsFocused) { tbNoteTransposition.Text = bp.MidiOptions.TranspositionOffset.ToString(); }
-
-            if (!tbSmoothCC.IsFocused) { tbSmoothCC.Text = bp.MidiOptions.SmoothCCLength.ToString(); }
-            if (!tbDelayNotes.IsFocused) { tbDelayNotes.Text = bp.MidiOptions.DelayNotesLength.ToString(); }
-
-            if (!cbCCDefaultValues.IsFocused)
-            {
-                foreach (var item in cbCCDefaultValues.Items)
+                if (bp.MidiOptions.PlayNote != null)
                 {
-                    ComboBoxCustomItem cb = (ComboBoxCustomItem)item;
+                    if (!tbInternalGeneratorKey.IsFocused) { tbInternalGeneratorKey.Text = bp.MidiOptions.PlayNote.Note.ToString(); }
+                    if (!tbInternalGeneratorVelocity.IsFocused) { tbInternalGeneratorVelocity.Text = bp.MidiOptions.PlayNote.Velocity.ToString(); }
+                    if (!tbInternalGeneratorLength.IsFocused) { tbInternalGeneratorLength.Text = bp.MidiOptions.PlayNote.Length.ToString(); }
+                }
+                ckInternalGeneratorLowestKey.IsChecked = bp.MidiOptions.PlayNote_LowestNote;
 
-                    switch (cb.Id)
+                //if (bIsFirst)
+                //{
+                cbMidiIn.SelectedValue = bp.DeviceIn;
+                cbMidiOut.SelectedValue = bp.DeviceOut;
+                cbChannelMidiIn.SelectedValue = bp.ChannelIn;
+                cbChannelMidiOut.SelectedValue = bp.ChannelOut;
+                //}
+
+                lbPreset.Text = bp.MidiPreset.PresetName;
+                lbPreset.Tag = bp.MidiPreset.Tag;
+
+                if (!tbFilterHighNote.IsFocused) { tbFilterHighNote.Text = bp.MidiOptions.NoteFilterHigh.ToString(); }
+                if (!tbFilterLowNote.IsFocused) { tbFilterLowNote.Text = bp.MidiOptions.NoteFilterLow.ToString(); }
+                if (!tbFilterHighVelo.IsFocused) { tbFilterHighVelo.Text = bp.MidiOptions.VelocityFilterHigh.ToString(); }
+                if (!tbFilterLowVelo.IsFocused) { tbFilterLowVelo.Text = bp.MidiOptions.VelocityFilterLow.ToString(); }
+
+                ckCompressVelocityRange.IsChecked = bp.MidiOptions.CompressVelocityRange;
+                ckTransposeNoteRange.IsChecked = bp.MidiOptions.TransposeNoteRange;
+
+                ckAllowAftertouch.IsChecked = bp.MidiOptions.AllowAftertouch;
+                ckAllowAllCC.IsChecked = bp.MidiOptions.AllowAllCC;
+                ckAllowModulation.IsChecked = bp.MidiOptions.AllowModulation;
+                ckAllowNotes.IsChecked = bp.MidiOptions.AllowNotes;
+                ckAllowNrpn.IsChecked = bp.MidiOptions.AllowNrpn;
+                ckAllowPitchBend.IsChecked = bp.MidiOptions.AllowPitchBend;
+                ckAllowProgramChange.IsChecked = bp.MidiOptions.AllowProgramChange;
+                ckAllowSysex.IsChecked = bp.MidiOptions.AllowSysex;
+
+                cbPlayMode.SelectedValue = bp.MidiOptions.PlayMode;
+
+                if (!tbNoteTransposition.IsFocused) { tbNoteTransposition.Text = bp.MidiOptions.TranspositionOffset.ToString(); }
+
+                if (!tbSmoothCC.IsFocused) { tbSmoothCC.Text = bp.MidiOptions.SmoothCCLength.ToString(); }
+                if (!tbDelayNotes.IsFocused) { tbDelayNotes.Text = bp.MidiOptions.DelayNotesLength.ToString(); }
+
+                if (!cbCCDefaultValues.IsFocused)
+                {
+                    foreach (var item in cbCCDefaultValues.Items)
                     {
-                        case "tbCC_Chorus":
-                            cb.Value = bp.MidiOptions.CC_Chorus_Value.ToString();
-                            break;
-                        case "tbCC_Pan":
-                            if (bp.MidiOptions.CC_Pan_Value == -1)
-                            { bp.MidiOptions.CC_Pan_Value = 64; }
-                            cb.Value = bp.MidiOptions.CC_Pan_Value.ToString();
-                            break;
-                        case "tbCC_Volume":
-                            if (bp.MidiOptions.CC_Volume_Value == -1)
-                            { bp.MidiOptions.CC_Volume_Value = 100; }
-                            cb.Value = bp.MidiOptions.CC_Volume_Value.ToString();
-                            break;
-                        case "tbCC_Attack":
-                            cb.Value = bp.MidiOptions.CC_Attack_Value.ToString();
-                            break;
-                        case "tbCC_Decay":
-                            cb.Value = bp.MidiOptions.CC_Decay_Value.ToString();
-                            break;
-                        case "tbCC_Release":
-                            cb.Value = bp.MidiOptions.CC_Release_Value.ToString();
-                            break;
-                        case "tbCC_Reverb":
-                            cb.Value = bp.MidiOptions.CC_Reverb_Value.ToString();
-                            break;
-                        case "tbCC_Timbre":
-                            cb.Value = bp.MidiOptions.CC_Timbre_Value.ToString();
-                            break;
-                        case "tbCC_CutOff":
-                            cb.Value = bp.MidiOptions.CC_FilterCutOff_Value.ToString();
-                            break;
+                        ComboBoxCustomItem cb = (ComboBoxCustomItem)item;
+
+                        switch (cb.Id)
+                        {
+                            case "tbCC_Chorus":
+                                cb.Value = bp.MidiOptions.CC_Chorus_Value.ToString();
+                                break;
+                            case "tbCC_Pan":
+                                if (bp.MidiOptions.CC_Pan_Value == -1)
+                                { bp.MidiOptions.CC_Pan_Value = 64; }
+                                cb.Value = bp.MidiOptions.CC_Pan_Value.ToString();
+                                break;
+                            case "tbCC_Volume":
+                                if (bp.MidiOptions.CC_Volume_Value == -1)
+                                { bp.MidiOptions.CC_Volume_Value = 100; }
+                                cb.Value = bp.MidiOptions.CC_Volume_Value.ToString();
+                                break;
+                            case "tbCC_Attack":
+                                cb.Value = bp.MidiOptions.CC_Attack_Value.ToString();
+                                break;
+                            case "tbCC_Decay":
+                                cb.Value = bp.MidiOptions.CC_Decay_Value.ToString();
+                                break;
+                            case "tbCC_Release":
+                                cb.Value = bp.MidiOptions.CC_Release_Value.ToString();
+                                break;
+                            case "tbCC_Reverb":
+                                cb.Value = bp.MidiOptions.CC_Reverb_Value.ToString();
+                                break;
+                            case "tbCC_Timbre":
+                                cb.Value = bp.MidiOptions.CC_Timbre_Value.ToString();
+                                break;
+                            case "tbCC_CutOff":
+                                cb.Value = bp.MidiOptions.CC_FilterCutOff_Value.ToString();
+                                break;
+                        }
                     }
                 }
-            }
 
-            int iCCConvertIndex = cbCCConvert.SelectedIndex;
-            cbCCConvert.Items.Clear();
-            foreach (var item in bp.MidiOptions.CC_Converters)
-            {
-                string sTag = string.Concat(item[0], "-", item[1]);
-                string sText = string.Concat("FROM ", item[0], " TO ", item[1]);
-                cbCCConvert.Items.Add(new ComboBoxItem { Tag = sTag, Content = sText });
-            }
-            cbCCConvert.SelectedIndex = iCCConvertIndex;
+                int iCCConvertIndex = cbCCConvert.SelectedIndex;
+                cbCCConvert.Items.Clear();
+                foreach (var item in bp.MidiOptions.CC_Converters)
+                {
+                    string sTag = string.Concat(item[0], "-", item[1]);
+                    string sText = string.Concat("FROM ", item[0], " TO ", item[1]);
+                    cbCCConvert.Items.Add(new ComboBoxItem { Tag = sTag, Content = sText });
+                }
+                cbCCConvert.SelectedIndex = iCCConvertIndex;
 
-            int iNOTEConvertIndex = cbNOTEConvert.SelectedIndex;
-            cbNOTEConvert.Items.Clear();
-            foreach (var item in bp.MidiOptions.Note_Converters)
-            {
-                string sTag = string.Concat(item[0], "-", item[1]);
-                string sText = string.Concat("FROM ", item[0], " TO ", item[1]);
-                cbNOTEConvert.Items.Add(new ComboBoxItem { Tag = sTag, Content = sText });
-            }
-            cbNOTEConvert.SelectedIndex = iNOTEConvertIndex;
+                int iNOTEConvertIndex = cbNOTEConvert.SelectedIndex;
+                cbNOTEConvert.Items.Clear();
+                foreach (var item in bp.MidiOptions.Note_Converters)
+                {
+                    string sTag = string.Concat(item[0], "-", item[1]);
+                    string sText = string.Concat("FROM ", item[0], " TO ", item[1]);
+                    cbNOTEConvert.Items.Add(new ComboBoxItem { Tag = sTag, Content = sText });
+                }
+                cbNOTEConvert.SelectedIndex = iNOTEConvertIndex;
 
-            int iTranslatorIndex = cbTranslators.SelectedIndex;
-            cbTranslators.Items.Clear();
-            foreach (var item in bp.MidiOptions.Translators)
-            {
-                string sTag = string.Concat(item[0]);
-                string sText = string.Concat(item[1]);
-                cbTranslators.Items.Add(new ComboBoxItem { Tag = sTag, Content = sText });
-            }
-            cbTranslators.SelectedIndex = iTranslatorIndex;
+                int iTranslatorIndex = cbTranslators.SelectedIndex;
+                cbTranslators.Items.Clear();
+                foreach (var item in bp.MidiOptions.Translators)
+                {
+                    string sTag = string.Concat(item[0]);
+                    string sText = string.Concat(item[1]);
+                    cbTranslators.Items.Add(new ComboBoxItem { Tag = sTag, Content = sText });
+                }
+                cbTranslators.SelectedIndex = iTranslatorIndex;
+            });
         }
 
-        public MidiPreset GetPreset()
+        public async Task<MidiPreset> GetPreset()
         {
             MidiPreset mp = null;
 
-            Dispatcher.Invoke(() =>
-            {
-                if (cbChannelMidiOut.SelectedItem != null)
+            await Dispatcher.InvokeAsync(() =>
                 {
-                    try
+                    if (cbChannelMidiOut.SelectedItem != null)
                     {
-                        int iPrg = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[0]);
-                        int iMsb = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[1]);
-                        int iLsb = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[2]);
-                        mp = new MidiPreset("", Convert.ToInt32(((ComboBoxItem)cbChannelMidiOut.SelectedItem).Tag.ToString()), iPrg, iMsb, iLsb, lbPreset.Text);
+                        try
+                        {
+                            int iPrg = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[0]);
+                            int iMsb = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[1]);
+                            int iLsb = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[2]);
+                            mp = new MidiPreset("", Convert.ToInt32(((ComboBoxItem)cbChannelMidiOut.SelectedItem).Tag.ToString()), iPrg, iMsb, iLsb, lbPreset.Text);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("Invalid Program (" + ex.Message + ")");
+                            mp = new MidiPreset("", 1, 0, 0, 0, "Unknown Preset");
+                        }
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        MessageBox.Show("Invalid Program (" + ex.Message + ")");
                         mp = new MidiPreset("", 1, 0, 0, 0, "Unknown Preset");
                     }
-                }
-                else
-                {
-                    mp = new MidiPreset("", 1, 0, 0, 0, "Unknown Preset");
-                }
-            });
+                });
 
             return mp;
         }
 
-        public MidiOptions GetOptions()
+        public async Task<MidiOptions> GetOptions()
         {
             var options = new MidiOptions();
 
-            Dispatcher.Invoke(() =>
+            await Dispatcher.InvokeAsync(() =>
             {
                 options.Active = tbMute.Background == Brushes.IndianRed ? false : true;
                 //options.Active = .Active;
@@ -1060,6 +1082,7 @@ namespace MidiLiveSystem
                 }
 
             });
+
             return options;
         }
 
@@ -1109,6 +1132,14 @@ namespace MidiLiveSystem
                 }
                 tbSolo.Background = Brushes.DarkGray;
             }
+        }
+
+        internal async Task ChangePreset(int iPreset)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                cbPresetButton.SelectedIndex = iPreset - 1;
+            });
         }
     }
 

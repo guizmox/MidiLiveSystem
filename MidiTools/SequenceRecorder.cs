@@ -23,10 +23,9 @@ namespace MidiTools
         public event RecorderLengthCounter RecordCounter;
 
         public bool StopSequenceRequested = false;
-        private int PlayStatus = 0;
 
-        private List<MidiEvent> _eventsIN = new List<MidiEvent>();
-        private List<MidiEvent> _eventsOUT = new List<MidiEvent>();
+        private readonly List<MidiEvent> _eventsIN = new List<MidiEvent>();
+        private readonly List<MidiEvent> _eventsOUT = new List<MidiEvent>();
 
         public List<MidiEvent> EventsOUT { get { return _eventsOUT; } }
 
@@ -83,19 +82,27 @@ namespace MidiTools
 
         public void StartRecording(bool bIn, bool bOut, MidiRouting routing)
         {
-            //on doit absolument garder les valeurs actuelles des données pour figer tous les paramètres MIDI pour pouvoir reproduire la séquence fidèlement
-            SequencerDefault = routing.GetLiveCCData();
-
-            if (bIn)
+            if (routing.HasOutDevices > 0)
             {
-                OnMidiSequenceEventIN += MidiEventSequenceHandler_OnMidiEventIN;
-            }
-            if (bOut)
-            {
-                OnMidiSequenceEventOUT += MidiEventSequenceHandler_OnMidiEventOUT;
-            }
+                //on doit absolument garder les valeurs actuelles des données pour figer tous les paramètres MIDI pour pouvoir reproduire la séquence fidèlement
+                SequencerDefault = routing.GetLiveCCData();
 
-            IsStopped = false;
+                if (bIn)
+                {
+                    OnMidiSequenceEventIN += MidiEventSequenceHandler_OnMidiEventIN;
+                }
+                if (bOut)
+                {
+                    OnMidiSequenceEventOUT += MidiEventSequenceHandler_OnMidiEventOUT;
+                }
+
+                IsStopped = false;
+            }
+            else
+            {
+                StartStopPlayerCounter(false);
+                SequenceFinished?.Invoke("No Output Device.");
+            }
         }
 
         public void StopRecording(bool bIn, bool bOut)
@@ -209,8 +216,6 @@ namespace MidiTools
 
         private void PlaySequence(List<MidiEvent> events, MidiRouting routing)
         {
-            PlayStatus = 1;
-
             Stopwatch stopwatch = new Stopwatch(); // Créer un chronomètre
 
             routing.InitDevicesForSequencePlay(SequencerDefault);
@@ -247,8 +252,6 @@ namespace MidiTools
                     break;
                 }
             }
-
-            PlayStatus = 0;
         }
 
         public void StopSequence()

@@ -11,7 +11,7 @@ namespace MidiTools
     [Serializable]
     public class LiveData
     {
-        public List<LiveCC> StartCC = new List<LiveCC>();
+        public List<int[]> StartCC = new List<int[]>();
         public MidiOptions StartOptions;
         public Channel Channel;
         public string DeviceOUT;
@@ -24,27 +24,4 @@ namespace MidiTools
 
         }
     }
-
-    public class LiveCC
-    {
-        public string Device = "";
-        public Channel Channel;
-        public int CC = -1;
-        public int CCValue = -1;
-        internal bool BlockIncoming = false;
-
-        public LiveCC(string device, Channel channel, int iCC, int ccValue)
-        {
-            Device = device;
-            Channel = channel;
-            CC = iCC;
-            CCValue = ccValue;
-        }
-
-        public LiveCC()
-        {
-
-        }
-    }
-
 }

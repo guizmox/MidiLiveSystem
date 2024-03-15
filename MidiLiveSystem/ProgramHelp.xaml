@@ -18,7 +18,7 @@
             <ColumnDefinition Width="50*"/>
             <ColumnDefinition Width="50*"/>
         </Grid.ColumnDefinitions>
-    <TextBlock Grid.Row="0" Grid.Column="0" TextWrapping="Wrap" Margin="5,5,5,5">
+        <TextBlock Grid.Row="0" Grid.Column="0"  Foreground="DarkBlue" TextWrapping="Wrap" Margin="5,5,5,5">
               Concept and Development : Guillaume Tristant
             <LineBreak/>
             Inspired by Vangelis System I
@@ -31,23 +31,23 @@
             <LineBreak/>
             <LineBreak/>
             Contact : 
-            <Hyperlink NavigateUri="guizmox@hotmail.com">Mail</Hyperlink>
+            <Hyperlink NavigateUri="mailto:guizmox@hotmail.com" RequestNavigate="Hyperlink_RequestNavigate">Mail</Hyperlink>
             <LineBreak/>
             RtMidi Core Project : 
-            <Hyperlink NavigateUri="https://github.com/micdah/RtMidi.Core">GitHub</Hyperlink>
+            <Hyperlink NavigateUri="https://github.com/micdah/RtMidi.Core" RequestNavigate="Hyperlink_RequestNavigate">GitHub</Hyperlink>
             <LineBreak/>
             Download Virtual MIDI Cable : 
-            <Hyperlink NavigateUri="https://www.tobias-erichsen.de/software/loopmidi.html">Loop Midi</Hyperlink>
-            or <Hyperlink NavigateUri="https://www.nerds.de/en/loopbe1.html">LoopBe</Hyperlink>
+            <Hyperlink NavigateUri="https://www.tobias-erichsen.de/software/loopmidi.html" RequestNavigate="Hyperlink_RequestNavigate">Loop Midi</Hyperlink>
+            or <Hyperlink NavigateUri="https://www.nerds.de/en/loopbe1.html" RequestNavigate="Hyperlink_RequestNavigate">LoopBe</Hyperlink>
              <LineBreak/>
             Download Cubase Instrument Files : 
-            <Hyperlink NavigateUri="https://rivetedstudios.com/downloadpage/">Riveted Studios</Hyperlink>
+            <Hyperlink NavigateUri="https://rivetedstudios.com/downloadpage/" RequestNavigate="Hyperlink_RequestNavigate">Riveted Studios</Hyperlink>
         </TextBlock>
         <StackPanel  Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Center" VerticalAlignment="Bottom" >
             <Image Name="imgHelp" Source="/MidiLiveSystem;component/assets/1.png" Visibility="Visible"/>
         </StackPanel>
 
-        <TextBlock Grid.Column="0" Grid.Row="2" Text="HINT : All of the input fields reacts to incoming MIDI Notes and CC values. It means that you can quickly set values using your MIDI keyboard." TextWrapping="Wrap" />
+        <TextBlock Grid.Column="0" Grid.Row="2" Foreground="DarkBlue" Text="HINT : All of the input fields reacts to incoming MIDI Notes and CC values. It means that you can quickly set values using your MIDI keyboard." TextWrapping="Wrap" />
 
 
         <Button Name="btnNextScreen" Grid.Row="2" Grid.Column="1" Background="Orange" Content="Next" Width="150" Margin="5,0,5,0" HorizontalAlignment="Right" Click="btnNextScreen_Click" />

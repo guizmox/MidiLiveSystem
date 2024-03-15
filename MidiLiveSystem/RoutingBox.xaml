@@ -314,6 +314,8 @@
                                 <TextBlock Grid.Column="0" Text="PLAY MODE" />
                                 <ComboBox Name="cbPlayMode" SelectedIndex="0" Grid.Column="1" Grid.ColumnSpan="2" SelectedValuePath="Tag">
                                     <ComboBoxItem Tag="NORMAL" Content="Normal"/>
+                                    <ComboBoxItem Tag="PIZZICATO_FAST" Content="Pizzicato (fast)"/>
+                                    <ComboBoxItem Tag="PIZZICATO_SLOW" Content="Pizzicato (long)"/>
                                     <ComboBoxItem Tag="AFTERTOUCH" Content="Aftertouch"/>
                                     <ComboBoxItem Tag="MONO_HIGH" Content="Mono-H. note"/>
                                     <ComboBoxItem Tag="MONO_LOW" Content="Mono-L. note"/>

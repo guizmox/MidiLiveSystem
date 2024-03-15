@@ -91,41 +91,52 @@ namespace MidiTools
             }
         }
 
-        internal static int[] GetNoteIndex(int key, int vel, MidiOptions options)
+        internal static int[] GetNoteIndex(int key, int vel, MatrixItem routing, bool bNoteOff)
         {
             int iNote = -1;
 
-            if (options != null)
+            if (routing.Options != null)
             {
-                if (options.CompressVelocityRange)
+                if (routing.Options.CompressVelocityRange)
                 {
-                    if (vel > options.VelocityFilterHigh)
-                    { vel = options.VelocityFilterHigh; }
-                    else if (vel < options.VelocityFilterLow)
-                    { vel = options.VelocityFilterLow; }
+                    if (vel > routing.Options.VelocityFilterHigh)
+                    { vel = routing.Options.VelocityFilterHigh; }
+                    else if (vel < routing.Options.VelocityFilterLow)
+                    { vel = routing.Options.VelocityFilterLow; }
                 }
 
-                if (options.TransposeNoteRange)
+                if (routing.Options.TransposeNoteRange)
                 {
-                    if (key < options.NoteFilterLow)
+                    if (key < routing.Options.NoteFilterLow)
                     {
-                        while (key < options.NoteFilterLow)
+                        while (key < routing.Options.NoteFilterLow)
                         {
                             key += 12;
                         }
                     }
-                    else if (key > options.NoteFilterHigh)
+                    else if (key > routing.Options.NoteFilterHigh)
                     {
-                        while (key > options.NoteFilterHigh)
+                        while (key > routing.Options.NoteFilterHigh)
                         {
                             key -= 12;
                         }
                     }
                 }
 
-                if (key >= options.NoteFilterLow && key <= options.NoteFilterHigh && (vel == 0 || (vel >= options.VelocityFilterLow && vel <= options.VelocityFilterHigh))) //attention, la vélocité d'un noteoff est souvent à 0 (dépend des devices mais généralement)
+                if (bNoteOff)
                 {
-                    iNote = key + options.TranspositionOffset;
+                    iNote = key + routing.Options.TranspositionOffset;
+                    //if (!routing.DeviceOut.GetLiveNOTEValue(routing.ChannelOut, iNote))
+                    //{
+                    //    iNote = -1;
+                    //}   
+                }
+                else
+                {
+                    if (key >= routing.Options.NoteFilterLow && key <= routing.Options.NoteFilterHigh && (vel == 0 || (vel >= routing.Options.VelocityFilterLow && vel <= routing.Options.VelocityFilterHigh))) //attention, la vélocité d'un noteoff est souvent à 0 (dépend des devices mais généralement)
+                    {
+                        iNote = key + routing.Options.TranspositionOffset;
+                    }
                 }
             }
 
