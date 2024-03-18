@@ -19,7 +19,7 @@ namespace MidiTools
     [Serializable]
     internal class MatrixItem
     {
-        public delegate void SequencerPlayNote(List<MidiEvent> events, MatrixItem matrix);
+        public delegate void SequencerPlayNote(List<MidiEvent> eventsON, List<MidiEvent> eventsOFF, MatrixItem matrix);
         public event SequencerPlayNote OnSequencerPlayNote;
 
         readonly bool[] BlockIncomingCC = new bool[128];
@@ -90,15 +90,16 @@ namespace MidiTools
             {
                 if (!DeviceInSequencer.Muted && DeviceOut != null && Options.Active)
                 {
-                    List<MidiEvent> events = new List<MidiEvent>();
-                   
+                    List<MidiEvent> eventsON = new List<MidiEvent>();
+                    List<MidiEvent> eventsOFF = new List<MidiEvent>();
+
                     foreach (var note in notes.NotesAndVelocity)
                     {
                         int iNote = note[0] - DeviceInSequencer.TransposeOffset;
                         int iVelocity = note[1];
 
                         MidiEvent mvON = new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelocity }, Tools.GetChannel(ChannelOut), DeviceOut.Name);
-                        events.Add(mvON);
+                        eventsON.Add(mvON);
                     }
 
                     foreach (var note in notes.NotesAndVelocity)
@@ -109,10 +110,10 @@ namespace MidiTools
 
                         MidiEvent mvOFF = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, iVelocity }, Tools.GetChannel(ChannelOut), DeviceOut.Name);
                         mvOFF.Delay = iLength;
-                        events.Add(mvOFF);
+                        eventsOFF.Add(mvOFF);
                     }
 
-                    OnSequencerPlayNote?.Invoke(events, this);
+                    OnSequencerPlayNote?.Invoke(eventsON, eventsOFF, this);
                 }
             });
         }
@@ -780,6 +781,9 @@ namespace MidiTools
     [Serializable]
     public class MidiRouting
     {
+        private List<string> DevicesRoutingIN = new List<string>();
+        private List<string> DevicesRoutingOUT = new List<string>();
+
         private static readonly int CLOCK_INTERVAL = 1000;
 
         private bool ClockRunning = false;
@@ -887,15 +891,20 @@ namespace MidiTools
             _eventsProcessedOUT = 0;
         }
 
-        private async void MatrixItem_OnSequencerPlayNote(List<MidiEvent> events, MatrixItem matrix)
+        private async void MatrixItem_OnSequencerPlayNote(List<MidiEvent> eventsON, List<MidiEvent> eventsOFF, MatrixItem matrix)
         {
-            await Task.Run(() =>
+            List<Task> tasks = new List<Task>();
+
+            foreach (var item in eventsON)
             {
-                foreach (var item in events)
-                {
-                    CreateOUTEvent(item, matrix);
-                }
-            });
+                tasks.Add(Task.Factory.StartNew(() => CreateOUTEvent(item, matrix)));
+            }
+            foreach (var item in eventsOFF)
+            {
+                tasks.Add(Task.Factory.StartNew(() => CreateOUTEvent(item, matrix)));
+            }
+
+            await Task.WhenAll(tasks);
         }
 
         private void MidiClock_OnEvent(object sender, ElapsedEventArgs e)
@@ -908,20 +917,13 @@ namespace MidiTools
 
         private void CheckAndCloseUnusedDevices(object sender, ElapsedEventArgs e)
         {
-            IEnumerable<string> usedin = null;
-
-            lock (MidiMatrix)
-            {
-                usedin = MidiMatrix.Where(d => d.DeviceIn != null).Select(d => d.DeviceIn.Name).Distinct();
-            }
-
             List<string> ToRemoveIN = new List<string>();
 
             lock (UsedDevicesIN)
             {
                 foreach (var devin in UsedDevicesIN.Where(d => !d.IsReserverdForInternalPurposes))
                 {
-                    if (!usedin.Contains(devin.Name) && DateTime.Now.Subtract(devin.LastMessage).TotalSeconds > 10)
+                    if (!DevicesRoutingIN.Contains(devin.Name) && DateTime.Now.Subtract(devin.LastMessage).TotalSeconds > 60)
                     {
                         ToRemoveIN.Add(devin.Name);
                     }
@@ -937,20 +939,13 @@ namespace MidiTools
                 }
             }
 
-            IEnumerable<string> usedout = null;
-
-            lock (MidiMatrix)
-            {
-                usedout = MidiMatrix.Where(d => d.DeviceOut != null).Select(d => d.DeviceOut.Name).Distinct();
-            }
-
             List<string> ToRemoveOUT = new List<string>();
 
             lock (UsedDevicesOUT)
             {
-                foreach (var devout in UsedDevicesOUT.Where(d => DateTime.Now.Subtract(d.LastMessage).TotalSeconds > 10))
+                foreach (var devout in UsedDevicesOUT.Where(d => DateTime.Now.Subtract(d.LastMessage).TotalSeconds > 60))
                 {
-                    if (!usedout.Contains(devout.Name) && DateTime.Now.Subtract(devout.LastMessage).TotalSeconds > 10)
+                    if (!DevicesRoutingOUT.Contains(devout.Name) && DateTime.Now.Subtract(devout.LastMessage).TotalSeconds > 60)
                     {
                         ToRemoveOUT.Add(devout.Name);
                     }
@@ -2281,11 +2276,11 @@ namespace MidiTools
                 {
                     MatrixItem newmatrix = null;
 
-                    if (sDeviceIn.Equals(Tools.INTERNAL_GENERATOR))
-                    {
-                        newmatrix.Options.Active = false;
-                    }
-                    else if (sDeviceIn.Equals(Tools.INTERNAL_SEQUENCER))
+                    //if (sDeviceIn.Equals(Tools.INTERNAL_GENERATOR))
+                    //{
+                    //    newmatrix.Options.Active = false;
+                    //}
+                    if (sDeviceIn.Equals(Tools.INTERNAL_SEQUENCER))
                     {
                         if (DeviceInSequencer != null)
                         {
@@ -2315,10 +2310,8 @@ namespace MidiTools
             return GUID;
         }
 
-        public async Task<bool> ModifyRouting(Guid routingGuid, string sDeviceIn, string sDeviceOut, int iChIn, int iChOut, MidiOptions options, MidiPreset preset = null, Sequencer DeviceInSequencer = null)
+        public async Task ModifyRouting(Guid routingGuid, string sDeviceIn, string sDeviceOut, int iChIn, int iChOut, MidiOptions options, MidiPreset preset = null, Sequencer DeviceInSequencer = null)
         {
-            bool bModify = false;
-
             bool bDeviceOutChanged = false;
 
             var routing = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
@@ -2396,11 +2389,26 @@ namespace MidiTools
                         ChangeOptions(routing, options, bDeviceOutChanged ? true : false);
                         ChangeProgram(routing, preset, bDeviceOutChanged ? true : false);
                     }
-                    bModify = true;
                 }
             });
+        }
 
-            return bModify;
+        public async Task UpdateUsedDevices(List<string[]> devices)
+        {
+            await Task.Run(() =>
+            {
+                foreach (var dev in devices)
+                {
+                    if (dev[0].Equals("I") && dev[1].Length > 0 && !DevicesRoutingIN.Contains(dev[1]))
+                    {
+                        DevicesRoutingIN.Add(dev[1]);
+                    }
+                    else if (dev[0].Equals("O") && dev[1].Length > 0 && !DevicesRoutingOUT.Contains(dev[1]))
+                    {
+                        DevicesRoutingOUT.Add(dev[1]);
+                    }
+                }
+            });
         }
 
         private MidiDevice AddNewOutDevice(string sDeviceOut)

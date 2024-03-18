@@ -35,6 +35,7 @@ namespace MidiLiveSystem
         private int ActualStep = 0;
         private Button[] ButtonSteps = new Button[32];
         private bool AlternateButtonColor = false;
+        private bool IsPlaying = false;
 
         private List<SequenceStep> StepsRecorded = new List<SequenceStep>();
 
@@ -66,12 +67,13 @@ namespace MidiLiveSystem
             {
                 Button btn = new Button();
                 btn.Name = "btnStep_" + i.ToString();
+                btn.Tag = i - 1;
                 btn.Background = Brushes.White;
                 btn.Margin = new Thickness(1);
                 btn.VerticalAlignment = VerticalAlignment.Bottom;
                 btn.FontSize = 9;
                 btn.Width = 40;
-                btn.Padding = new Thickness(2);
+                btn.Padding = new Thickness(1);
                 btn.Content = "--";
                 btn.Foreground = Brushes.Black;
                 btn.Click += BtnStep_Click;
@@ -250,7 +252,7 @@ namespace MidiLiveSystem
                     if (stepdata.NotesAndVelocity != null && stepdata.NotesAndVelocity.Count > 0)
                     {
                         sText = Tools.MidiNoteNumberToNoteName(stepdata.NotesAndVelocity[0][0]);
-                        if (stepdata.NotesAndVelocity.Count > 1) { sText = string.Concat(sText, "+"); }
+                        if (stepdata.NotesAndVelocity.Count > 1) { sText = string.Concat(sText, Environment.NewLine, "+", (stepdata.NotesAndVelocity.Count - 1)); }
                     }
                     ButtonSteps[iStep].Content = sText;
                 }
@@ -259,7 +261,17 @@ namespace MidiLiveSystem
 
         private void BtnStep_Click(object sender, RoutedEventArgs e)
         {
+            if (!IsPlaying)
+            {
+                int iTag = Convert.ToInt32(((Button)sender).Tag.ToString());
 
+                if (InternalSequence.Sequence[iTag].NotesAndVelocity != null && InternalSequence.Sequence[iTag].NotesAndVelocity.Count > 0)
+                {
+                    EditValue editor = new EditValue(InternalSequence.Sequence[iTag], "Edit Step Values");
+                    editor.ShowDialog();
+                    InternalSequence.Sequence[iTag] = editor.GetStep();
+                }
+            }
         }
 
         private async void btnRecordSequence_Click(object sender, RoutedEventArgs e)
@@ -332,7 +344,7 @@ namespace MidiLiveSystem
                     Buffer.Add(ev);
                 }
             }
-            else if (ev.Type == MidiDevice.TypeEvent.NOTE_OFF)
+            else if (ev.Type == MidiDevice.TypeEvent.NOTE_OFF && Buffer.Count > 0)
             {
                 int iSteps = await cbQteSteps.Dispatcher.InvokeAsync(() => cbQteSteps.SelectedIndex);
                 double dGatePercent = await slGate.Dispatcher.InvokeAsync(() => slGate.Value);
@@ -407,6 +419,7 @@ namespace MidiLiveSystem
 
                     if (bOK)
                     {
+                        IsPlaying = true;
                         await btnMuted.Dispatcher.InvokeAsync(() => btnMuted.IsEnabled = false);
                         await btnRecordSequence.Dispatcher.InvokeAsync(() => btnRecordSequence.IsEnabled = false);
                         await btnIncrementStep.Dispatcher.InvokeAsync(() => btnIncrementStep.IsEnabled = false);
@@ -421,6 +434,7 @@ namespace MidiLiveSystem
                     }
                     else
                     {
+                        IsPlaying = false;
                         await btnMuted.Dispatcher.InvokeAsync(() => btnMuted.IsEnabled = true);
                         await btnRecordSequence.Dispatcher.InvokeAsync(() => btnRecordSequence.IsEnabled = true);
                         await btnIncrementStep.Dispatcher.InvokeAsync(() => btnIncrementStep.IsEnabled = true);

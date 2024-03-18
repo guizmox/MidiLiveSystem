@@ -414,10 +414,13 @@ namespace MidiLiveSystem
             }
         }
 
-        internal void UpdateBoxes()
+        internal async Task UpdateBoxes()
         {
-            InitPage();
-            GetRecallFromProject();
+            await Dispatcher.InvokeAsync(() =>
+            {
+                InitPage();
+                GetRecallFromProject();
+            });
         }
     }
 }

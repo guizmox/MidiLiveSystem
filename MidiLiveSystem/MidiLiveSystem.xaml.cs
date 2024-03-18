@@ -423,6 +423,7 @@ namespace MidiLiveSystem
                             await Routing.DeleteRouting(box.RoutingGuid);
                             Boxes.Remove(box);
                             await AddAllRoutingBoxes();
+                            await RecallWindow.UpdateBoxes();
                         }
                         break;
                     case "MOVE_NEXT":
@@ -436,6 +437,7 @@ namespace MidiLiveSystem
                             box.GridPosition++;
                             next.GridPosition--;
                             await AddAllRoutingBoxes();
+                            await RecallWindow.UpdateBoxes();
                         }
                         break;
                     case "MOVE_PREVIOUS":
@@ -449,6 +451,7 @@ namespace MidiLiveSystem
                             box.GridPosition--;
                             previous.GridPosition++;
                             await AddAllRoutingBoxes();
+                            await RecallWindow.UpdateBoxes();
                         }
                         break;
                     case "SOLO":
@@ -622,9 +625,9 @@ namespace MidiLiveSystem
         {
             RoutingBox rtb = new RoutingBox(Project, MidiRouting.InputDevices, MidiRouting.OutputDevices, Boxes.Count);
             Boxes.Add(rtb);
-
-            RecallWindow.UpdateBoxes();
             await AddRoutingBoxToFrame(rtb, true);
+            await RecallWindow.UpdateBoxes();
+
         }
 
         private void btnConductor_Click(object sender, RoutedEventArgs e)
@@ -732,16 +735,16 @@ namespace MidiLiveSystem
                             await AddAllRoutingBoxes();
                             NewMessage?.Invoke("Routing Boxes Added");
 
-                            foreach (var box in Boxes)
+                            for (int iB = 0; iB < Boxes.Count; iB++)
                             {
                                 try
                                 {
-                                    await ProcessBoxData(box, true);
-                                    NewMessage?.Invoke("Routing Box Initialized : " + box.BoxName);
+                                    NewMessage?.Invoke("Initializing Routing Box (" + (iB + 1) + "/" + Boxes.Count + ") : " + Boxes[iB].BoxName);
+                                    await ProcessBoxData(Boxes[iB], true);   
                                 }
                                 catch (Exception ex)
                                 {
-                                    NewMessage?.Invoke("Routing Box Initialization failed : " + box.BoxName + " (" + ex.Message + ")");
+                                    NewMessage?.Invoke("Routing Box Initialization failed : " + Boxes[iB].BoxName + " (" + ex.Message + ")");
                                 }
                             }
                         }
@@ -972,7 +975,7 @@ namespace MidiLiveSystem
         private async Task AddAllRoutingBoxes()
         {
             RemoveAllBoxes(CurrentHorizontalGrid, CurrentVerticalGrid);
-
+            
             List<Task> tasks = new List<Task>();
 
             foreach (var box in Boxes.OrderBy(b => b.GridPosition))
@@ -981,6 +984,8 @@ namespace MidiLiveSystem
             }
 
             await Task.WhenAll(tasks);
+
+            await RecallWindow.UpdateBoxes();
         }
 
         private async Task AddRoutingBoxToFrame(RoutingBox rtb, bool bCreate)
@@ -1088,10 +1093,14 @@ namespace MidiLiveSystem
             if (box.RoutingGuid == Guid.Empty || bFromSave)
             {
                 box.RoutingGuid = await Routing.AddRouting(sDevIn, sDevOut, iChIn, iChOut, options, preset, sDevIn.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn - 1 ? SeqData.Sequencer[iChIn - 1] : null);
+                var devices = await box.GetAllDevices();
+                await Routing.UpdateUsedDevices(devices);
             }
             else
             {
-                bool bModify = await Routing.ModifyRouting(snapshot.RoutingGuid, sDevIn, sDevOut, iChIn, iChOut, options, preset, sDevIn.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn - 1 ? SeqData.Sequencer[iChIn - 1] : null);
+                await Routing.ModifyRouting(snapshot.RoutingGuid, sDevIn, sDevOut, iChIn, iChOut, options, preset, sDevIn.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn - 1 ? SeqData.Sequencer[iChIn - 1] : null);
+                var devices = await box.GetAllDevices();
+                await Routing.UpdateUsedDevices(devices);
             }
         }
 

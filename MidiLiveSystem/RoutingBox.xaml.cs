@@ -1147,6 +1147,27 @@ namespace MidiLiveSystem
                 cbPresetButton.SelectedIndex = iPreset - 1;
             });
         }
+
+        internal async Task<List<string[]>> GetAllDevices()
+        {
+            List<string[]> devices = new List<string[]>();
+
+            await Task.Run(() =>
+            {
+                for (int i = 0; i < TempMemory.Length; i++)
+                {
+                    devices.Add(new string[] { "I", TempMemory[i].DeviceIn });
+                    devices.Add(new string[] { "O", TempMemory[i].DeviceOut });
+                }
+            });
+
+            if (devices.Count > 0)
+            {
+                return devices.ToList();
+            }
+            else
+            { return new List<string[]>(); }
+        }
     }
 
     [Serializable]
