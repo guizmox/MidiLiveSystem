@@ -31,6 +31,11 @@ namespace MidiLiveSystem
     /// </summary>
     public partial class MainWindow : Window
     {
+        private static string APP_NAME = "Midi Live System";
+
+        private delegate void UIEventHandler(string sMessage);
+        private static event UIEventHandler NewMessage;
+
         private System.Timers.Timer UIRefreshRate;
 
         private int CurrentVerticalGrid = 4;
@@ -85,6 +90,16 @@ namespace MidiLiveSystem
             SeqData.Sequencer = seq;
 
             SequencerWindow = new InternalSequencer(Project, Routing, SeqData);
+
+            NewMessage += MainWindow_NewMessage;
+        }
+
+        private async void MainWindow_NewMessage(string sMessage)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                Title = string.Concat(APP_NAME, " [", sMessage, "]");
+            });
         }
 
         private void Keyboard_KeyPressed(string sKey)
@@ -222,9 +237,11 @@ namespace MidiLiveSystem
 
         private void Window_Closed(object sender, EventArgs e)
         {
+            NewMessage -= MainWindow_NewMessage;
             UIRefreshRate.Enabled = false;
             UIRefreshRate.Elapsed -= UIRefreshRate_Elapsed;
             UIRefreshRate.Stop();
+
             MidiRouting.InputStaticMidiMessage -= MidiRouting_InputMidiMessage;
 
             if (LogWindow != null)
@@ -488,7 +505,7 @@ namespace MidiLiveSystem
 
                         if (bp1.RoutingGuid != Guid.Empty)
                         {
-                            await Routing.ModifyRouting(bp1.RoutingGuid, sDevIn1, sDevOut1, iChIn1, iChOut1, bp1.MidiOptions, bp1.MidiPreset, SeqData.Sequencer[iChIn1 - 1]);
+                            await Routing.ModifyRouting(bp1.RoutingGuid, sDevIn1, sDevOut1, iChIn1, iChOut1, bp1.MidiOptions, bp1.MidiPreset, sDevIn1.Equals(Tools.INTERNAL_SEQUENCER) ? SeqData.Sequencer[iChIn1 - 1] : null);
                             await Routing.SendNote(box.RoutingGuid, bp1.MidiOptions.PlayNote);
                         }
                         break;
@@ -504,7 +521,7 @@ namespace MidiLiveSystem
 
                         if (bp2.RoutingGuid != Guid.Empty)
                         {
-                            await Routing.ModifyRouting(bp2.RoutingGuid, sDevIn2, sDevOut2, iChIn2, iChOut2, bp2.MidiOptions, bp2.MidiPreset, SeqData.Sequencer[iChIn2 - 1]);
+                            await Routing.ModifyRouting(bp2.RoutingGuid, sDevIn2, sDevOut2, iChIn2, iChOut2, bp2.MidiOptions, bp2.MidiPreset, sDevIn2.Equals(Tools.INTERNAL_SEQUENCER) ? SeqData.Sequencer[iChIn2 - 1] : null);
                         }
                         break;
 
@@ -548,11 +565,11 @@ namespace MidiLiveSystem
             {
                 if (Routing.Events <= 16) //pour éviter de saturer les process avec des appels UI inutiles
                 {
-                    Title = string.Concat("Midi Live System [", Routing.CyclesInfo, " - UI Refresh Rate : ", UIRefreshRate.Interval / 1000, " Sec.]");
+                    Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, " - UI Refresh Rate : ", UIRefreshRate.Interval / 1000, " Sec.]");
                 }
                 else
                 {
-                    Title = string.Concat("Midi Live System [", Routing.CyclesInfo, " - UI events disabled]");
+                    Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, " - UI events disabled]");
                 }
             });
         }
@@ -683,15 +700,22 @@ namespace MidiLiveSystem
                         Routing.DeleteAllRouting();
 
                         Project = project.Item2;
+                        NewMessage?.Invoke("Project Loaded");
 
                         Boxes = project.Item3.GetBoxes(Project, Routing);
+                        NewMessage?.Invoke("Routing Boxes Loaded");
 
-                        RecordedSequence = project.Item4;
+                        if (project.Item4 != null)
+                        {
+                            RecordedSequence = project.Item4;
+                            NewMessage?.Invoke("Recording Loaded");
+                        }
 
                         if (project.Item5 != null)
                         {
                             SeqData = project.Item5;
                             SequencerWindow = new InternalSequencer(Project, Routing, SeqData);
+                            NewMessage?.Invoke("Sequencer Loaded");
                         }
 
                         if (Boxes != null)
@@ -706,10 +730,19 @@ namespace MidiLiveSystem
                             }
 
                             await AddAllRoutingBoxes();
+                            NewMessage?.Invoke("Routing Boxes Added");
 
                             foreach (var box in Boxes)
                             {
-                                await ProcessBoxData(box, true);
+                                try
+                                {
+                                    await ProcessBoxData(box, true);
+                                    NewMessage?.Invoke("Routing Box Initialized : " + box.BoxName);
+                                }
+                                catch (Exception ex)
+                                {
+                                    NewMessage?.Invoke("Routing Box Initialization failed : " + box.BoxName + " (" + ex.Message + ")");
+                                }
                             }
                         }
 
@@ -729,7 +762,7 @@ namespace MidiLiveSystem
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Unable to Get Project List : " + ex.Message);
+                MessageBox.Show("Unable to Load Project : " + ex.Message);
             }
         }
 
@@ -1054,11 +1087,11 @@ namespace MidiLiveSystem
 
             if (box.RoutingGuid == Guid.Empty || bFromSave)
             {
-                box.RoutingGuid = await Routing.AddRouting(sDevIn, sDevOut, iChIn, iChOut, options, preset, SeqData.Sequencer[iChIn - 1]);
+                box.RoutingGuid = await Routing.AddRouting(sDevIn, sDevOut, iChIn, iChOut, options, preset, sDevIn.Equals(Tools.INTERNAL_SEQUENCER) ? SeqData.Sequencer[iChIn - 1] : null);
             }
             else
             {
-                bool bModify = await Routing.ModifyRouting(snapshot.RoutingGuid, sDevIn, sDevOut, iChIn, iChOut, options, preset, SeqData.Sequencer[iChIn - 1]);
+                bool bModify = await Routing.ModifyRouting(snapshot.RoutingGuid, sDevIn, sDevOut, iChIn, iChOut, options, preset, sDevIn.Equals(Tools.INTERNAL_SEQUENCER) ? SeqData.Sequencer[iChIn - 1] : null);
             }
         }
 
