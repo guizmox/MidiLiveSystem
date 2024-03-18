@@ -227,10 +227,11 @@ namespace MidiTools
             int noiresParMesure = iQt;
 
             // Durée d'une mesure en millisecondes
-            double dureeMesureMs = dureeNoireMs * noiresParMesure;
+            //double dureeMesureMs = dureeNoireMs * noiresParMesure;
+            double dureeMesureMs = dureeNoireMs * (dDiviseur / noiresParMesure);
 
             // Calcul de l'intervalle du timer en millisecondes
-            double intervalleTimerMs = dureeMesureMs / dDiviseur; // On prend un quart de la mesure
+            double intervalleTimerMs = dureeMesureMs; // On prend un quart de la mesure
 
             return (int)intervalleTimerMs;
         }

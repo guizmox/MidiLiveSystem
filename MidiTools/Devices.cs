@@ -25,7 +25,7 @@ namespace MidiTools
         public List<int> Values = new List<int>();
         public string Device;
         public string SysExData;
-        public int WaitTimeBeforeNextEvent = 0;
+        public int Delay = 0;
 
         internal MidiEvent(MidiDevice.TypeEvent evType, List<int> values, Channel ch, string device)
         {
@@ -98,7 +98,9 @@ namespace MidiTools
             PC = 6,
             CH_PRES = 7,
             POLY_PRES = 8,
-            CLOCK = 9
+            CLOCK = 9,
+            STOP = 10,
+            START = 11
         }
 
         public string Name { get; internal set; }
@@ -589,6 +591,9 @@ namespace MidiTools
                     inputDevice.Nrpn += NrPnChangeHandler;
                     inputDevice.ChannelPressure += ChannelPressureHandler;
                     inputDevice.PolyphonicKeyPressure += PolyphonicPressure;
+                    inputDevice.Start += InputDevice_Start;
+                    inputDevice.Stop += InputDevice_Stop;
+                    
                     //inputDevice.Clock += ClockHandler;
                     inputDevice.Open();
                     AddLog(inputDevice.Name, true, Channel.Channel1, "[OPEN]", "", "", "");
@@ -605,6 +610,9 @@ namespace MidiTools
                     inputDevice.ChannelPressure += ChannelPressureHandler;
                     inputDevice.PolyphonicKeyPressure += PolyphonicPressure;
                     inputDevice.Clock -= ClockHandler;
+                    inputDevice.Start -= InputDevice_Start;
+                    inputDevice.Stop -= InputDevice_Stop;
+
                     inputDevice.Open();
                     AddLog(inputDevice.Name, true, Channel.Channel1, "[OPEN]", "", "", "");
                 }
@@ -622,6 +630,9 @@ namespace MidiTools
                 inputDevice.ChannelPressure -= ChannelPressureHandler;
                 inputDevice.PolyphonicKeyPressure -= PolyphonicPressure;
                 inputDevice.Clock -= ClockHandler;
+                inputDevice.Start -= InputDevice_Start;
+                inputDevice.Stop -= InputDevice_Stop;
+
                 if (inputDevice.IsOpen)
                 {
                     inputDevice.Close();
@@ -631,6 +642,20 @@ namespace MidiTools
 
                 throw ex;
             }
+        }
+
+        private void InputDevice_Stop(IMidiInputDevice sender, in StopMessage msg)
+        {
+            AddLog(inputDevice.Name, true, Channel.Channel1, "Stop", "", "", "");
+
+            AddEvent(TypeEvent.STOP, null, Channel.Channel1);
+        }
+
+        private void InputDevice_Start(IMidiInputDevice sender, in StartMessage msg)
+        {
+            AddLog(inputDevice.Name, true, Channel.Channel1, "Start", "", "", "");
+
+            AddEvent(TypeEvent.START, null, Channel.Channel1);
         }
 
         private void ClockHandler(IMidiInputDevice sender, in ClockMessage msg)

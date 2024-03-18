@@ -80,6 +80,18 @@ namespace RtMidi.Core.Devices
         /// MIDI Clock event
         /// </summary>
         event ClockHandler Clock;
+
+        /// <summary>
+        /// MIDI Start
+        /// </summary>
+        event StartHandler Start;
+
+
+        /// <summary>
+        /// MIDI Stop
+        /// </summary>
+        event StopHandler Stop;
+
     }
 
     public delegate void NoteOffMessageHandler(IMidiInputDevice sender, in NoteOffMessage msg);
@@ -109,4 +121,8 @@ namespace RtMidi.Core.Devices
     public delegate void TuneRequestHandler(IMidiInputDevice sender, in TuneRequestMessage msg);
 
     public delegate void ClockHandler(IMidiInputDevice sender, in ClockMessage msg);
+
+    public delegate void StartHandler(IMidiInputDevice sender, in StartMessage msg);
+
+    public delegate void StopHandler(IMidiInputDevice sender, in StopMessage msg);
 }

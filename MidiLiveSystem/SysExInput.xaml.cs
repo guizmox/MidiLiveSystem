@@ -59,7 +59,7 @@ namespace MidiLiveSystem
                 rtbSysEx.Document.Blocks.Add(paragraph);
             }
 
-            MidiRouting.StaticIncomingMidiMessage += Routing_IncomingMidiMessage;
+            MidiRouting.InputStaticMidiMessage += Routing_IncomingMidiMessage;
         }
 
         private void Window_Closed(object sender, EventArgs e)
@@ -69,7 +69,7 @@ namespace MidiLiveSystem
                 MidiRouting.CheckAndCloseINPort(cbMidiIn.SelectedValue.ToString().Substring(2));
             }
 
-            MidiRouting.StaticIncomingMidiMessage -= Routing_IncomingMidiMessage;
+            MidiRouting.InputStaticMidiMessage -= Routing_IncomingMidiMessage;
         }
 
         private void cbMidiIn_SelectionChanged(object sender, SelectionChangedEventArgs e)

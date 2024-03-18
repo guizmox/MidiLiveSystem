@@ -6,11 +6,11 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:MidiLiveSystem"
         mc:Ignorable="d"
-        Title="Internal Sequencer" Background="Gray" Height="700" Width="800" SizeToContent="WidthAndHeight"  WindowStyle="ToolWindow" WindowStartupLocation="CenterScreen" Closed="Window_Closed">
+        Title="Internal Sequencer" Background="Gray" Height="700" Width="800" ResizeMode="NoResize" GotKeyboardFocus="Window_GotKeyboardFocus" LostKeyboardFocus="Window_LostKeyboardFocus" SizeToContent="WidthAndHeight"  WindowStyle="ToolWindow" WindowStartupLocation="CenterScreen" Closed="Window_Closed">
     
     <Window.Resources>
         <Style TargetType="Label">
-            <Setter Property="Foreground" Value="Red"/>
+            <Setter Property="Foreground" Value="White"/>
             <!-- Couleur du texte rouge -->
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
@@ -33,11 +33,12 @@
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="20*"/>
-                    <ColumnDefinition Width="20*"/>
-                    <ColumnDefinition Width="60*"/>
+                    <ColumnDefinition Width="15*"/>
+                    <ColumnDefinition Width="65*"/>
                 </Grid.ColumnDefinitions>
                 <Label Grid.Column="0" Content="RECORDER MIDI PORT"/>
                 <ComboBox Name="cbMidiIn" Grid.Column="1" SelectedValuePath="Tag" SelectionChanged="cbMidiIn_SelectionChanged" />
+                <Label Grid.Column="2" HorizontalAlignment="Right" FontStyle="Italic" Content="You can Start/Stop Sequences by sending MIDI Start/Stop messages from the selected device"/>
             </Grid>
         </StackPanel>
 

@@ -1,6 +1,7 @@
 ﻿using MidiTools;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -23,8 +24,11 @@ namespace MidiLiveSystem
     /// </summary>
     public partial class SequencerBox : Page
     {
+        private InternalSequencer MainWindow;
+
         private System.Timers.Timer BufferProcessor;
         internal bool IsRecording { get; private set; } = false;
+
         internal int SequencerIndex = 0;
         internal Sequencer InternalSequence;
         private List<MidiEvent> Buffer = new List<MidiEvent>();
@@ -34,9 +38,11 @@ namespace MidiLiveSystem
 
         private List<SequenceStep> StepsRecorded = new List<SequenceStep>();
 
-        public SequencerBox(int iSequencer, Sequencer seq)
+        public SequencerBox(int iSequencer, Sequencer seq, InternalSequencer mainW)
         {
             InitializeComponent();
+
+            MainWindow = mainW;
 
             BufferProcessor = new System.Timers.Timer();
             BufferProcessor.Elapsed += BufferProcessor_Elapsed;
@@ -61,8 +67,13 @@ namespace MidiLiveSystem
                 Button btn = new Button();
                 btn.Name = "btnStep_" + i.ToString();
                 btn.Background = Brushes.White;
-                btn.Margin = new Thickness(2);
+                btn.Margin = new Thickness(1);
                 btn.VerticalAlignment = VerticalAlignment.Bottom;
+                btn.FontSize = 9;
+                btn.Width = 40;
+                btn.Padding = new Thickness(2);
+                btn.Content = "--";
+                btn.Foreground = Brushes.Black;
                 btn.Click += BtnStep_Click;
                 Grid.SetColumn(btn, i - 1);
                 gdSteps.Children.Add(btn);
@@ -81,35 +92,119 @@ namespace MidiLiveSystem
             {
                 tbChannel.Text = string.Concat("Channel : ", InternalSequence.Channel.ToString());
                 cbQuantization.SelectedValue = InternalSequence.Quantization;
-                tbTempo.Text = InternalSequence.Tempo.ToString();
-                cbQteSteps.SelectedValue = InternalSequence.Steps;
+                slTempo.Value = InternalSequence.Tempo;
+                cbQteSteps.SelectedValue = InternalSequence.Steps == 0 ? 4 : InternalSequence.Steps;
                 ckTranspose.IsChecked = InternalSequence.Transpose;
-                slGate.Value = InternalSequence.Sequence != null && InternalSequence.Sequence.Length > 0 ? InternalSequence.Sequence[0].GatePercent : 25;
+                slGate.Value = InternalSequence.Sequence[0] != null ? InternalSequence.Sequence[0].GatePercent : 25;
+                btnMuted.Background = InternalSequence.Muted ? Brushes.IndianRed : Brushes.DarkGray;
 
-                if (InternalSequence.Sequence != null)
+                for (int iStep = 0; iStep < InternalSequence.Sequence.Length; iStep++)
                 {
-                    for (int i = 0; i < InternalSequence.Sequence.Length; i++)
+                    SequenceStep seq = InternalSequence.Sequence[iStep];
+
+                    if (seq == null) //c'est un intermédiaire
                     {
-                        await ChangeButtonColor(i, Brushes.IndianRed);
+                        await ChangeButtonText(iStep, null);
+                        await ChangeButtonColor(iStep, Brushes.DarkOrange);
+                    }
+                    else if (seq.StepCount <= 0)
+                    {
+                        await ChangeButtonText(iStep, null);
+                        await ChangeButtonColor(iStep, Brushes.White);
+                    }
+                    else
+                    {
+                        await ChangeButtonText(iStep, seq);
+                        await ChangeButtonColor(iStep, Brushes.IndianRed);
                     }
                 }
             });
         }
 
+        private async void slTempo_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            double tempo = await slTempo.Dispatcher.InvokeAsync(() => slTempo.Value);
+            await lbTempo.Dispatcher.InvokeAsync(() => lbTempo.Content = string.Concat("Tempo (", tempo.ToString(), ")"));
+            await InternalSequence.ChangeTempo((int)tempo);
+        }
+
+        private async void ckTranspose_Click(object sender, RoutedEventArgs e)
+        {
+            InternalSequence.Transpose = await (ckTranspose.Dispatcher.InvokeAsync(() => ckTranspose.IsChecked.Value));
+        }
+
+        private async void slGate_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            double gate = await (slGate.Dispatcher.InvokeAsync(() => slGate.Value));
+            await lbGate.Dispatcher.InvokeAsync(() => lbGate.Content = string.Concat("Gate (", gate.ToString(), ")"));
+
+            lock (InternalSequence.Sequence)
+            {
+                for (int i = 0; i < InternalSequence.Sequence.Length; i++)
+                {
+                    if (InternalSequence.Sequence[i] != null)
+                    {
+                        InternalSequence.Sequence[i].GatePercent = (int)gate;
+                    }
+                }
+            }
+        }
+
         private async void cbQteSteps_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            int iMax = ((ComboBox)sender).SelectedIndex;
-            await ClearButtons(iMax);
+            ComboBoxItem cb = ((ComboBoxItem)e.AddedItems[0]);
+            if (cb.IsFocused)
+            {
+                int iMax = Convert.ToInt32(cb.Tag) - 1;
+                await ClearButtons(iMax + 1);
+            }
+        }
+
+        private async void cbQuantization_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ComboBoxItem cb = ((ComboBoxItem)e.AddedItems[0]);
+            if (cb.IsFocused)
+            {
+                string sQuantize = cb.Tag.ToString();
+                await ChangeQuantization(sQuantize);
+            }
+        }
+
+        private async void btnMuted_Click(object sender, RoutedEventArgs e)
+        {
+            await btnMuted.Dispatcher.InvokeAsync(() =>
+            {
+                if (btnMuted.Background == Brushes.DarkGray)
+                { btnMuted.Background = Brushes.IndianRed; InternalSequence.Muted = true; }
+                else { btnMuted.Background = Brushes.DarkGray; InternalSequence.Muted = false; }
+            });
+        }
+
+        private async Task ChangeQuantization(string sQuantize)
+        {
+            await Task.Run(() =>
+            {
+                InternalSequence.Quantization = sQuantize;
+            });
+
+            ActualStep = 0;
+            StepsRecorded.Clear();
         }
 
         private async Task ClearButtons(int iMax)
         {
-            ActualStep = 0;
-            StepsRecorded.Clear();
+            await Task.Run(() =>
+            {
+                InternalSequence.InitSequence(iMax);
+
+                ActualStep = 0;
+                StepsRecorded.Clear();
+            });
 
             for (int i = 0; i < 32; i++)
             {
-                if (i <= iMax)
+                await ButtonSteps[i].Dispatcher.InvokeAsync(() => ButtonSteps[i].Content = "--");
+                if (i < iMax)
                 {
                     await ChangeButtonColor(i, Brushes.White);
                 }
@@ -123,17 +218,37 @@ namespace MidiLiveSystem
         private async void BufferProcessor_Elapsed(object sender, ElapsedEventArgs e)
         {
             if (IsRecording)
-            {                
+            {
                 AlternateButtonColor = AlternateButtonColor ? false : true;
-                await ChangeButtonColor(ActualStep, AlternateButtonColor ? Brushes.Gray : Brushes.GreenYellow);
+                await ChangeButtonColor(ActualStep, AlternateButtonColor ? Brushes.White : Brushes.IndianRed);
             }
         }
 
         private async Task ChangeButtonColor(int iStep, SolidColorBrush color)
         {
-            await Dispatcher.InvokeAsync(() => 
+            if (iStep >= 0)
             {
-                ButtonSteps[iStep].Background = color;
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    ButtonSteps[iStep].Background = color;
+                });
+            }
+        }
+
+        private async Task ChangeButtonText(int iStep, SequenceStep stepdata)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                if (stepdata != null)
+                {
+                    string sText = "";
+                    if (stepdata.NotesAndVelocity != null && stepdata.NotesAndVelocity.Count > 0)
+                    {
+                        sText = Tools.MidiNoteNumberToNoteName(stepdata.NotesAndVelocity[0][0]);
+                        if (stepdata.NotesAndVelocity.Count > 1) { sText = string.Concat(sText, "+"); }
+                    }
+                    ButtonSteps[iStep].Content = sText;
+                }
             });
         }
 
@@ -146,9 +261,8 @@ namespace MidiLiveSystem
         {
             IsRecording = true;
 
-            int iMax = await cbQteSteps.Dispatcher.InvokeAsync(() => cbQteSteps.SelectedIndex);
+            int iMax = await cbQteSteps.Dispatcher.InvokeAsync(() => Convert.ToInt32(cbQteSteps.SelectedValue));
 
-            InternalSequence.Clear();
             await ClearButtons(iMax);
 
             await btnRecordSequence.Dispatcher.InvokeAsync(() => btnRecordSequence.Background = Brushes.IndianRed);
@@ -169,8 +283,36 @@ namespace MidiLiveSystem
 
         private async void btnIncrementStep_Click(object sender, RoutedEventArgs e)
         {
-            await ChangeButtonColor(ActualStep, Brushes.DarkRed);
-            ActualStep++;
+            if (IsRecording && StepsRecorded.Count > 0)
+            {
+                int iLength = await cbQteSteps.Dispatcher.InvokeAsync(() => Convert.ToInt32(cbQteSteps.SelectedValue));
+
+                if (InternalSequence.Sequence != null)
+                {
+                    await ChangeButtonText(ActualStep, InternalSequence.Sequence.Last());
+                }
+
+                StepsRecorded.Last().StepCount += 1;
+
+                if (ActualStep < iLength - 1)
+                {
+                    await ChangeButtonColor(ActualStep, Brushes.DarkOrange);
+
+                    ActualStep++;
+                }
+                else
+                {
+                    await ChangeButtonColor(ActualStep, Brushes.DarkRed);
+
+                    ActualStep = 0;
+                    IsRecording = false;
+
+                    await btnRecordSequence.Dispatcher.InvokeAsync(() => btnRecordSequence.Background = Brushes.DarkGray);
+                    await btnStopSequence.Dispatcher.InvokeAsync(() => btnStopSequence.Background = Brushes.DarkGray);
+
+                    await ProcessRecordedData(StepsRecorded);
+                }
+            }
         }
 
         internal async Task AddMidiEvent(MidiEvent ev)
@@ -185,11 +327,11 @@ namespace MidiLiveSystem
             else if (ev.Type == MidiDevice.TypeEvent.NOTE_OFF)
             {
                 int iSteps = await cbQteSteps.Dispatcher.InvokeAsync(() => cbQteSteps.SelectedIndex);
-                int iGatePercent = await slGate.Dispatcher.InvokeAsync(() => (int)slGate.Value);
+                double dGatePercent = await slGate.Dispatcher.InvokeAsync(() => slGate.Value);
 
                 if (ActualStep >= iSteps)
                 {
-                    await ProcessEvent(iGatePercent);
+                    await ProcessEvent(dGatePercent);
 
                     await btnRecordSequence.Dispatcher.InvokeAsync(() => btnRecordSequence.Background = Brushes.DarkGray);
                     await btnStopSequence.Dispatcher.InvokeAsync(() => btnStopSequence.Background = Brushes.DarkGray);
@@ -200,24 +342,23 @@ namespace MidiLiveSystem
                 }
                 else
                 {
-                    await ProcessEvent(iGatePercent);
+                    await ProcessEvent(dGatePercent);
                 }
             }
         }
 
-        private async Task ProcessEvent(int iGatePercent)
+        private async Task ProcessEvent(double dGatePercent)
         {
             lock (Buffer)
             {
                 if (Buffer.Count >= 1)
                 {
-                    int iCount = Buffer.Count;
                     List<int[]> notes = new List<int[]>();
                     foreach (var buf in Buffer.Where(b => b.Type == MidiDevice.TypeEvent.NOTE_ON))
                     {
                         notes.Add(new int[] { buf.Values[0], buf.Values[1] });
                     }
-                    SequenceStep step = new SequenceStep(ActualStep, iGatePercent, iCount, notes);
+                    SequenceStep step = new SequenceStep(ActualStep, dGatePercent, 1, notes);
                     StepsRecorded.Add(step);
                     ActualStep++;
                 }
@@ -227,34 +368,82 @@ namespace MidiLiveSystem
             if (ActualStep > 0)
             {
                 await ChangeButtonColor(ActualStep - 1, Brushes.IndianRed);
+                await ChangeButtonText(ActualStep - 1, StepsRecorded.Last());
             }
         }
 
         private async Task ProcessRecordedData(List<SequenceStep> stepsRecorded)
         {
             int iSteps = await cbQteSteps.Dispatcher.InvokeAsync(() => Convert.ToInt32(cbQteSteps.SelectedValue));
-            string sTempo = await tbTempo.Dispatcher.InvokeAsync(() => tbTempo.Text.Trim());
+            double dTempo = await slTempo.Dispatcher.InvokeAsync(() => slTempo.Value);
             bool bTranspose = await ckTranspose.Dispatcher.InvokeAsync(() => ckTranspose.IsChecked.Value);
             string sQuantize = await cbQuantization.Dispatcher.InvokeAsync(() => cbQuantization.SelectedValue.ToString());
-            int iTempo = 120;
-            if (int.TryParse(sTempo, out iTempo))
-            {
-                if (iTempo >= 40 && iTempo <= 300)
-                {
-
-                }
-                else
-                {
-                    MessageBox.Show("Tempo value out of bounds. Set to default (120)");
-                    await tbTempo.Dispatcher.InvokeAsync(() => tbTempo.Text = "120");
-                }
-            }
 
             InternalSequence.Channel = SequencerIndex;
             InternalSequence.Quantization = sQuantize;
             InternalSequence.Steps = iSteps;
-            InternalSequence.Sequence = stepsRecorded.ToArray();
+            InternalSequence.SetSequence(stepsRecorded);
             InternalSequence.Transpose = bTranspose;
+            await InternalSequence.ChangeTempo((int)dTempo);
+
+            await FillUI();
+        }
+
+        internal async Task Listener(bool bOK)
+        {
+            if (await Dispatcher.InvokeAsync(() => MainWindow.IsVisible))
+            {
+                if (!InternalSequence.Muted)
+                {
+                    await FillUI();
+
+                    if (bOK)
+                    {
+                        await btnMuted.Dispatcher.InvokeAsync(() => btnMuted.IsEnabled = false);
+                        await btnRecordSequence.Dispatcher.InvokeAsync(() => btnRecordSequence.IsEnabled = false);
+                        await btnIncrementStep.Dispatcher.InvokeAsync(() => btnIncrementStep.IsEnabled = false);
+                        await btnStopSequence.Dispatcher.InvokeAsync(() => btnStopSequence.IsEnabled = false);
+                        await cbQteSteps.Dispatcher.InvokeAsync(() => cbQteSteps.IsEnabled = false);
+                        await cbQuantization.Dispatcher.InvokeAsync(() => cbQuantization.IsEnabled = false);
+                        //await slGate.Dispatcher.InvokeAsync(() => slGate.IsEnabled = false);
+                        //await slTempo.Dispatcher.InvokeAsync(() => slTempo.IsEnabled = false);
+                        await ckTranspose.Dispatcher.InvokeAsync(() => ckTranspose.IsEnabled = false);
+
+                        InternalSequence.OnInternalSequencerStep += InternalSequence_OnInternalSequencerStep;
+                    }
+                    else
+                    {
+                        await btnMuted.Dispatcher.InvokeAsync(() => btnMuted.IsEnabled = true);
+                        await btnRecordSequence.Dispatcher.InvokeAsync(() => btnRecordSequence.IsEnabled = true);
+                        await btnIncrementStep.Dispatcher.InvokeAsync(() => btnIncrementStep.IsEnabled = true);
+                        await btnStopSequence.Dispatcher.InvokeAsync(() => btnStopSequence.IsEnabled = true);
+                        await cbQteSteps.Dispatcher.InvokeAsync(() => cbQteSteps.IsEnabled = true);
+                        await cbQuantization.Dispatcher.InvokeAsync(() => cbQuantization.IsEnabled = true);
+                        //await slGate.Dispatcher.InvokeAsync(() => slGate.IsEnabled = true);
+                        //await slTempo.Dispatcher.InvokeAsync(() => slTempo.IsEnabled = true);
+                        await ckTranspose.Dispatcher.InvokeAsync(() => ckTranspose.IsEnabled = true);
+
+                        InternalSequence.OnInternalSequencerStep -= InternalSequence_OnInternalSequencerStep;
+                    }
+                }
+            }
+        }
+
+        private async void InternalSequence_OnInternalSequencerStep(SequenceStep notes, double lengthInMs, int lastpositionInSequence, int positionInSequence)
+        {
+            if (await Dispatcher.InvokeAsync(() => MainWindow.IsVisible))
+            {
+                if (notes.Step > 0)
+                {
+                    await ChangeButtonColor(lastpositionInSequence, Brushes.IndianRed);
+                    await ChangeButtonColor(positionInSequence, Brushes.Green);
+                }
+                else if (notes.Step == 0)
+                {
+                    await ChangeButtonColor(lastpositionInSequence, Brushes.IndianRed);
+                    await ChangeButtonColor(positionInSequence, Brushes.Green);
+                }
+            }
         }
     }
 }

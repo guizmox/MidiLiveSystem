@@ -9,15 +9,19 @@ namespace MidiTools
     [Serializable]
     public class Sequencer
     {
-        public delegate void SequencerStepHandler(SequenceStep notes, double lengthInMs);
+        public delegate void SequencerStepHandler(SequenceStep notes, double lengthInMs, int lastPositionInSequence, int positionInSequence);
         public event SequencerStepHandler OnInternalSequencerStep;
 
-        public int StartNote = -1;
+        public bool[] LiveNotes = new bool[128];
+        public int StartNote { get { return Sequence[0].NotesAndVelocity.Count > 0 ? Sequence[0].NotesAndVelocity[0][0] : -1; } }
         public bool Transpose = false;
         public int Channel = 0;
-        public int Tempo = 120;
+        public int Tempo { get; set; } = 120;
+        public int TransposeOffset { get; set; } = 0;
+
         public string Quantization = "4";
         public int Steps = 32;
+        public bool Muted = false;
 
         public SequenceStep[] Sequence;
 
@@ -25,39 +29,103 @@ namespace MidiTools
         private int Loop;
         private double TimerFrequency = 0;
 
+        private int LastPositionInSequence = 0;
+
         public Sequencer()
         { }
 
-        public Sequencer(int iChannel, string sQuantization, int iSteps, int iTempo, SequenceStep[] data, bool bTranspose)
+        public Sequencer(int iChannel, string sQuantization, int iSteps, int iTempo, List<SequenceStep> data, bool bTranspose)
         {
             Channel = iChannel;
             Tempo = iTempo;
             Quantization = sQuantization;
             Steps = iSteps;
-            Sequence = data;
+            SetSequence(data);
             Transpose = bTranspose;
-            StartNote = data != null ? data[0].NotesAndVelocity[0][0] : -1;
+        }
+
+        private void MidiRouting_StaticIncomingMidiMessage(MidiEvent ev)
+        {
+            if (ev.Type == MidiDevice.TypeEvent.NOTE_ON)
+            {
+                LiveNotes[ev.Values[0]] = true;
+            }
+            else if (ev.Type == MidiDevice.TypeEvent.NOTE_OFF)
+            {
+                LiveNotes[ev.Values[0]] = false;
+            }
+
+            if (Transpose)
+            {
+                int iFirstNote = GetLowestNote();
+                if (iFirstNote > -1)
+                {
+                    int iDelta = StartNote - iFirstNote;
+                    TransposeOffset = iDelta;
+                }
+            }
+
+        }
+
+        public void SetSequence(List<SequenceStep> data)
+        {
+            Sequence = new SequenceStep[Steps];
+
+            if (data != null)
+            {
+                int iOffset = 0;
+                for (int i = 0; i < data.Count; i++)
+                {
+                    if (data[i].StepCount == 1)
+                    {
+                        Sequence[iOffset + i] = data[i];
+                    }
+                    else
+                    {
+                        Sequence[i + iOffset] = data[i];
+
+                        for (int ioff = 1; ioff < data[i].StepCount; ioff++)
+                        {
+                            iOffset++;
+                            Sequence[i + iOffset] = null;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (int i = 0; i < Steps; i++)
+                {
+                    Sequence[i] = new SequenceStep(i, -1, -1, new List<int[]>());
+                }
+            }
         }
 
         public async Task StartSequence()
         {
             await Task.Run(() =>
             {
-                if (SequencerClock != null)
+                if (Sequence[0].StepCount > 0)
                 {
-                    SequencerClock.Stop();
-                    SequencerClock.Enabled = false;
-                    SequencerClock = null;
-                    Loop = 0;
-                }
-                if (Sequence != null && Sequence.Length > 0)
-                {
-                    TimerFrequency = Tools.GetMidiClockIntervalDouble(Tempo, Quantization);
-                    Loop = 0;
-                    SequencerClock = new System.Timers.Timer();
-                    SequencerClock.Elapsed += TriggerStep;
-                    SequencerClock.Interval = (int)Math.Round(TimerFrequency);
-                    SequencerClock.Start();
+                    if (SequencerClock != null)
+                    {
+                        SequencerClock.Stop();
+                        SequencerClock.Enabled = false;
+                        SequencerClock = null;
+                        Loop = 0;
+                    }
+                    if (Sequence[0].StepCount > 0)
+                    {
+                        MidiRouting.InputStaticMidiMessage -= MidiRouting_StaticIncomingMidiMessage;
+                        MidiRouting.InputStaticMidiMessage += MidiRouting_StaticIncomingMidiMessage;
+
+                        TimerFrequency = Tools.GetMidiClockIntervalDouble(Tempo, Quantization);
+                        Loop = 0;
+                        SequencerClock = new System.Timers.Timer();
+                        SequencerClock.Elapsed += TriggerStep;
+                        SequencerClock.Interval = (int)Math.Round(TimerFrequency);
+                        SequencerClock.Start();
+                    }
                 }
             });
         }
@@ -66,12 +134,35 @@ namespace MidiTools
         {
             await Task.Run(() =>
             {
-                if (SequencerClock != null)
+                if (Sequence[0].StepCount > 0)
                 {
-                    SequencerClock.Stop();
-                    SequencerClock.Enabled = false;
-                    SequencerClock = null;
-                    Loop = 0;
+                    if (SequencerClock != null)
+                    {
+                        MidiRouting.InputStaticMidiMessage -= MidiRouting_StaticIncomingMidiMessage;
+
+                        SequencerClock.Stop();
+                        SequencerClock.Enabled = false;
+                        SequencerClock = null;
+                        Loop = 0;
+                    }
+                }
+            });
+        }
+
+        public async Task ChangeTempo(int iNewValue)
+        {
+            await Task.Run(() =>
+            {
+                if (Tempo != iNewValue)
+                {
+                    Tempo = iNewValue;
+                    if (SequencerClock != null)
+                    {
+                        TimerFrequency = Tools.GetMidiClockIntervalDouble(iNewValue, Quantization);
+                        SequencerClock.Stop();
+                        SequencerClock.Interval = (int)Math.Round(TimerFrequency);
+                        SequencerClock.Start();
+                    }
                 }
             });
         }
@@ -83,21 +174,37 @@ namespace MidiTools
                 Loop = 0;
             }
 
-            OnInternalSequencerStep?.Invoke(Sequence[Loop], ((TimerFrequency * Sequence[Loop].StepCount) * (Sequence[Loop].GatePercent / 100)));
+            if (Sequence[Loop] != null) //c'est une tie
+            {
+                double length = ((TimerFrequency * Sequence[Loop].StepCount) * (Sequence[Loop].GatePercent / 100.0));
+                OnInternalSequencerStep?.Invoke(Sequence[Loop], (int)length, LastPositionInSequence, Loop);
+                LastPositionInSequence = Loop;
+            }
 
             Loop += 1;
         }
 
-
-        public void Clear()
+        public void InitSequence(int iSeqLen)
         {
-            Sequence = null;
-            StartNote = -1;
             Transpose = false;
             Channel = 0;
             Tempo = 120;
             Quantization = "4";
-            Steps = 0;
+            Steps = iSeqLen;
+            SetSequence(null);
+        }
+
+        internal int GetLowestNote()
+        {
+            int iNote = -1;
+            for (int i = 0; i < 128; i++)
+            {
+                if (LiveNotes[i])
+                {
+                    return i;
+                }
+            }
+            return iNote;
         }
     }
 
@@ -106,7 +213,7 @@ namespace MidiTools
     {
         public int Step = 0;
         public List<int[]> NotesAndVelocity = new List<int[]>();
-        public int GatePercent = 50;
+        public double GatePercent = 50.0;
         public int StepCount = 1;
 
         private SequenceStep()
@@ -114,7 +221,7 @@ namespace MidiTools
 
         }
 
-        public SequenceStep(int iStep, int gatePercent, int iStepsCount, List<int[]> iNotes)
+        public SequenceStep(int iStep, double gatePercent, int iStepsCount, List<int[]> iNotes)
         {
             Step = iStep;
             NotesAndVelocity = iNotes;

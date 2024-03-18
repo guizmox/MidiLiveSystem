@@ -43,6 +43,8 @@ namespace RtMidi.Core.Devices
         public event SongSelectHandler SongSelect;
         public event TuneRequestHandler TuneRequest;
         public event ClockHandler Clock;
+        public event StartHandler Start;
+        public event StopHandler Stop;
 
         private void RtMidiInputDevice_Message(object sender, byte[] message)
         {
@@ -161,6 +163,21 @@ namespace RtMidi.Core.Devices
                             if (ClockMessage.TryDecode(message,
                                    out var clockmessage))
                                 Clock?.Invoke(this, in clockmessage);
+                            break;
+                        case Midi.Status.Start:
+                            if (StartMessage.TryDecode(message,
+                                   out var startmessage))
+                                Start?.Invoke(this, in startmessage);
+                            break;
+                        case Midi.Status.Continue:
+                            if (StartMessage.TryDecode(message,
+                                  out var continuemessage))
+                                Start?.Invoke(this, in continuemessage);
+                            break;
+                        case Midi.Status.Stop:
+                            if (StopMessage.TryDecode(message,
+                             out var stopmessage))
+                                Stop?.Invoke(this, in stopmessage);
                             break;
                         default:
                             Log.Error("Unknown system message type {Status}", $"{status:X2}");

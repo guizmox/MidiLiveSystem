@@ -32,7 +32,6 @@ namespace MidiLiveSystem
     public partial class MainWindow : Window
     {
         private System.Timers.Timer UIRefreshRate;
-        private int RefreshCounter = 0;
 
         private int CurrentVerticalGrid = 4;
         private int CurrentHorizontalGrid = 4;
@@ -47,7 +46,6 @@ namespace MidiLiveSystem
         public InternalSequencer SequencerWindow;
 
         private SequencerData SeqData = new SequencerData();
-        private Sequencer[] InternalSequences = new Sequencer[16];
 
         private bool ViewOnConfig = false;
 
@@ -68,24 +66,25 @@ namespace MidiLiveSystem
             UIRefreshRate.Elapsed += UIRefreshRate_Elapsed;
             UIRefreshRate.Interval = 1000;
             UIRefreshRate.Start();
+            
+            MidiRouting.InputStaticMidiMessage += MidiRouting_InputMidiMessage;
 
             //chargement des template instruments
             CubaseInstrumentData.Instruments = Database.LoadInstruments();
 
-            MidiRouting.InputMidiMessage += MidiRouting_InputMidiMessage;
 
             RecallWindow = new RecallButtons(Boxes, Project);
             RecallWindow.Closed += RecallWindow_Closed;
 
-
+            Sequencer[] seq = new Sequencer[InternalSequencer.MaxSequences];
             for (int iSeq = 0; iSeq < InternalSequencer.MaxSequences; iSeq++)
             {
-                InternalSequences[iSeq] = new Sequencer(iSeq + 1, "4", 32, 120, null, false);
+                seq[iSeq] = new Sequencer(iSeq + 1, "4", 32, 120, null, false);
             }
 
-            SeqData.Sequencer = InternalSequences;
+            SeqData.Sequencer = seq;
 
-            SequencerWindow = new InternalSequencer(Project, Routing, InternalSequences);
+            SequencerWindow = new InternalSequencer(Project, Routing, SeqData);
         }
 
         private void Keyboard_KeyPressed(string sKey)
@@ -107,44 +106,6 @@ namespace MidiLiveSystem
             });
         }
 
-        private async void Routing_IncomingMidiMessage(MidiEvent ev)
-        {
-            await Dispatcher.InvokeAsync(() =>
-            {
-                if (ev.Type == MidiDevice.TypeEvent.CC)
-                {
-                    tbNoteName.Text = "CC#" + ev.Values[0];
-                }
-                else
-                {
-                    tbNoteName.Text = Tools.MidiNoteNumberToNoteName(ev.Values[0]);
-                }
-
-                if (FocusManager.GetFocusedElement(this) is TextBox textBox)
-                {
-                    if (textBox.Name.Equals("tbPresetName") || textBox.Name.Equals("tbProjectName"))
-                    {
-
-                    }
-                    else
-                    {
-                        switch (ev.Type)
-                        {
-                            case MidiDevice.TypeEvent.NOTE_ON:
-                                textBox.Text = ev.Values[0].ToString();
-                                break;
-                            case MidiDevice.TypeEvent.CC:
-                                textBox.Text = ev.Values[1].ToString();
-                                break;
-                            case MidiDevice.TypeEvent.SYSEX:
-                                textBox.Text = ev.SysExData;
-                                break;
-                        }
-                    }
-                }
-            });
-        }
-
         private async void MidiRouting_InputMidiMessage(MidiEvent ev)
         {
             if (RecallWindow != null && Project.TriggerRecallDevice.Equals(ev.Device))
@@ -156,6 +117,55 @@ namespace MidiLiveSystem
                 else if (ev.Type == MidiDevice.TypeEvent.NOTE_ON && Project.TriggerRecallButtons.Equals("CC") && ev.Values[1] < 8)
                 {
                     await RecallWindow.SetButton(false, Project.TriggerRecallButtonsValue, ev.Values[1]);
+                }
+            }
+
+            if (ev.Type == MidiDevice.TypeEvent.START)
+            {
+                await SequencerWindow.StartPlay(false);
+            }
+            else if (ev.Type == MidiDevice.TypeEvent.STOP)
+            {
+                await SequencerWindow.StopPlay(false);
+            }
+            else
+            {
+                if (Routing.Events <= 16)
+                {
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        if (ev.Type == MidiDevice.TypeEvent.CC)
+                        {
+                            tbNoteName.Text = "CC#" + ev.Values[0];
+                        }
+                        else if (ev.Type == MidiDevice.TypeEvent.NOTE_ON)
+                        {
+                            tbNoteName.Text = Tools.MidiNoteNumberToNoteName(ev.Values[0]);
+                        }
+
+                        if (FocusManager.GetFocusedElement(this) is TextBox textBox)
+                        {
+                            if (textBox.Name.Equals("tbPresetName") || textBox.Name.Equals("tbProjectName"))
+                            {
+
+                            }
+                            else
+                            {
+                                switch (ev.Type)
+                                {
+                                    case MidiDevice.TypeEvent.NOTE_ON:
+                                        textBox.Text = ev.Values[0].ToString();
+                                        break;
+                                    case MidiDevice.TypeEvent.CC:
+                                        textBox.Text = ev.Values[1].ToString();
+                                        break;
+                                    case MidiDevice.TypeEvent.SYSEX:
+                                        textBox.Text = ev.SysExData;
+                                        break;
+                                }
+                            }
+                        }
+                    });
                 }
             }
         }
@@ -215,6 +225,7 @@ namespace MidiLiveSystem
             UIRefreshRate.Enabled = false;
             UIRefreshRate.Elapsed -= UIRefreshRate_Elapsed;
             UIRefreshRate.Stop();
+            MidiRouting.InputStaticMidiMessage -= MidiRouting_InputMidiMessage;
 
             if (LogWindow != null)
             {
@@ -477,7 +488,7 @@ namespace MidiLiveSystem
 
                         if (bp1.RoutingGuid != Guid.Empty)
                         {
-                            await Routing.ModifyRouting(bp1.RoutingGuid, sDevIn1, sDevOut1, iChIn1, iChOut1, bp1.MidiOptions, bp1.MidiPreset, InternalSequences[iChIn1 - 1]);
+                            await Routing.ModifyRouting(bp1.RoutingGuid, sDevIn1, sDevOut1, iChIn1, iChOut1, bp1.MidiOptions, bp1.MidiPreset, SeqData.Sequencer[iChIn1 - 1]);
                             await Routing.SendNote(box.RoutingGuid, bp1.MidiOptions.PlayNote);
                         }
                         break;
@@ -493,7 +504,7 @@ namespace MidiLiveSystem
 
                         if (bp2.RoutingGuid != Guid.Empty)
                         {
-                            await Routing.ModifyRouting(bp2.RoutingGuid, sDevIn2, sDevOut2, iChIn2, iChOut2, bp2.MidiOptions, bp2.MidiPreset, InternalSequences[iChIn2 - 1]);
+                            await Routing.ModifyRouting(bp2.RoutingGuid, sDevIn2, sDevOut2, iChIn2, iChOut2, bp2.MidiOptions, bp2.MidiPreset, SeqData.Sequencer[iChIn2 - 1]);
                         }
                         break;
 
@@ -523,38 +534,27 @@ namespace MidiLiveSystem
 
         private async void UIRefreshRate_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            RefreshCounter += 1;
-            int i = Routing.AdjustUIRefreshRate(); //renvoit une quantité en ms
-
-            Routing.IncomingMidiMessage -= Routing_IncomingMidiMessage;
-            if (Routing.Events <= 8) //pour éviter de saturer les process avec des appels UI inutiles
+            await tbNoteName.Dispatcher.InvokeAsync(() =>
             {
-                Routing.IncomingMidiMessage += Routing_IncomingMidiMessage;
-            }
-            else
-            {
-                await tbNoteName.Dispatcher.InvokeAsync(() =>
-                {
-                    tbNoteName.Text = "";
-                });
-            }
+                tbNoteName.Text = "";
+            });
 
-            //if (LogWindow != null)
-            //{
-            //    LogWindow.AddLog("UI", true, Routing.Events.ToString());
-            //}
+            if (Routing.Events <= 16) //pour éviter de saturer les process avec des appels UI inutiles
+            {
+                await SaveTemplate();
+            }
 
             await Dispatcher.InvokeAsync(() =>
             {
-                this.Title = string.Concat("Midi Live System [", Routing.CyclesInfo, " - UI Refresh Rate : ", i, " Sec.]");
+                if (Routing.Events <= 16) //pour éviter de saturer les process avec des appels UI inutiles
+                {
+                    Title = string.Concat("Midi Live System [", Routing.CyclesInfo, " - UI Refresh Rate : ", UIRefreshRate.Interval / 1000, " Sec.]");
+                }
+                else
+                {
+                    Title = string.Concat("Midi Live System [", Routing.CyclesInfo, " - UI events disabled]");
+                }
             });
-
-            if (RefreshCounter >= i)
-            {
-                //sauvegarde temporaire
-                await SaveTemplate();
-                RefreshCounter = 0;
-            }
         }
 
         private async void MidiRouting_NewLog(string sDevice, bool bIn, string sLog)
@@ -596,7 +596,7 @@ namespace MidiLiveSystem
             else
             {
                 SequencerWindow.Close();
-                SequencerWindow = new InternalSequencer(Project, Routing, InternalSequences);
+                SequencerWindow = new InternalSequencer(Project, Routing, SeqData);
                 SequencerWindow.Show();
             }
         }
@@ -667,10 +667,7 @@ namespace MidiLiveSystem
                     RecallWindow.Close();
                 }
 
-                if (SequencerWindow.IsVisible) //pour forcer le rafraichissement suite au rechargement de la config
-                {
-                    SequencerWindow.Close();
-                }
+                SequencerWindow.Close();
 
                 //Id, ProjectGuid, Name, DateProject, Author, Active
                 List<string[]> projects = Database.GetProjects();
@@ -694,7 +691,7 @@ namespace MidiLiveSystem
                         if (project.Item5 != null)
                         {
                             SeqData = project.Item5;
-                            InternalSequences = SeqData.Sequencer;
+                            SequencerWindow = new InternalSequencer(Project, Routing, SeqData);
                         }
 
                         if (Boxes != null)
@@ -1057,11 +1054,11 @@ namespace MidiLiveSystem
 
             if (box.RoutingGuid == Guid.Empty || bFromSave)
             {
-                box.RoutingGuid = await Routing.AddRouting(sDevIn, sDevOut, iChIn, iChOut, options, preset, InternalSequences[iChIn - 1]);
+                box.RoutingGuid = await Routing.AddRouting(sDevIn, sDevOut, iChIn, iChOut, options, preset, SeqData.Sequencer[iChIn - 1]);
             }
             else
             {
-                bool bModify = await Routing.ModifyRouting(snapshot.RoutingGuid, sDevIn, sDevOut, iChIn, iChOut, options, preset, InternalSequences[iChIn - 1]);
+                bool bModify = await Routing.ModifyRouting(snapshot.RoutingGuid, sDevIn, sDevOut, iChIn, iChOut, options, preset, SeqData.Sequencer[iChIn - 1]);
             }
         }
 

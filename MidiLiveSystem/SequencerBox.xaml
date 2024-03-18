@@ -15,7 +15,7 @@
         </Style>
 
         <Style TargetType="Label">
-            <Setter Property="Foreground" Value="Red"/>
+            <Setter Property="Foreground" Value="White"/>
             <!-- Couleur du texte rouge -->
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
@@ -31,16 +31,16 @@
             <RowDefinition Height="45*"/>
         </Grid.RowDefinitions>
 
-        <TextBlock x:Name="tbChannel" Text="Channel"/>
+        <TextBlock x:Name="tbChannel" FontWeight="Bold" FontSize="14" Foreground="LightGoldenrodYellow" Text="Channel"/>
         
         <StackPanel Grid.Row="1">
             <Grid>
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="8*"/>
+                    <ColumnDefinition Width="12*"/>
                     <ColumnDefinition Width="10*"/>
-                    <ColumnDefinition Width="15*"/>
-                    <ColumnDefinition Width="10*"/>
-                    <ColumnDefinition Width="10*"/>
-                    <ColumnDefinition Width="25*"/>
+                    <ColumnDefinition Width="17*"/>
+                    <ColumnDefinition Width="23*"/>
                     <ColumnDefinition Width="30*"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Margin="5,5,5,5" Grid.Column="0" >
@@ -49,7 +49,7 @@
                 </StackPanel>
                 <StackPanel Margin="5,5,5,5" Grid.Column="1">
                     <Label Content="Quantization" />
-                    <ComboBox Name="cbQuantization" SelectedValuePath="Tag">
+                    <ComboBox Name="cbQuantization" SelectedValuePath="Tag" SelectionChanged="cbQuantization_SelectionChanged">
                         <ComboBoxItem Content="4'" Tag="4"/>
                         <ComboBoxItem Content="8'" Tag="8"/>
                         <ComboBoxItem Content="16'" Tag="16"/>
@@ -61,16 +61,16 @@
                     </ComboBox>
                 </StackPanel>
                 <StackPanel Margin="5,5,5,5" Grid.Row="0" Grid.Column="2" >
-                    <Label Content="Gate" />
-                    <Slider x:Name="slGate" Minimum="10" Maximum="100" />
+                    <Label Name="lbGate" Content="Gate" />
+                    <Slider x:Name="slGate" Minimum="10" Maximum="100" ValueChanged="slGate_ValueChanged" IsSnapToTickEnabled="True" TickFrequency="10" LargeChange="10" SmallChange="10" />
                 </StackPanel>
                 <StackPanel Margin="5,5,5,5" Grid.Row="0" Grid.Column="3" >
-                    <Label Content="Tempo" />
-                    <TextBox x:Name="tbTempo" MaxLength="3" Text="120" />
+                    <Label Name="lbTempo" Content="Tempo" />
+                    <Slider x:Name="slTempo" Minimum="40" Maximum="240" Value="120" ValueChanged="slTempo_ValueChanged" IsSnapToTickEnabled="True" TickFrequency="1" LargeChange="10" SmallChange="1"/>
                 </StackPanel>
                 <StackPanel Margin="5,5,5,5" Grid.Row="0" Grid.Column="4" >
                     <Label Content="Transposition" />
-                    <CheckBox x:Name="ckTranspose" Content="Uses the lowest played note" />
+                    <CheckBox x:Name="ckTranspose" Content="Uses the lowest played note" Click="ckTranspose_Click" />
                 </StackPanel>
                 <StackPanel Grid.Row="0" Grid.Column="5" Margin="5,5,5,5" Orientation="Horizontal" HorizontalAlignment="Right" >
                     <Button Name="btnRecordSequence" Background="DarkGray" Width="60" Height="40" Click="btnRecordSequence_Click" >
@@ -104,6 +104,17 @@
                                 Kind="Stop" />
                             </TextBlock>
                             <TextBlock x:Name="tbStopSec" Text="STOP" FontSize="11"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Name="btnMuted" Background="DarkGray" Width="60" Height="40" Click="btnMuted_Click" >
+                        <StackPanel>
+                            <TextBlock HorizontalAlignment="Center">
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="Mute" />
+                            </TextBlock>
+                            <TextBlock x:Name="tbMuted" Text="MUTE" FontSize="11"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>
