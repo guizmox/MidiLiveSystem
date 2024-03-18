@@ -88,11 +88,8 @@ namespace MidiTools
         {
             await Task.Run(() =>
             {
-                if (!DeviceInSequencer.Muted && DeviceOut != null)
+                if (!DeviceInSequencer.Muted && DeviceOut != null && Options.Active)
                 {
-                    int iFirstNote = -1;
-                    int iDelta = 0;
-
                     List<MidiEvent> events = new List<MidiEvent>();
                    
                     foreach (var note in notes.NotesAndVelocity)
@@ -2290,8 +2287,11 @@ namespace MidiTools
                     }
                     else if (sDeviceIn.Equals(Tools.INTERNAL_SEQUENCER))
                     {
-                        newmatrix = new MatrixItem(DeviceInSequencer, iChIn, UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut)), iChOut, options, preset);
-                        newmatrix.OnSequencerPlayNote += MatrixItem_OnSequencerPlayNote;
+                        if (DeviceInSequencer != null)
+                        {
+                            newmatrix = new MatrixItem(DeviceInSequencer, iChIn, UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut)), iChOut, options, preset);
+                            newmatrix.OnSequencerPlayNote += MatrixItem_OnSequencerPlayNote;
+                        }
                     }
                     else
                     {
@@ -2349,10 +2349,13 @@ namespace MidiTools
                         }
                         else if (sDeviceIn.Equals(Tools.INTERNAL_SEQUENCER))
                         {
-                            routing.OnSequencerPlayNote -= MatrixItem_OnSequencerPlayNote;
-                            routing.AddSequencer(DeviceInSequencer);
-                            routing.OnSequencerPlayNote += MatrixItem_OnSequencerPlayNote;
-                            routing.DeviceIn = null;
+                            if (DeviceInSequencer != null)
+                            {
+                                routing.OnSequencerPlayNote -= MatrixItem_OnSequencerPlayNote;
+                                routing.AddSequencer(DeviceInSequencer);
+                                routing.OnSequencerPlayNote += MatrixItem_OnSequencerPlayNote;
+                                routing.DeviceIn = null;
+                            }
                         }
                         else
                         {

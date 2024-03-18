@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
@@ -32,7 +33,9 @@ namespace MidiTools
         private int LastPositionInSequence = 0;
 
         public Sequencer()
-        { }
+        {
+           
+        }
 
         public Sequencer(int iChannel, string sQuantization, int iSteps, int iTempo, List<SequenceStep> data, bool bTranspose)
         {
@@ -73,23 +76,17 @@ namespace MidiTools
 
             if (data != null)
             {
-                int iOffset = 0;
-                for (int i = 0; i < data.Count; i++)
+                for (int i = 0; i < Steps; i++)
                 {
-                    if (data[i].StepCount == 1)
+                    var step = data.FirstOrDefault(d => d.Step == i);
+                    if (step != null)
                     {
-                        Sequence[iOffset + i] = data[i];
+                        Sequence[i] = step;
                     }
                     else
                     {
-                        Sequence[i + iOffset] = data[i];
-
-                        for (int ioff = 1; ioff < data[i].StepCount; ioff++)
-                        {
-                            iOffset++;
-                            Sequence[i + iOffset] = null;
-                        }
-                    }
+                        Sequence[i] = null;
+                    }           
                 }
             }
             else
@@ -105,7 +102,7 @@ namespace MidiTools
         {
             await Task.Run(() =>
             {
-                if (Sequence[0].StepCount > 0)
+                if (SequenceHasData())
                 {
                     if (SequencerClock != null)
                     {
@@ -114,27 +111,35 @@ namespace MidiTools
                         SequencerClock = null;
                         Loop = 0;
                     }
-                    if (Sequence[0].StepCount > 0)
-                    {
-                        MidiRouting.InputStaticMidiMessage -= MidiRouting_StaticIncomingMidiMessage;
-                        MidiRouting.InputStaticMidiMessage += MidiRouting_StaticIncomingMidiMessage;
 
-                        TimerFrequency = Tools.GetMidiClockIntervalDouble(Tempo, Quantization);
-                        Loop = 0;
-                        SequencerClock = new System.Timers.Timer();
-                        SequencerClock.Elapsed += TriggerStep;
-                        SequencerClock.Interval = (int)Math.Round(TimerFrequency);
-                        SequencerClock.Start();
-                    }
+                    MidiRouting.InputStaticMidiMessage -= MidiRouting_StaticIncomingMidiMessage;
+                    MidiRouting.InputStaticMidiMessage += MidiRouting_StaticIncomingMidiMessage;
+
+                    TimerFrequency = Tools.GetMidiClockIntervalDouble(Tempo, Quantization);
+                    Loop = 0;
+                    SequencerClock = new System.Timers.Timer();
+                    SequencerClock.Elapsed += TriggerStep;
+                    SequencerClock.Interval = (int)Math.Round(TimerFrequency);
+                    SequencerClock.Start();
                 }
             });
+        }
+
+        private bool SequenceHasData()
+        {
+            for (int i = 0; i < Sequence.Length; i++)
+            {
+                if (Sequence[i] != null && Sequence[i].StepCount <= 0)
+                { return false; }
+            }
+            return true;
         }
 
         public async Task StopSequence()
         {
             await Task.Run(() =>
             {
-                if (Sequence[0].StepCount > 0)
+                if (SequenceHasData())
                 {
                     if (SequencerClock != null)
                     {

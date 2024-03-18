@@ -118,6 +118,11 @@ namespace MidiLiveSystem
                         await ChangeButtonColor(iStep, Brushes.IndianRed);
                     }
                 }
+
+                for (int iStep = InternalSequence.Steps; iStep < 32; iStep++)
+                {
+                    await ChangeButtonColor(iStep, Brushes.Black);
+                }
             });
         }
 
@@ -283,7 +288,7 @@ namespace MidiLiveSystem
 
         private async void btnIncrementStep_Click(object sender, RoutedEventArgs e)
         {
-            if (IsRecording && StepsRecorded.Count > 0)
+            if (IsRecording)
             {
                 int iLength = await cbQteSteps.Dispatcher.InvokeAsync(() => Convert.ToInt32(cbQteSteps.SelectedValue));
 
@@ -292,7 +297,10 @@ namespace MidiLiveSystem
                     await ChangeButtonText(ActualStep, InternalSequence.Sequence.Last());
                 }
 
-                StepsRecorded.Last().StepCount += 1;
+                if (StepsRecorded.Count > 0)
+                {
+                    StepsRecorded.Last().StepCount += 1;
+                }
 
                 if (ActualStep < iLength - 1)
                 {

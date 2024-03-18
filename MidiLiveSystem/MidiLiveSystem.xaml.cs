@@ -505,7 +505,7 @@ namespace MidiLiveSystem
 
                         if (bp1.RoutingGuid != Guid.Empty)
                         {
-                            await Routing.ModifyRouting(bp1.RoutingGuid, sDevIn1, sDevOut1, iChIn1, iChOut1, bp1.MidiOptions, bp1.MidiPreset, sDevIn1.Equals(Tools.INTERNAL_SEQUENCER) ? SeqData.Sequencer[iChIn1 - 1] : null);
+                            await Routing.ModifyRouting(bp1.RoutingGuid, sDevIn1, sDevOut1, iChIn1, iChOut1, bp1.MidiOptions, bp1.MidiPreset, sDevIn1.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn1 - 1 ? SeqData.Sequencer[iChIn1 - 1] : null);
                             await Routing.SendNote(box.RoutingGuid, bp1.MidiOptions.PlayNote);
                         }
                         break;
@@ -521,7 +521,7 @@ namespace MidiLiveSystem
 
                         if (bp2.RoutingGuid != Guid.Empty)
                         {
-                            await Routing.ModifyRouting(bp2.RoutingGuid, sDevIn2, sDevOut2, iChIn2, iChOut2, bp2.MidiOptions, bp2.MidiPreset, sDevIn2.Equals(Tools.INTERNAL_SEQUENCER) ? SeqData.Sequencer[iChIn2 - 1] : null);
+                            await Routing.ModifyRouting(bp2.RoutingGuid, sDevIn2, sDevOut2, iChIn2, iChOut2, bp2.MidiOptions, bp2.MidiPreset, sDevIn2.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn2 - 1 ? SeqData.Sequencer[iChIn2 - 1] : null);
                         }
                         break;
 
@@ -1087,11 +1087,11 @@ namespace MidiLiveSystem
 
             if (box.RoutingGuid == Guid.Empty || bFromSave)
             {
-                box.RoutingGuid = await Routing.AddRouting(sDevIn, sDevOut, iChIn, iChOut, options, preset, sDevIn.Equals(Tools.INTERNAL_SEQUENCER) ? SeqData.Sequencer[iChIn - 1] : null);
+                box.RoutingGuid = await Routing.AddRouting(sDevIn, sDevOut, iChIn, iChOut, options, preset, sDevIn.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn - 1 ? SeqData.Sequencer[iChIn - 1] : null);
             }
             else
             {
-                bool bModify = await Routing.ModifyRouting(snapshot.RoutingGuid, sDevIn, sDevOut, iChIn, iChOut, options, preset, sDevIn.Equals(Tools.INTERNAL_SEQUENCER) ? SeqData.Sequencer[iChIn - 1] : null);
+                bool bModify = await Routing.ModifyRouting(snapshot.RoutingGuid, sDevIn, sDevOut, iChIn, iChOut, options, preset, sDevIn.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn - 1 ? SeqData.Sequencer[iChIn - 1] : null);
             }
         }
 
