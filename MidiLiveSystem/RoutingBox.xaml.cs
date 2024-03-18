@@ -114,6 +114,7 @@ namespace MidiLiveSystem
             }
 
             cbMidiIn.Items.Add(new ComboBoxItem() { Tag = Tools.INTERNAL_GENERATOR, Content = Tools.INTERNAL_GENERATOR });
+            cbMidiIn.Items.Add(new ComboBoxItem() { Tag = Tools.INTERNAL_SEQUENCER, Content = Tools.INTERNAL_SEQUENCER });
 
             foreach (var s in outputDevices)
             {
@@ -1089,6 +1090,11 @@ namespace MidiLiveSystem
         public List<BoxPreset> GetRoutingBoxMemory()
         {
             return TempMemory.ToList();
+        }
+
+        public BoxPreset GetCurrentPreset()
+        {
+            return TempMemory[CurrentPreset];
         }
 
         private int TextParser(string sText)

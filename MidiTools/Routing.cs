@@ -19,6 +19,9 @@ namespace MidiTools
     [Serializable]
     internal class MatrixItem
     {
+        public delegate void SequencerPlayNote(List<MidiEvent> events, MatrixItem matrix);
+        public event SequencerPlayNote OnSequencerPlayNote;
+
         readonly bool[] BlockIncomingCC = new bool[128];
         private readonly int[] CCToNotBlock = new int[16] { 0, 6, 32, 64, 65, 66, 67, 68, 120, 121, 122, 123, 124, 125, 126, 127 };
 
@@ -51,6 +54,7 @@ namespace MidiTools
         internal MidiOptions Options { get; set; } = new MidiOptions();
         internal MidiDevice DeviceIn;
         internal MidiDevice DeviceOut;
+        internal Sequencer DeviceInSequencer;
 
         internal bool TempActive = false; //utilisé pour muter provisoirement le routing à partir de l'UI
 
@@ -68,6 +72,55 @@ namespace MidiTools
             Preset = preset;
         }
 
+        internal MatrixItem(Sequencer sequencer, int iChIN, MidiDevice MidiOUT, int iChOUT, MidiOptions options, MidiPreset preset)
+        {
+            DeviceOut = MidiOUT;
+            ChannelIn = iChIN;
+            ChannelOut = iChOUT;
+            Options = options;
+            RoutingGuid = Guid.NewGuid();
+            Preset = preset;
+            DeviceInSequencer = sequencer;
+            DeviceInSequencer.OnInternalSequencerStep += Sequencer_OnInternalSequencerStep;
+        }
+
+        private async void Sequencer_OnInternalSequencerStep(SequenceStep notes, double lengthInMs)
+        {
+            await Task.Run(() =>
+            {
+                if (DeviceOut != null)
+                {
+                    int iFirstNote = -1;
+                    int iDelta = 0;
+
+                    if (DeviceInSequencer.Transpose)
+                    {
+                        iFirstNote = DeviceOut.GetLiveLowestNote();
+                        if (iFirstNote > -1)
+                        {
+                            iDelta = DeviceInSequencer.StartNote - iDelta;
+                        }
+                    }
+
+                    List<MidiEvent> events = new List<MidiEvent>();
+
+                    foreach (var note in notes.NotesAndVelocity)
+                    {
+                        int iNote = note[0] - iDelta;
+                        int iVelocity = note[1];
+                        int iLength = (int)Math.Round(lengthInMs);
+                        MidiEvent mvON = new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelocity }, Tools.GetChannel(ChannelOut), DeviceOut.Name);
+                        mvON.WaitTimeBeforeNextEvent = iLength;
+                        MidiEvent mvOFF = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, iVelocity }, Tools.GetChannel(ChannelOut), DeviceOut.Name);
+                        events.Add(mvON);
+                        events.Add(mvOFF);
+                    }
+
+                    OnSequencerPlayNote?.Invoke(events, this);
+                }
+            });
+        }
+
         internal MatrixItem()
         {
 
@@ -78,7 +131,7 @@ namespace MidiTools
             RoutingGuid = guid;
         }
 
-        internal bool CheckDeviceIn(string sDeviceIn)
+        internal bool CheckDeviceIn(string sDeviceIn, int iChannel)
         {
             if (DeviceIn != null && DeviceIn.Name != sDeviceIn)
             {
@@ -86,9 +139,44 @@ namespace MidiTools
             }
             else
             {
-                if (DeviceIn == null && sDeviceIn.Length > 0)
-                { return true; }
-                else { return false; }
+                if (DeviceInSequencer == null && sDeviceIn.Equals(Tools.INTERNAL_SEQUENCER)) //on est passé d'un device midi au séquenceur
+                {
+                    return true;
+                }
+                else if (DeviceInSequencer != null && sDeviceIn.Equals(Tools.INTERNAL_SEQUENCER)) //on est toujours sur le séquenceur
+                {
+                    if (DeviceInSequencer.Channel != iChannel) //mais on a changé de canal midi
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+                else if (DeviceInSequencer != null && !sDeviceIn.Equals(Tools.INTERNAL_SEQUENCER)) //on est passé du séquenceur à un device midi
+                { 
+                    return true;
+                }
+                else if (DeviceIn == null)
+                {
+                    if (sDeviceIn.Length > 0 && sDeviceIn.Equals(Tools.INTERNAL_GENERATOR))
+                    { 
+                        return false; 
+                    }
+                    else if (sDeviceIn.Length == 0)
+                    {
+                        return false;
+                    }
+                    else
+                    {
+                        return true;
+                    }
+                }
+                else
+                { 
+                    return false; 
+                }
             }
         }
 
@@ -671,12 +759,32 @@ namespace MidiTools
             return intermediate;
         }
 
+        internal void AddSequencer(Sequencer deviceInSequencer)
+        {
+            if (DeviceInSequencer != null)
+            {
+                DeviceInSequencer.OnInternalSequencerStep -= Sequencer_OnInternalSequencerStep;
+                DeviceInSequencer = null;
+            }
+
+            DeviceInSequencer = deviceInSequencer;
+            DeviceInSequencer.OnInternalSequencerStep += Sequencer_OnInternalSequencerStep;
+        }
+
+        internal void RemoveSequencer()
+        {
+            if (DeviceInSequencer != null)
+            {
+                DeviceInSequencer.OnInternalSequencerStep -= Sequencer_OnInternalSequencerStep;
+                DeviceInSequencer = null;
+            }
+        }
     }
 
     [Serializable]
     public class MidiRouting
     {
-        private static readonly double CLOCK_INTERVAL = 1000;
+        private static readonly int CLOCK_INTERVAL = 1000;
 
         private bool ClockRunning = false;
         private int ClockBPM = 120;
@@ -714,6 +822,9 @@ namespace MidiTools
 
         public delegate void MidiInputEventHandler(MidiEvent ev);
         public event MidiInputEventHandler IncomingMidiMessage;
+
+        public delegate void StaticMidiInputEventHandler(MidiEvent ev);
+        public static event StaticMidiInputEventHandler StaticIncomingMidiMessage;
 
         public delegate void OutputtingMidiEventHandler(bool b, Guid routingGuid);
         public static event OutputtingMidiEventHandler OutputMidiMessage;
@@ -784,6 +895,17 @@ namespace MidiTools
             _eventsProcessedOUTLast = _eventsProcessedOUT;
             _eventsProcessedIN = 0;
             _eventsProcessedOUT = 0;
+        }
+
+        private async void MatrixItem_OnSequencerPlayNote(List<MidiEvent> events, MatrixItem matrix)
+        {
+            await Task.Run(() =>
+            {
+                foreach (var item in events)
+                {
+                    CreateOUTEvent(item, matrix);
+                }
+            });
         }
 
         private void MidiClock_OnEvent(object sender, ElapsedEventArgs e)
@@ -2074,6 +2196,7 @@ namespace MidiTools
                 if (devIN != null)
                 {
                     var device = new MidiDevice(devIN);
+                    device.OnMidiEvent += Device_OnMidiEvent; ;
                     device.IsReserverdForInternalPurposes = true;
 
                     UsedDevicesIN.Add(device);
@@ -2085,12 +2208,18 @@ namespace MidiTools
             else { return false; }
         }
 
+        private static void Device_OnMidiEvent(bool bIn, MidiEvent ev)
+        {
+            StaticIncomingMidiMessage?.Invoke(ev);
+        }
+
         public static void CheckAndCloseINPort(string sDevice)
         {
             var exists = UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDevice) && !d.UsedForRouting);
 
             if (exists != null)
             {
+                exists.OnMidiEvent -= Device_OnMidiEvent;
                 exists.CloseDevice();
                 UsedDevicesIN.Remove(exists);
             }
@@ -2135,16 +2264,19 @@ namespace MidiTools
 
         private void RoutingPanic(MidiDevice deviceOut, int channelOut)
         {
-            for (int iKey = 0; iKey < 128; iKey++)
+            if (deviceOut != null)
             {
-                if (deviceOut.GetLiveNOTEValue(channelOut, iKey))
+                for (int iKey = 0; iKey < 128; iKey++)
                 {
-                    deviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKey, 0 }, Tools.GetChannel(channelOut), deviceOut.Name));
+                    if (deviceOut.GetLiveNOTEValue(channelOut, iKey))
+                    {
+                        deviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKey, 0 }, Tools.GetChannel(channelOut), deviceOut.Name));
+                    }
                 }
             }
         }
 
-        public async Task<Guid> AddRouting(string sDeviceIn, string sDeviceOut, int iChIn, int iChOut, MidiOptions options, MidiPreset preset = null)
+        public async Task<Guid> AddRouting(string sDeviceIn, string sDeviceOut, int iChIn, int iChOut, MidiOptions options, MidiPreset preset = null, Sequencer DeviceInSequencer = null)
         {
             Guid GUID = new Guid();
 
@@ -2155,7 +2287,13 @@ namespace MidiTools
 
                 if (devIN != null && UsedDevicesIN.Count(d => d.Name.Equals(sDeviceIn)) == 0)
                 {
-                    if (!sDeviceIn.Equals(Tools.INTERNAL_GENERATOR))
+                    if (sDeviceIn.Equals(Tools.INTERNAL_GENERATOR))
+                    {
+                    }
+                    else if (sDeviceIn.Equals(Tools.INTERNAL_SEQUENCER))
+                    {
+                    }
+                    else
                     {
                         var device = new MidiDevice(devIN);
                         device.UsedForRouting = true;
@@ -2176,14 +2314,23 @@ namespace MidiTools
                 //devIN != null && devOUT != null && 
                 if (iChIn >= 0 && iChIn <= 16 && iChOut >= 0 && iChOut <= 16)
                 {
-                    var newmatrix = new MatrixItem(UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDeviceIn)), UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut)), iChIn, iChOut, options, preset);
-
-                    MidiMatrix.Add(newmatrix);
+                    MatrixItem newmatrix = null; 
 
                     if (sDeviceIn.Equals(Tools.INTERNAL_GENERATOR))
                     {
                         newmatrix.Options.Active = false;
                     }
+                    else if (sDeviceIn.Equals(Tools.INTERNAL_SEQUENCER))
+                    {
+                        newmatrix = new MatrixItem(DeviceInSequencer, iChIn, UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut)), iChOut, options, preset);
+                        newmatrix.OnSequencerPlayNote += MatrixItem_OnSequencerPlayNote;
+                    }
+                    else
+                    {
+                        newmatrix = new MatrixItem(UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDeviceIn)), UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut)), iChIn, iChOut, options, preset);
+                    }
+
+                    MidiMatrix.Add(newmatrix);
 
                     if (iChOut > 0 && iChOut <= 16)
                     {
@@ -2200,7 +2347,7 @@ namespace MidiTools
             return GUID;
         }
 
-        public async Task<bool> ModifyRouting(Guid routingGuid, string sDeviceIn, string sDeviceOut, int iChIn, int iChOut, MidiOptions options, MidiPreset preset = null)
+        public async Task<bool> ModifyRouting(Guid routingGuid, string sDeviceIn, string sDeviceOut, int iChIn, int iChOut, MidiOptions options, MidiPreset preset = null, Sequencer DeviceInSequencer = null)
         {
             bool bModify = false;
 
@@ -2215,20 +2362,36 @@ namespace MidiTools
                     if ((routing.DeviceOut == null && sDeviceOut.Length > 0) || (routing.DeviceOut != null && !routing.DeviceOut.Name.Equals(sDeviceOut)))
                     { bDeviceOutChanged = true; }
 
+                    bool bINChanged = routing.CheckDeviceIn(sDeviceIn, iChIn);
+                    bool bOUTChanged = routing.CheckDeviceOut(sDeviceOut);
+
                     routing.ChannelIn = iChIn;
                     routing.ChannelOut = iChOut;
-                    bool bINChanged = routing.CheckDeviceIn(sDeviceIn);
-                    bool bOUTChanged = routing.CheckDeviceOut(sDeviceOut);
 
                     if (bINChanged)
                     {
                         bool active = routing.Options.Active;
                         routing.Options.Active = false;
 
-                        if (!sDeviceIn.Equals(Tools.INTERNAL_GENERATOR))
+                        if (sDeviceIn.Equals(Tools.INTERNAL_GENERATOR))
+                        {
+                            routing.OnSequencerPlayNote -= MatrixItem_OnSequencerPlayNote;
+                            routing.RemoveSequencer();
+                            routing.DeviceIn = null;
+                        }
+                        else if (sDeviceIn.Equals(Tools.INTERNAL_SEQUENCER))
+                        {
+                            routing.OnSequencerPlayNote -= MatrixItem_OnSequencerPlayNote;                            
+                            routing.AddSequencer(DeviceInSequencer);
+                            routing.OnSequencerPlayNote += MatrixItem_OnSequencerPlayNote;
+                            routing.DeviceIn = null;
+                        }
+                        else
                         {
                             if (sDeviceIn.Length > 0)
                             {
+                                routing.OnSequencerPlayNote -= MatrixItem_OnSequencerPlayNote;
+                                routing.RemoveSequencer();
                                 routing.DeviceIn = AddNewInDevice(sDeviceIn);
                             }
                             else
@@ -2236,10 +2399,7 @@ namespace MidiTools
                                 routing.DeviceIn = null;
                             }
                         }
-                        else
-                        {
-                            routing.DeviceIn = null;
-                        }
+
                         routing.Options.Active = active;
                     }
                     if (bOUTChanged)
@@ -2375,6 +2535,8 @@ namespace MidiTools
 
         public void DeleteAllRouting()
         {
+            Panic();
+
             MidiClock.Stop();
             MidiClock.Enabled = false;
             EventsCounter.Stop();
@@ -2427,7 +2589,7 @@ namespace MidiTools
             {
                 var routing = MidiMatrix.FirstOrDefault(d => d.RoutingGuid == routingGuid && d.DeviceOut != null);
 
-                if (routing != null)
+                if (routing != null && routing.Options.Active)
                 {
                     int iNote = note.Note;
                     if (routing.Options.PlayNote_LowestNote)
@@ -2545,6 +2707,14 @@ namespace MidiTools
                 ClockBPM = iBPM;
                 ClockDevice = sDevice;
             });
+        }
+
+        public void ReactivateTimers()
+        {
+            EventsCounter.Enabled = true;
+            EventsCounter.Start();
+            CloseDevicesTimer.Enabled = true;
+            CloseDevicesTimer.Start();
         }
 
         #endregion

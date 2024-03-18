@@ -1,4 +1,5 @@
-﻿using MidiTools;
+﻿using MaterialDesignThemes.Wpf;
+using MidiTools;
 using RtMidi.Core.Enums;
 using System;
 using System.Collections.Generic;
@@ -43,6 +44,10 @@ namespace MidiLiveSystem
         public ProgramHelp HelpWindow;
         public Conductor ConductorWindow;
         public RecallButtons RecallWindow;
+        public InternalSequencer SequencerWindow;
+
+        private SequencerData SeqData = new SequencerData();
+        private Sequencer[] InternalSequences = new Sequencer[16];
 
         private bool ViewOnConfig = false;
 
@@ -71,6 +76,16 @@ namespace MidiLiveSystem
 
             RecallWindow = new RecallButtons(Boxes, Project);
             RecallWindow.Closed += RecallWindow_Closed;
+
+
+            for (int iSeq = 0; iSeq < InternalSequencer.MaxSequences; iSeq++)
+            {
+                InternalSequences[iSeq] = new Sequencer(iSeq + 1, "4", 32, 120, null, false);
+            }
+
+            SeqData.Sequencer = InternalSequences;
+
+            SequencerWindow = new InternalSequencer(Project, Routing, InternalSequences);
         }
 
         private void Keyboard_KeyPressed(string sKey)
@@ -224,6 +239,10 @@ namespace MidiLiveSystem
             if (RecallWindow != null)
             {
                 RecallWindow.Close();
+            }
+            if (SequencerWindow != null)
+            {
+                SequencerWindow.Close();
             }
 
             foreach (var detached in DetachedWindows)
@@ -458,7 +477,7 @@ namespace MidiLiveSystem
 
                         if (bp1.RoutingGuid != Guid.Empty)
                         {
-                            await Routing.ModifyRouting(bp1.RoutingGuid, sDevIn1, sDevOut1, iChIn1, iChOut1, bp1.MidiOptions, bp1.MidiPreset);
+                            await Routing.ModifyRouting(bp1.RoutingGuid, sDevIn1, sDevOut1, iChIn1, iChOut1, bp1.MidiOptions, bp1.MidiPreset, InternalSequences[iChIn1 - 1]);
                             await Routing.SendNote(box.RoutingGuid, bp1.MidiOptions.PlayNote);
                         }
                         break;
@@ -474,7 +493,7 @@ namespace MidiLiveSystem
 
                         if (bp2.RoutingGuid != Guid.Empty)
                         {
-                            await Routing.ModifyRouting(bp2.RoutingGuid, sDevIn2, sDevOut2, iChIn2, iChOut2, bp2.MidiOptions, bp2.MidiPreset);
+                            await Routing.ModifyRouting(bp2.RoutingGuid, sDevIn2, sDevOut2, iChIn2, iChOut2, bp2.MidiOptions, bp2.MidiPreset, InternalSequences[iChIn2 - 1]);
                         }
                         break;
 
@@ -568,6 +587,20 @@ namespace MidiLiveSystem
             }
         }
 
+        private void btnSequencer_Click(object sender, RoutedEventArgs e)
+        {
+            if (SequencerWindow.IsVisible)
+            {
+                SequencerWindow.Close();
+            }
+            else
+            {
+                SequencerWindow.Close();
+                SequencerWindow = new InternalSequencer(Project, Routing, InternalSequences);
+                SequencerWindow.Show();
+            }
+        }
+
         private async void btnAddBox_Click(object sender, RoutedEventArgs e)
         {
             RoutingBox rtb = new RoutingBox(Project, MidiRouting.InputDevices, MidiRouting.OutputDevices, Boxes.Count);
@@ -614,7 +647,7 @@ namespace MidiLiveSystem
 
                 try
                 {
-                    Database.SaveProject(Boxes, Project, RecordedSequence);
+                    Database.SaveProject(Boxes, Project, RecordedSequence, SeqData);
                     Database.SaveInstruments(CubaseInstrumentData.Instruments);
                 }
                 catch (Exception ex)
@@ -632,6 +665,11 @@ namespace MidiLiveSystem
                 if (RecallWindow.IsVisible) //pour forcer le rafraichissement suite au rechargement de la config
                 {
                     RecallWindow.Close();
+                }
+
+                if (SequencerWindow.IsVisible) //pour forcer le rafraichissement suite au rechargement de la config
+                {
+                    SequencerWindow.Close();
                 }
 
                 //Id, ProjectGuid, Name, DateProject, Author, Active
@@ -653,6 +691,12 @@ namespace MidiLiveSystem
 
                         RecordedSequence = project.Item4;
 
+                        if (project.Item5 != null)
+                        {
+                            SeqData = project.Item5;
+                            InternalSequences = SeqData.Sequencer;
+                        }
+
                         if (Boxes != null)
                         {
                             if (Project.VerticalGrid > -1)
@@ -673,6 +717,8 @@ namespace MidiLiveSystem
                         }
 
                         UIRefreshRate.Enabled = true;
+
+                        Routing.ReactivateTimers();
                     }
                     else
                     {
@@ -1011,13 +1057,14 @@ namespace MidiLiveSystem
 
             if (box.RoutingGuid == Guid.Empty || bFromSave)
             {
-                box.RoutingGuid = await Routing.AddRouting(sDevIn, sDevOut, iChIn, iChOut, options, preset);
+                box.RoutingGuid = await Routing.AddRouting(sDevIn, sDevOut, iChIn, iChOut, options, preset, InternalSequences[iChIn - 1]);
             }
             else
             {
-                bool bModify = await Routing.ModifyRouting(snapshot.RoutingGuid, sDevIn, sDevOut, iChIn, iChOut, options, preset);
+                bool bModify = await Routing.ModifyRouting(snapshot.RoutingGuid, sDevIn, sDevOut, iChIn, iChOut, options, preset, InternalSequences[iChIn - 1]);
             }
         }
+
     }
 
     [Serializable]

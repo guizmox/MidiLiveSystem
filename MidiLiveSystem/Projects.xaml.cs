@@ -20,7 +20,7 @@ namespace MidiLiveSystem
     /// </summary>
     public partial class Projects : Window
     {
-        internal Tuple<Guid, ProjectConfiguration, RoutingBoxes, MidiSequence> Project;
+        internal Tuple<Guid, ProjectConfiguration, RoutingBoxes, MidiSequence, SequencerData> Project;
         private SQLiteDatabaseManager Database;
 
         public Projects(SQLiteDatabaseManager db, List<string[]> sListProjects)
@@ -95,7 +95,7 @@ namespace MidiLiveSystem
             if (item != null)
             {
                 string sGuid = ((TreeViewItem)item).Tag.ToString();
-                Tuple<Guid, ProjectConfiguration, RoutingBoxes, MidiSequence> project = Database.GetProject(sGuid);
+                Tuple<Guid, ProjectConfiguration, RoutingBoxes, MidiSequence, SequencerData> project = Database.GetProject(sGuid);
                 if (project != null)
                 {
                     Project = project;

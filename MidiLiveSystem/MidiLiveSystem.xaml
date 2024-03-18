@@ -30,11 +30,12 @@
                     <ColumnDefinition Width="10*" />
                     <ColumnDefinition Width="10*" />
                     <ColumnDefinition Width="10*" />
-                    <ColumnDefinition Width="5*" />
-                    <ColumnDefinition Width="8*" />
-                    <ColumnDefinition Width="5*" />
-                    <ColumnDefinition Width="8*" />
-                    <ColumnDefinition Width="8*" />
+                    <ColumnDefinition Width="10*" />
+                    <ColumnDefinition Width="3*" />
+                    <ColumnDefinition Width="7*" />
+                    <ColumnDefinition Width="3*" />
+                    <ColumnDefinition Width="7*" />
+                    <ColumnDefinition Width="7*" />
                     <ColumnDefinition Width="0*" />
                 </Grid.ColumnDefinitions>
                 
@@ -50,7 +51,19 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnSaveProject" ToolTip="Save the project in the internal database. No confirmation or popup will be showed."  Width="140" Height="60" Grid.Column="3" Click="btnSaveProject_Click" >
+                <Button Name="btnSequencer" ToolTip="Configure the internal 32 steps sequencer" Width="140" Height="60" Grid.Column="2" Background="YellowGreen" Click="btnSequencer_Click" >
+                    <StackPanel>
+                        <TextBlock HorizontalAlignment="Center">
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="MusicNoteAdd" />
+                        </TextBlock>
+                        <TextBlock Text="Sequencer" FontSize="11" />
+                    </StackPanel>
+                </Button>
+
+                <Button Name="btnSaveProject" ToolTip="Save the project in the internal database. No confirmation or popup will be showed."  Width="140" Height="60" Grid.Column="4" Click="btnSaveProject_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -62,7 +75,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnOpenProject" ToolTip="Open a saved project." Width="140" Height="60" Grid.Column="4" Click="btnOpenProject_Click" >
+                <Button Name="btnOpenProject" ToolTip="Open a saved project." Width="140" Height="60" Grid.Column="5" Click="btnOpenProject_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -74,7 +87,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnSettings" ToolTip="Change the project settings like the projkect name, grid configuration, box names, MIDI clock"  Width="140" Height="60" Grid.Column="2" Click="btnSettings_Click" >
+                <Button Name="btnSettings" ToolTip="Change the project settings like the projkect name, grid configuration, box names, MIDI clock"  Width="140" Height="60" Grid.Column="3" Click="btnSettings_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -86,7 +99,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnLog" ToolTip="Shows IN/OUT MIDI messages. You can filter them by device. Keep in mind that this is ressource intensive and must be disabled while playing live." Width="140" Height="60" Grid.Column="5" Background="IndianRed" Click="btnLog_Click" >
+                <Button Name="btnLog" ToolTip="Shows IN/OUT MIDI messages. You can filter them by device. Keep in mind that this is ressource intensive and must be disabled while playing live." Width="140" Height="60" Grid.Column="6" Background="IndianRed" Click="btnLog_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -98,7 +111,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnRecallButtons" ToolTip="Opens a window with 8 buttons that can recall a specific Project Configuration" Width="140" Height="60" Grid.Column="6" Background="DarkKhaki" Click="btnRecallButtons_Click" >
+                <Button Name="btnRecallButtons" ToolTip="Opens a window with 8 buttons that can recall a specific Project Configuration" Width="140" Height="60" Grid.Column="7" Background="DarkKhaki" Click="btnRecallButtons_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -123,7 +136,7 @@
                 </Button>
 
 
-                <Button Name="btnConductor" ToolTip="Set the Routing Boxes position in the sound space." Width="140" Height="60" Grid.Column="7" Background="DarkCyan" Click="btnConductor_Click" >
+                <Button Name="btnConductor" ToolTip="Set the Routing Boxes position in the sound space." Width="140" Height="60" Grid.Column="8" Background="DarkCyan" Click="btnConductor_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -135,9 +148,9 @@
                     </StackPanel>
                 </Button>
                 
-                <TextBlock Name="tbNoteName" Text="" Foreground="IndianRed" Grid.Column="8" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                <TextBlock Name="tbNoteName" Text="" Foreground="IndianRed" Grid.Column="9" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center"/>
 
-                <Button Name="btnSwitchView" ToolTip="Switches all routing boxes between the 'Preset' view and the 'Configuration' view" Width="110" Height="60" Grid.Column="9" Background="YellowGreen" Click="btnSwitchView_Click" >
+                <Button Name="btnSwitchView" ToolTip="Switches all routing boxes between the 'Preset' view and the 'Configuration' view" Width="110" Height="60" Grid.Column="10" Background="DeepPink" Click="btnSwitchView_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -149,7 +162,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnRecordSequence" ToolTip="Simple performance recorder. It's a one click operation. Click to record. Click to stop. The performance will be saved with the project." Background="DarkGray" Width="80" Height="60" Grid.Column="11" Click="btnRecordSequence_Click" >
+                <Button Name="btnRecordSequence" ToolTip="Simple performance recorder. It's a one click operation. Click to record. Click to stop. The performance will be saved with the project." Background="DarkGray" Width="80" Height="60" Grid.Column="12" Click="btnRecordSequence_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -161,7 +174,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnPlaySequence" ToolTip="Plays the recorded performance." Background="DarkGray" Width="80" Height="60" Grid.Column="12" Click="btnPlaySequence_Click" >
+                <Button Name="btnPlaySequence" ToolTip="Plays the recorded performance." Background="DarkGray" Width="80" Height="60" Grid.Column="13" Click="btnPlaySequence_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon

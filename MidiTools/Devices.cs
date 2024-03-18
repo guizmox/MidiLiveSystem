@@ -332,6 +332,28 @@ namespace MidiTools
             }
             else { return false; }
         }
+
+        internal int GetLiveLowestNote()
+        {
+            int iNote = -1;
+
+            if (MIDI_OutputEvents != null)
+            {
+                for (int iC = 0; iC < 16; iC++)
+                {
+                    for (int iN = 0; iN < 128; iN++)
+                    {
+                        if (MIDI_OutputEvents.NOTEmemory[iC, iN])
+                        {
+                            return iN;
+                        }
+
+                    }
+                }
+            }
+
+            return iNote;
+        }
     }
 
     internal class MidiOutputDeviceEvents

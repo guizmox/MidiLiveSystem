@@ -355,11 +355,11 @@ namespace MidiLiveSystem
 
                 if (instr == null)
                 {
-                    sys = new SysExInput();
+                    sys = new SysExInput(Routing);
                 }
                 else
                 {
-                    sys = new SysExInput(instr.SysExInitializer);
+                    sys = new SysExInput(instr.SysExInitializer, Routing);
                 }
                 
                 sys.ShowDialog();

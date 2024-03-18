@@ -25,16 +25,24 @@ namespace MidiLiveSystem
     {
         public bool InvalidData = false;
         private bool DeviceAdded = false;
+        private string DeviceListener = "";
+        private MidiRouting Routing;
 
-        public SysExInput()
+        public SysExInput(MidiRouting routing)
         {
             InitializeComponent();
+
+            Routing = routing;
+
             InitPage("");
         }
 
-        public SysExInput(string sData)
+        public SysExInput(string sData, MidiRouting routing)
         {
             InitializeComponent();
+
+            Routing = routing;
+
             InitPage(sData);
         }
 
@@ -50,6 +58,8 @@ namespace MidiLiveSystem
                 Paragraph paragraph = new Paragraph(new Run(sSysex));
                 rtbSysEx.Document.Blocks.Add(paragraph);
             }
+
+            MidiRouting.StaticIncomingMidiMessage += Routing_IncomingMidiMessage;
         }
 
         private void Window_Closed(object sender, EventArgs e)
@@ -58,6 +68,8 @@ namespace MidiLiveSystem
             {
                 MidiRouting.CheckAndCloseINPort(cbMidiIn.SelectedValue.ToString().Substring(2));
             }
+
+            MidiRouting.StaticIncomingMidiMessage -= Routing_IncomingMidiMessage;
         }
 
         private void cbMidiIn_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -68,12 +80,14 @@ namespace MidiLiveSystem
 
             if (cbOld != null && DeviceAdded && cbOld.Tag.ToString().StartsWith("I-"))
             {
-                MidiRouting.CheckAndCloseINPort(cbOld.Tag.ToString().Substring(2));
+                var oldDevice = cbOld.Tag.ToString().Substring(2);
+                MidiRouting.CheckAndCloseINPort(oldDevice);
             }
 
             if (cbNew != null && cbNew.Tag.ToString().StartsWith("I-"))
             {
-                DeviceAdded = MidiRouting.CheckAndOpenINPort(cbNew.Tag.ToString().Substring(2));
+                DeviceListener = cbNew.Tag.ToString().Substring(2);
+                DeviceAdded = MidiRouting.CheckAndOpenINPort(DeviceListener);
             }
         }
 

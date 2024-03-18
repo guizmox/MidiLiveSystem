@@ -21,7 +21,8 @@ namespace MidiTools
     public static class Tools
     {
         public static string SYSEX_CHECK = @"^(F0)([A-f0-9]*)(F7)$";
-        public static string INTERNAL_GENERATOR = "Internal Generator";
+        public static string INTERNAL_GENERATOR = "Internal Note Generator";
+        public static string INTERNAL_SEQUENCER = "Internal Sequencer";
 
         public static string MidiNoteNumberToNoteName(int noteNumber)
         {
@@ -202,6 +203,36 @@ namespace MidiTools
             double millisecondsPerMIDIClock = microsecondsPerMIDIClock / 1000;
 
             return (int)Math.Round(millisecondsPerMIDIClock);
+        }
+
+        internal static double GetMidiClockIntervalDouble(int iTempo, string sQuantization)
+        {
+            double dDiviseur = 4.0;
+            int iQt = 4;
+
+            if (sQuantization.EndsWith("T", StringComparison.OrdinalIgnoreCase))
+            {
+                dDiviseur = 3.0;
+                iQt = Convert.ToInt32(sQuantization[0..^1]);
+            }
+            else 
+            {
+                iQt = Convert.ToInt32(sQuantization); 
+            }
+
+            // Durée d'une noire en millisecondes
+            double dureeNoireMs = 60000.0 / iTempo;
+
+            // Nombre de noires par mesure (quantification)
+            int noiresParMesure = iQt;
+
+            // Durée d'une mesure en millisecondes
+            double dureeMesureMs = dureeNoireMs * noiresParMesure;
+
+            // Calcul de l'intervalle du timer en millisecondes
+            double intervalleTimerMs = dureeMesureMs / dDiviseur; // On prend un quart de la mesure
+
+            return (int)intervalleTimerMs;
         }
     }
 

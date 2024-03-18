@@ -48,7 +48,8 @@ namespace MidiLiveSystem
                     ProjectName TEXT NOT NULL,
                     Config TEXT NOT NULL,
                     Routing TEXT NOT NULL,
-                    Sequence TEXT,
+                    Recording TEXT,
+                    Sequences TEXT,
                     DateProject TEXT NOT NULL,
                     Author TEXT,
                     Active INT NOT NULL)";
@@ -127,7 +128,7 @@ namespace MidiLiveSystem
             return instruments;
         }
 
-        public void SaveProject(List<RoutingBox> Boxes, ProjectConfiguration Project, MidiSequence RecordedSequence)
+        public void SaveProject(List<RoutingBox> Boxes, ProjectConfiguration Project, MidiSequence RecordedSequence, SequencerData SeqData)
         {
             Project.IsDefaultConfig = false; //pour signifier que la config a été chargée, même si on est pas allé dans la menu de configuration du projet (et éviter de générer un nouvel ID à cause de ce flag)
 
@@ -135,7 +136,8 @@ namespace MidiLiveSystem
             string sProjectConfig = "";
             string sRoutingConfig = "";
             string sProjectName = Project.ProjectName;
-            string sSequence = "";
+            string sRecording = "";
+            string sSeqData = "";
 
             Project.BoxNames = new List<string[]>();
             foreach (var box in Boxes)
@@ -165,11 +167,18 @@ namespace MidiLiveSystem
                 sRoutingConfig = textWriter.ToString();
             }
 
-            XmlSerializer serializerSequence = new XmlSerializer(typeof(MidiSequence));
+            XmlSerializer serializerRecording = new XmlSerializer(typeof(MidiSequence));
             using (StringWriter textWriter = new StringWriter())
             {
-                serializerSequence.Serialize(textWriter, RecordedSequence);
-                sSequence = textWriter.ToString();
+                serializerRecording.Serialize(textWriter, RecordedSequence);
+                sRecording = textWriter.ToString();
+            }
+
+            XmlSerializer serializerSeqData = new XmlSerializer(typeof(SequencerData));
+            using (StringWriter textWriter = new StringWriter())
+            {
+                serializerSeqData.Serialize(textWriter, SeqData);
+                sSeqData = textWriter.ToString();
             }
 
             List<string> sVersionsToDelete = GetOldProjectVersion(sId);
@@ -197,12 +206,13 @@ namespace MidiLiveSystem
                 updateCommand.ExecuteNonQuery();
 
                 var insertCommand = connection.CreateCommand();
-                insertCommand.CommandText = "INSERT INTO Projects (ProjectGuid, ProjectName, Config, Routing, Sequence, DateProject, Author, Active) VALUES (@projectid, @projectname, @config, @routing, @sequence, @dateproject, @author, @active)";
+                insertCommand.CommandText = "INSERT INTO Projects (ProjectGuid, ProjectName, Config, Routing, Recording, Sequences, DateProject, Author, Active) VALUES (@projectid, @projectname, @config, @routing, @recording, @sequences, @dateproject, @author, @active)";
                 insertCommand.Parameters.AddWithValue("@projectid", sId);
                 insertCommand.Parameters.AddWithValue("@projectname", sProjectName);
                 insertCommand.Parameters.AddWithValue("@config", sProjectConfig);
                 insertCommand.Parameters.AddWithValue("@routing", sRoutingConfig);
-                insertCommand.Parameters.AddWithValue("@sequence", sSequence);
+                insertCommand.Parameters.AddWithValue("@recording", sRecording);
+                insertCommand.Parameters.AddWithValue("@sequences", sSeqData);
                 insertCommand.Parameters.AddWithValue("@dateproject", DateTime.Now.ToString());
                 insertCommand.Parameters.AddWithValue("@author", Environment.UserName);
                 insertCommand.Parameters.AddWithValue("@active", "1");
@@ -308,7 +318,7 @@ namespace MidiLiveSystem
             }
         }
 
-        public Tuple<Guid, ProjectConfiguration, RoutingBoxes, MidiSequence> GetProject(string idDb)
+        public Tuple<Guid, ProjectConfiguration, RoutingBoxes, MidiSequence, SequencerData> GetProject(string idDb)
         {
             string sId = "";
             string sProjectGuid = "";
@@ -317,7 +327,8 @@ namespace MidiLiveSystem
             string sName = "";
             string sDate = "";
             string sAuthor = "";
-            string sSequence = "";
+            string sRecording = "";
+            string sSeqData = "";
 
             string sDbID = idDb.IndexOf('|') > 0 ? idDb.Split('|')[1] : idDb;
 
@@ -326,7 +337,7 @@ namespace MidiLiveSystem
                 connection.Open();
 
                 var selectCommand = connection.CreateCommand();
-                selectCommand.CommandText = "SELECT Id, ProjectGuid, ProjectName, Config, Routing, Sequence, DateProject, Author, Active FROM Projects WHERE Id = '" + sDbID + "' AND Active = 1;";
+                selectCommand.CommandText = "SELECT Id, ProjectGuid, ProjectName, Config, Routing, Recording, Sequences, DateProject, Author, Active FROM Projects WHERE Id = '" + sDbID + "' AND Active = 1;";
 
                 using (var reader = selectCommand.ExecuteReader())
                 {
@@ -337,9 +348,10 @@ namespace MidiLiveSystem
                         sName = reader.GetString(2);
                         sConfig = reader.GetString(3);
                         sRouting = reader.GetString(4);
-                        sSequence = reader.GetString(5);
-                        sDate = reader.GetString(6);
-                        sAuthor = reader.GetString(7);
+                        sRecording = reader.IsDBNull(5) ? null : reader.GetString(5);
+                        sSeqData = reader.IsDBNull(6) ? null : reader.GetString(6);
+                        sDate = reader.GetString(7);
+                        sAuthor = reader.GetString(8);
                     }
                 }
             }
@@ -349,6 +361,7 @@ namespace MidiLiveSystem
                 ProjectConfiguration project;
                 RoutingBoxes presets;
                 MidiSequence sequence = null;
+                SequencerData seqs = null;
 
                 XmlSerializer serializerConfig = new XmlSerializer(typeof(ProjectConfiguration));
                 using (StringReader stream = new StringReader(sConfig))
@@ -362,16 +375,25 @@ namespace MidiLiveSystem
                     presets = (RoutingBoxes)serializerRouting.Deserialize(stream);
                 }
 
-                if (sSequence.Length > 0)
+                if (!string.IsNullOrEmpty(sRecording))
                 {
-                    XmlSerializer serializerSequence = new XmlSerializer(typeof(MidiSequence));
-                    using (StringReader stream = new StringReader(sSequence))
+                    XmlSerializer serializerRecording = new XmlSerializer(typeof(MidiSequence));
+                    using (StringReader stream = new StringReader(sRecording))
                     {
-                        sequence = (MidiSequence)serializerSequence.Deserialize(stream);
+                        sequence = (MidiSequence)serializerRecording.Deserialize(stream);
                     }
                 }
 
-                return new Tuple<Guid, ProjectConfiguration, RoutingBoxes, MidiSequence>(Guid.Parse(sProjectGuid), project, presets, sequence);
+                if (!string.IsNullOrEmpty(sSeqData))
+                {
+                    XmlSerializer serializerSeqData = new XmlSerializer(typeof(SequencerData));
+                    using (StringReader stream = new StringReader(sSeqData))
+                    {
+                        seqs = (SequencerData)serializerSeqData.Deserialize(stream);
+                    }
+                }
+
+                return new Tuple<Guid, ProjectConfiguration, RoutingBoxes, MidiSequence, SequencerData>(Guid.Parse(sProjectGuid), project, presets, sequence, seqs);
             }
 
             return null;
