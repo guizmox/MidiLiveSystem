@@ -11,6 +11,76 @@ namespace MidiTools
 {
     public static class EventPool
     {
+        private class RoutingActions
+        {
+            private class RoutingAction
+            {
+                internal Guid RoutingGuid;
+                internal List<Task> Tasks = new List<Task>();
+
+                internal RoutingAction(Guid routingGuid, Task tRouting)
+                {
+                    RoutingGuid = routingGuid;
+                    lock (Tasks)
+                    {
+                        Tasks.Add(tRouting);
+                    }
+                }
+
+                internal void AddTask(Task tRouting)
+                {
+                    lock (Tasks)
+                    {
+                        Tasks.Add(tRouting);
+                    }
+                }
+
+                internal void Clean()
+                {
+                    lock (Tasks)
+                    {
+                        Tasks.RemoveAll(t => t.IsCompleted);
+                    }
+                }
+            }
+
+            List<RoutingAction> Actions = new List<RoutingAction>();
+
+            internal void AddTask(Guid routingGuid, Task tRouting)
+            {
+                lock (Actions)
+                {
+                    var action = Actions.FirstOrDefault(a => a.RoutingGuid == routingGuid);
+                    if (action == null) { Actions.Add(new RoutingAction(routingGuid, tRouting)); }
+                    else { action.AddTask(tRouting); }
+                }
+            }
+
+            internal int GetRoutingActions(Guid routingGuid)
+            {
+                lock (Actions)
+                {
+                    var action = Actions.FirstOrDefault(a => a.RoutingGuid == routingGuid);
+                    if (action != null)
+                    {
+                        return action.Tasks.Count(t => !t.IsCompleted);
+                    }
+                    else { return 0; }
+                }
+            }
+
+            internal void Clean()
+            {
+                lock (Actions)
+                {
+                    foreach (var act in Actions)
+                    {
+                        act.Clean();
+                    }                    
+                }
+            }
+        }
+
         public static int TasksRunning
         {
             get
@@ -23,8 +93,12 @@ namespace MidiTools
         }
 
         private static List<Task> BackgroundTasks = new List<Task>();
-
+        private static RoutingActions BackgroundRoutingTasks = new RoutingActions();
         private static Timer timer;
+
+        public static  CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+        public static CancellationToken cancellationToken => cancellationTokenSource.Token;
+
 
         static EventPool()
         {
@@ -37,6 +111,10 @@ namespace MidiTools
             {
                 BackgroundTasks.RemoveAll(t => t.IsCompleted);
             }
+            lock (BackgroundRoutingTasks)
+            {
+                BackgroundRoutingTasks.Clean();
+            }
         }
 
         public async static Task AddTask(Action value)
@@ -44,6 +122,25 @@ namespace MidiTools
             var task = Task.Run(value);
             lock (BackgroundTasks) { BackgroundTasks.Add(task); }
             await task;
+        }
+
+        public async static Task AddTaskRouting(Guid routingGuid, Action value)
+        {
+            var task = Task.Run(value);
+            lock (BackgroundTasks) { BackgroundTasks.Add(task); }
+            BackgroundRoutingTasks.AddTask(routingGuid, task);
+            await task;
+        }
+
+        internal static int RoutingTasksRunning(Guid routingGuid)
+        {
+            return BackgroundRoutingTasks.GetRoutingActions(routingGuid);
+        }
+
+        internal static void CancelTask()
+        {
+            cancellationTokenSource.Cancel();
+            cancellationTokenSource = new CancellationTokenSource();
         }
     }
 }

@@ -75,9 +75,9 @@ namespace MidiLiveSystem
             GridPosition = gridPosition;
             BoxName = "Routing Box " + (GridPosition + 1).ToString();
 
-            TempMemory = new BoxPreset[8] { new BoxPreset(BoxGuid, "Preset 1", BoxName), new BoxPreset(BoxGuid, "Preset 2", BoxName), new BoxPreset(BoxGuid, "Preset 3", BoxName),
-                                            new BoxPreset(BoxGuid, "Preset 4", BoxName), new BoxPreset(BoxGuid, "Preset 5", BoxName), new BoxPreset(BoxGuid, "Preset 6", BoxName),
-                                            new BoxPreset(BoxGuid, "Preset 7", BoxName), new BoxPreset(BoxGuid, "Preset 8", BoxName) };
+            TempMemory = new BoxPreset[8] { new BoxPreset(RoutingGuid, BoxGuid, "Preset 1", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 2", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 3", BoxName),
+                                            new BoxPreset(RoutingGuid, BoxGuid, "Preset 4", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 5", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 6", BoxName),
+                                            new BoxPreset(RoutingGuid, BoxGuid, "Preset 7", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 8", BoxName) };
             Project = conf;
 
             InitializeComponent();
@@ -1089,7 +1089,13 @@ namespace MidiLiveSystem
 
         public List<BoxPreset> GetRoutingBoxMemory()
         {
-            return TempMemory.ToList();
+            List<BoxPreset> boxpresets = new List<BoxPreset>();
+            foreach (var mem in TempMemory)
+            {
+                mem.RoutingGuid = RoutingGuid;
+                boxpresets.Add(mem);
+            }
+            return boxpresets;
         }
 
         public BoxPreset GetCurrentPreset()
@@ -1189,8 +1195,9 @@ namespace MidiLiveSystem
 
         }
 
-        public BoxPreset(Guid boxGuid, string sName, string sBoxName)
+        public BoxPreset(Guid routingGuid, Guid boxGuid, string sName, string sBoxName)
         {
+            RoutingGuid = routingGuid;
             BoxGuid = boxGuid;
             PresetName = sName;
             BoxName = sBoxName;
