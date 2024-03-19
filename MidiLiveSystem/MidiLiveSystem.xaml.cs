@@ -98,7 +98,7 @@ namespace MidiLiveSystem
         {
             await Dispatcher.InvokeAsync(() =>
             {
-                Title = string.Concat(APP_NAME, " [", sMessage, "]");
+                Title = string.Concat(APP_NAME, " [", sMessage,  " -" + EventPool.TasksRunning + " task(s) running]");
             });
         }
 
@@ -235,7 +235,7 @@ namespace MidiLiveSystem
             }
         }
 
-        private void Window_Closed(object sender, EventArgs e)
+        private async void Window_Closed(object sender, EventArgs e)
         {
             NewMessage -= MainWindow_NewMessage;
             UIRefreshRate.Enabled = false;
@@ -279,7 +279,7 @@ namespace MidiLiveSystem
             }
 
             Database.SaveInstruments(CubaseInstrumentData.Instruments);
-            Routing.DeleteAllRouting();
+            await Routing.DeleteAllRouting();
         }
 
         private void RecallWindow_Closed(object sender, EventArgs e)
@@ -568,11 +568,11 @@ namespace MidiLiveSystem
             {
                 if (Routing.Events <= 16) //pour éviter de saturer les process avec des appels UI inutiles
                 {
-                    Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, " - UI Refresh Rate : ", UIRefreshRate.Interval / 1000, " Sec.]");
+                    Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, " - UI Refresh Rate : ", UIRefreshRate.Interval / 1000, " Sec  - " + EventPool.TasksRunning + " task(s) running]");
                 }
                 else
                 {
-                    Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, " - UI events disabled]");
+                    Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, " - UI events disabled - " + EventPool.TasksRunning + " task(s) running]");
                 }
             });
         }
@@ -700,7 +700,7 @@ namespace MidiLiveSystem
                     {
                         UIRefreshRate.Enabled = false;
 
-                        Routing.DeleteAllRouting();
+                        await Routing.DeleteAllRouting();
 
                         Project = project.Item2;
                         NewMessage?.Invoke("Project Loaded");
@@ -975,12 +975,12 @@ namespace MidiLiveSystem
         private async Task AddAllRoutingBoxes()
         {
             RemoveAllBoxes(CurrentHorizontalGrid, CurrentVerticalGrid);
-            
+
             List<Task> tasks = new List<Task>();
 
             foreach (var box in Boxes.OrderBy(b => b.GridPosition))
             {
-                tasks.Add(AddRoutingBoxToFrame(box, true));
+                tasks.Add(EventPool.AddTask(async () => await AddRoutingBoxToFrame(box, true)));
             }
 
             await Task.WhenAll(tasks);
@@ -1064,7 +1064,8 @@ namespace MidiLiveSystem
 
             for (int i = 0; i < Boxes.Count; i++)
             {
-                tasks.Add(ProcessBoxData(Boxes[i], false));
+                int index = i;
+                tasks.Add(EventPool.AddTask(async () => await ProcessBoxData(Boxes[index], false)));
             }
 
             await Task.WhenAll(tasks);

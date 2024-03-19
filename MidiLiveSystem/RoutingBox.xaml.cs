@@ -1152,7 +1152,7 @@ namespace MidiLiveSystem
         {
             List<string[]> devices = new List<string[]>();
 
-            await Task.Run(() =>
+            await EventPool.AddTask(() =>
             {
                 for (int i = 0; i < TempMemory.Length; i++)
                 {

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MidiTools;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -252,7 +253,8 @@ namespace MidiLiveSystem
 
             for (int i = 0; i < cbPreset.Items.Count; i++)
             {
-                tasks.Add(ProcessBox((ComboBoxCustomItem)cbPreset.Items[i]));
+                var item = (ComboBoxCustomItem)cbPreset.Items[i];
+                tasks.Add(EventPool.AddTask(async () => await ProcessBox(item)));
             }
 
             await Task.WhenAll(tasks);

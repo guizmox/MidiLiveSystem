@@ -200,58 +200,56 @@ namespace MidiTools
         {
             StopSequenceRequested = false;
 
-            await Task.Factory.StartNew(() =>
-            {
-                StartStopPlayerCounter(true);
+            StartStopPlayerCounter(true);
 
-                PlaySequence(_eventsOUT, routing);
+            await PlaySequence(_eventsOUT, routing);
+            await routing.Panic();
 
-                Thread.Sleep(2500);
+            StartStopPlayerCounter(false);
 
-                StartStopPlayerCounter(false);
-
-                SequenceFinished?.Invoke(_eventsOUT.Count.ToString() + " event(s) have been played.");
-            });
+            SequenceFinished?.Invoke(_eventsOUT.Count.ToString() + " event(s) have been played.");
         }
 
-        private void PlaySequence(List<MidiEvent> events, MidiRouting routing)
+        private async Task PlaySequence(List<MidiEvent> events, MidiRouting routing)
         {
-            Stopwatch stopwatch = new Stopwatch(); // Créer un chronomètre
-
-            routing.InitDevicesForSequencePlay(SequencerDefault);
-
-            for (int i = 0; i < events.Count; i++)
+            await EventPool.AddTask(() =>
             {
-                MidiEvent eventtoplay = new MidiEvent(events[i].Type, events[i].Values, events[i].Channel, events[i].Device);
+                Stopwatch stopwatch = new Stopwatch(); // Créer un chronomètre
 
-                long elapsedTicks = 0;
-                double waitingTime = 0;
+                routing.InitDevicesForSequencePlay(SequencerDefault);
 
-                if (i > 0)
+                for (int i = 0; i < events.Count; i++)
                 {
-                    elapsedTicks = events[i].EventDate.Ticks - events[i - 1].EventDate.Ticks;
-                    waitingTime = elapsedTicks / (double)TimeSpan.TicksPerMillisecond;
-                }
+                    MidiEvent eventtoplay = new MidiEvent(events[i].Type, events[i].Values, events[i].Channel, events[i].Device);
 
-                if (waitingTime > 0)
-                {
-                    // Utiliser le chronomètre pour attendre avec une précision supérieure à une milliseconde
-                    stopwatch.Restart(); // Redémarrer le chronomètre
-                    while (stopwatch.ElapsedTicks < elapsedTicks)
+                    long elapsedTicks = 0;
+                    double waitingTime = 0;
+
+                    if (i > 0)
                     {
-                        // Attente active jusqu'à ce que le temps écoulé soit égal au temps à attendre
+                        elapsedTicks = events[i].EventDate.Ticks - events[i - 1].EventDate.Ticks;
+                        waitingTime = elapsedTicks / (double)TimeSpan.TicksPerMillisecond;
                     }
-                    stopwatch.Stop(); // Arrêter le chronomètre
-                }
 
-                routing.SendSequencedEvent(eventtoplay);
+                    if (waitingTime > 0)
+                    {
+                        // Utiliser le chronomètre pour attendre avec une précision supérieure à une milliseconde
+                        stopwatch.Restart(); // Redémarrer le chronomètre
+                        while (stopwatch.ElapsedTicks < elapsedTicks)
+                        {
+                            // Attente active jusqu'à ce que le temps écoulé soit égal au temps à attendre
+                        }
+                        stopwatch.Stop(); // Arrêter le chronomètre
+                    }
 
-                if (StopSequenceRequested)
-                {
-                    routing.Panic();
-                    break;
+                    routing.SendSequencedEvent(eventtoplay);
+
+                    if (StopSequenceRequested)
+                    {
+                        break;
+                    }
                 }
-            }
+            });
         }
 
         public void StopSequence()

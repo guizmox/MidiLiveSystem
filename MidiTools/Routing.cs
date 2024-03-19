@@ -10,8 +10,6 @@ using System.Threading.Tasks;
 using System.Timers;
 using System.Threading;
 using RtMidi.Core.Enums;
-using System.Collections.Concurrent;
-using System.Diagnostics.Tracing;
 
 namespace MidiTools
 {
@@ -60,7 +58,7 @@ namespace MidiTools
 
         internal MidiPreset Preset { get; set; }
         internal Guid RoutingGuid { get; private set; }
-        internal bool Locked { get; set; } = false;
+        internal int PendingActions = 0;
 
         internal MatrixItem(MidiDevice MidiIN, MidiDevice MidiOUT, int iChIN, int iChOUT, MidiOptions options, MidiPreset preset)
         {
@@ -87,7 +85,7 @@ namespace MidiTools
 
         private async void Sequencer_OnInternalSequencerStep(SequenceStep notes, double lengthInMs, int lastPositionInSequence, int positionInSequence)
         {
-            await Task.Run(() =>
+            await EventPool.AddTask(() =>
             {
                 if (!DeviceInSequencer.Muted && DeviceOut != null && Options.Active)
                 {
@@ -121,7 +119,7 @@ namespace MidiTools
 
         internal async Task CreateNote(NoteGenerator note, int iLowestNotePlayed)
         {
-            await Task.Run(() =>
+            await EventPool.AddTask(() =>
             {
                 if (Options.Active)
                 {
@@ -915,16 +913,26 @@ namespace MidiTools
 
         private async void MatrixItem_OnSequencerPlayNote(List<MidiEvent> eventsON, List<MidiEvent> eventsOFF, MatrixItem matrix)
         {
-            var tasksON = eventsON.Select(item => CreateOUTEvent(item, matrix));
-            var tasksOFF = eventsOFF.Select(item => CreateOUTEvent(item, matrix));
-            await Task.WhenAll(tasksON.Concat(tasksOFF));
+            List<Task> tasks = new List<Task>();
+
+            foreach (var item in eventsON)
+            {
+                tasks.Add(EventPool.AddTask(async () => await CreateOUTEvent(item, matrix)));
+            }
+
+            foreach (var item in eventsOFF)
+            {
+                tasks.Add(EventPool.AddTask(async () => await CreateOUTEvent(item, matrix)));
+            }
+
+            await Task.WhenAll(tasks);
         }
 
         private async void MidiClock_OnEvent(object sender, ElapsedEventArgs e)
         {
             var tasks = UsedDevicesOUT.Select(device =>
             {
-                return Task.Run(() => { device.SendMidiEvent(new MidiEvent(TypeEvent.CLOCK, null, Channel.Channel1, device.Name)); });
+                return EventPool.AddTask(() => { device.SendMidiEvent(new MidiEvent(TypeEvent.CLOCK, null, Channel.Channel1, device.Name)); });
             });
 
             await Task.WhenAll(tasks);
@@ -1027,13 +1035,13 @@ namespace MidiTools
             {
                 OutputMidiMessage?.Invoke(true, routing.RoutingGuid);
 
-                List<MidiEvent> EventsToProcess = EventPreProcessor(routing, ev, routingOUT == null ? false : true);
+                List<MidiEvent> EventsToProcess = await EventPreProcessor(routing, ev, routingOUT == null ? false : true);
 
                 if (routingOUT != null)
                 {
-                    await Task.Factory.StartNew(() =>
+                    await EventPool.AddTask(() =>
                     {
-                        routing.Locked = true;
+                        routing.PendingActions++;
 
                         foreach (var evToProcess in EventsToProcess)
                         {
@@ -1051,15 +1059,15 @@ namespace MidiTools
 
                             routing.DeviceOut.SendMidiEvent(evToProcess);
                         }
-                        routing.Locked = false;
+                        routing.PendingActions--;
                         OutputMidiMessage?.Invoke(false, routing.RoutingGuid);
                     });
                 }
                 else
                 {
-                    await Task.Factory.StartNew(() =>
+                    await EventPool.AddTask(() =>
                     {
-                        routing.Locked = true;
+                        routing.PendingActions++;
 
                         //lecture de tous les events qui ont été ajoutés par les options
                         foreach (var evToProcess in EventsToProcess)
@@ -1073,17 +1081,17 @@ namespace MidiTools
 
                             routing.DeviceOut.SendMidiEvent(evToProcess);
                         }
-                        routing.Locked = false;
+                        routing.PendingActions--;
                         OutputMidiMessage?.Invoke(false, routing.RoutingGuid);
                     });
                 }
             }
         }
 
-        private List<MidiEvent> EventPreProcessor(MatrixItem routing, MidiEvent evIN, bool bOutEvent)
+        private async Task<List<MidiEvent>> EventPreProcessor(MatrixItem routing, MidiEvent evIN, bool bOutEvent)
         {
             bool bTranslated = false;
-            if (!bOutEvent) { bTranslated = MidiTranslator(routing, evIN); } //TRANSLATEUR DE MESSAGES
+            if (!bOutEvent) { bTranslated = await MidiTranslator(routing, evIN); } //TRANSLATEUR DE MESSAGES
 
             if (!bTranslated)
             {
@@ -1434,7 +1442,7 @@ namespace MidiTools
                 {
                     if (newop.TranspositionOffset != routing.Options.TranspositionOffset) //midi panic
                     {
-                        RoutingPanic(routing.DeviceOut, routing.ChannelOut);
+                        await RoutingPanic(routing.DeviceOut, routing.ChannelOut);
                     }
 
                     //comparer
@@ -1544,7 +1552,7 @@ namespace MidiTools
             return data;
         }
 
-        private bool MidiTranslator(MatrixItem routing, MidiEvent ev)
+        private async Task<bool> MidiTranslator(MatrixItem routing, MidiEvent ev)
         {
             bool bMustTranslate = false;
             int iPbDirection = -1;
@@ -1799,7 +1807,7 @@ namespace MidiTools
 
                                         if (sVelo2.Length == 0) //note fixe ET vélocité fixe
                                         {
-                                            Task.Factory.StartNew(() =>
+                                            await EventPool.AddTask(() =>
                                             {
                                                 routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelo }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
                                                 Thread.Sleep(Convert.ToInt32(sLen));
@@ -1825,7 +1833,7 @@ namespace MidiTools
                                                 { iVelo = (ev.Values[0] + 8192) / 256; }
                                             }
 
-                                            Task.Factory.StartNew(() =>
+                                            await EventPool.AddTask(() =>
                                             {
                                                 routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelo }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
                                                 Thread.Sleep(Convert.ToInt32(sLen));
@@ -1855,7 +1863,7 @@ namespace MidiTools
                                                 { iNote = (ev.Values[0] + 8192) / 256; }
                                             }
 
-                                            Task.Factory.StartNew(() =>
+                                            await EventPool.AddTask(() =>
                                             {
                                                 routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelo }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
                                                 Thread.Sleep(Convert.ToInt32(sLen));
@@ -1880,7 +1888,7 @@ namespace MidiTools
                                                 { iNote = (ev.Values[0] + 8192) / 256; iVelo = (ev.Values[0] + 8192) / 256; }
                                             }
 
-                                            Task.Factory.StartNew(() =>
+                                            await EventPool.AddTask(() =>
                                             {
                                                 routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelo }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
                                                 Thread.Sleep(Convert.ToInt32(sLen));
@@ -2222,44 +2230,51 @@ namespace MidiTools
             else { return true; }
         }
 
-        public void Panic()
+        public async Task Panic()
         {
             List<Task> devicesWork = new List<Task>();
 
             foreach (var device in UsedDevicesOUT)
             {
-                devicesWork.Add(Task.Factory.StartNew(() =>
+                devicesWork.Add(EventPool.AddTask(() =>
                 {
                     for (int iCh = 1; iCh <= 16; iCh++)
                     {
+                        int iChCopy = iCh;
                         for (int iKey = 0; iKey < 128; iKey++)
                         {
-                            if (device.GetLiveNOTEValue(iCh, iKey))
+                            int iKeyCopy = iKey;
+                            if (device.GetLiveNOTEValue(iChCopy, iKeyCopy))
                             {
-                                device.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKey, 0 }, Tools.GetChannel(iCh), device.Name));
+                                device.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKeyCopy, 0 }, Tools.GetChannel(iChCopy), device.Name));
                             }
                         }
                     }
                 }));
             }
 
-            while (devicesWork.Count(w => w.IsCompleted) != devicesWork.Count)
-            {
-                Thread.Sleep(100);
-            }
+            await Task.WhenAll(devicesWork);
         }
 
-        private void RoutingPanic(MidiDevice deviceOut, int channelOut)
+        private async Task RoutingPanic(MidiDevice deviceOut, int channelOut)
         {
             if (deviceOut != null)
             {
+                List<Task> tasks = new List<Task>();
+
                 for (int iKey = 0; iKey < 128; iKey++)
                 {
-                    if (deviceOut.GetLiveNOTEValue(channelOut, iKey))
+                    int iKeyCopy = iKey;
+                    if (deviceOut.GetLiveNOTEValue(channelOut, iKeyCopy))
                     {
-                        deviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKey, 0 }, Tools.GetChannel(channelOut), deviceOut.Name));
+                        tasks.Add(EventPool.AddTask(() =>
+                        {
+                            deviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKeyCopy, 0 }, Tools.GetChannel(channelOut), deviceOut.Name));
+                        }));
                     }
                 }
+
+                await Task.WhenAll(tasks);
             }
         }
 
@@ -2353,9 +2368,8 @@ namespace MidiTools
                 bool bOUTChanged = routing.CheckDeviceOut(sDeviceOut);
 
 
-                if (bINChanged && !routing.Locked)
+                if (bINChanged && routing.PendingActions == 0)
                 {
-                    routing.ChannelIn = iChIn;
 
                     bool active = routing.Options.Active;
                     routing.Options.Active = false;
@@ -2390,14 +2404,12 @@ namespace MidiTools
                             routing.DeviceIn = null;
                         }
                     }
-
+                    routing.ChannelIn = iChIn;
                     routing.Options.Active = active;
                 }
 
-                if (bOUTChanged && !routing.Locked)
+                if (bOUTChanged && routing.PendingActions == 0)
                 {
-                    routing.ChannelOut = iChOut;
-
                     bool active = routing.Options.Active;
                     routing.Options.Active = false;
 
@@ -2407,8 +2419,10 @@ namespace MidiTools
                     }
                     else
                     {
+                        await RoutingPanic(routing.DeviceOut, routing.ChannelOut);
                         routing.DeviceOut = null;
                     }
+                    routing.ChannelOut = iChOut;
                     routing.Options.Active = active;
                 }
 
@@ -2424,7 +2438,7 @@ namespace MidiTools
 
         public async Task UpdateUsedDevices(List<string[]> devices)
         {
-            await Task.Run(() =>
+            await EventPool.AddTask(() =>
             {
                 foreach (var dev in devices)
                 {
@@ -2470,43 +2484,37 @@ namespace MidiTools
 
         public async Task SetSolo(Guid routingGuid)
         {
-            await Task.Run(() =>
+            var routingOn = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
+
+            if (routingOn != null)
             {
-                var routingOn = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
+                routingOn.TempActive = routingOn.Options.Active;
+                routingOn.Options.Active = true;
+            }
 
-                if (routingOn != null)
-                {
-                    routingOn.TempActive = routingOn.Options.Active;
-                    routingOn.Options.Active = true;
-                }
-
-                var routingOff = MidiMatrix.Where(m => m.RoutingGuid != routingGuid);
-                foreach (var r in routingOff)
-                {
-                    RoutingPanic(r.DeviceOut, r.ChannelOut);
-                    r.TempActive = r.Options.Active;
-                    r.Options.Active = false;
-                }
-            });
+            var routingOff = MidiMatrix.Where(m => m.RoutingGuid != routingGuid);
+            foreach (var r in routingOff)
+            {
+                await RoutingPanic(r.DeviceOut, r.ChannelOut);
+                r.TempActive = r.Options.Active;
+                r.Options.Active = false;
+            }
         }
 
         public async Task MuteRouting(Guid routingGuid)
         {
-            await Task.Run(() =>
+            var routingOn = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
+            if (routingOn != null)
             {
-                var routingOn = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
-                if (routingOn != null)
-                {
-                    RoutingPanic(routingOn.DeviceOut, routingOn.ChannelOut);
-                    routingOn.TempActive = true;
-                    routingOn.Options.Active = false;
-                }
-            });
+                await RoutingPanic(routingOn.DeviceOut, routingOn.ChannelOut);
+                routingOn.TempActive = true;
+                routingOn.Options.Active = false;
+            }
         }
 
         public async Task UnmuteRouting(Guid routingGuid)
         {
-            await Task.Run(() =>
+            await EventPool.AddTask(() =>
             {
                 var routingOff = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
                 if (routingOff != null)
@@ -2519,7 +2527,7 @@ namespace MidiTools
 
         public async Task UnmuteAllRouting()
         {
-            await Task.Run(() =>
+            await EventPool.AddTask(() =>
             {
                 foreach (var r in MidiMatrix)
                 {
@@ -2530,7 +2538,7 @@ namespace MidiTools
 
         public async Task DeleteRouting(Guid routingGuid)
         {
-            await Task.Run(() =>
+            await EventPool.AddTask(() =>
             {
                 var routing = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
                 if (routing != null)
@@ -2540,9 +2548,9 @@ namespace MidiTools
             });
         }
 
-        public void DeleteAllRouting()
+        public async Task DeleteAllRouting()
         {
-            Panic();
+            await Panic();
 
             MidiClock.Stop();
             MidiClock.Enabled = false;
@@ -2606,7 +2614,7 @@ namespace MidiTools
 
         public async Task OpenUsedPorts(bool bIn)
         {
-            await Task.Run(() =>
+            await EventPool.AddTask(() =>
             {
                 if (bIn)
                 {
@@ -2629,7 +2637,7 @@ namespace MidiTools
 
         public async Task CloseUsedPorts(bool bIn)
         {
-            await Task.Run(() =>
+            await EventPool.AddTask(() =>
             {
                 if (bIn)
                 {
@@ -2651,7 +2659,7 @@ namespace MidiTools
 
         public async Task SetClock(bool bActivated, int iBPM, string sDevice)
         {
-            await Task.Run(() =>
+            await EventPool.AddTask(() =>
             {
                 bool bChanged = false;
 
@@ -2696,7 +2704,7 @@ namespace MidiTools
 
         public async Task SetSequencerListener(string sDevice)
         {
-            await Task.Run(() =>
+            await EventPool.AddTask(() =>
             {
                 if (sDevice.Length > 0)
                 {

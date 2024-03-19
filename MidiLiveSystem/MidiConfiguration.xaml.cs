@@ -401,11 +401,11 @@ namespace MidiLiveSystem
             }
         }
 
-        private void btnPanic_Click(object sender, RoutedEventArgs e)
+        private async void btnPanic_Click(object sender, RoutedEventArgs e)
         {
             if (Routing != null)
             {
-                Routing.Panic();
+                await Routing.Panic();
             }
         }
 

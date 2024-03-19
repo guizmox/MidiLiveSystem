@@ -4,14 +4,12 @@ using RtMidi.Core.Messages;
 using RtMidi.Core;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using static MidiTools.MidiDevice;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Timers;
 using System.Linq;
 using System.IO;
-using System.Collections.Concurrent;
 
 namespace MidiTools
 {

@@ -100,7 +100,7 @@ namespace MidiTools
 
         public async Task StartSequence()
         {
-            await Task.Run(() =>
+            await EventPool.AddTask(() =>
             {
                 if (SequenceHasData())
                 {
@@ -137,7 +137,7 @@ namespace MidiTools
 
         public async Task StopSequence()
         {
-            await Task.Run(() =>
+            await EventPool.AddTask(() =>
             {
                 if (SequenceHasData())
                 {
@@ -156,7 +156,7 @@ namespace MidiTools
 
         public async Task ChangeTempo(int iNewValue)
         {
-            await Task.Run(() =>
+            await EventPool.AddTask(() =>
             {
                 if (Tempo != iNewValue)
                 {
