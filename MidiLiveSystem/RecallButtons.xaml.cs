@@ -47,7 +47,8 @@ namespace MidiLiveSystem
         {
             foreach (var item in Project.RecallData)
             {
-                Memory[item.ButtonIndex] = new RecallMemory { CurrentPreset = item.ButtonIndex, BoxGuids = item.BoxGuids, BoxPresets = item.BoxPresets };
+                //buttonindex en index 1
+                Memory[item.ButtonIndex - 1] = new RecallMemory { CurrentPreset = item.ButtonIndex, BoxGuids = item.BoxGuids, BoxPresets = item.BoxPresets };
             }
         }
 
@@ -215,7 +216,7 @@ namespace MidiLiveSystem
 
         private void btnSaveUIState_Click(object sender, RoutedEventArgs e)
         {
-            int iButton = Convert.ToInt32(((Button)sender).Tag) - 1;
+            int iButton = Convert.ToInt32(((Button)sender).Tag);
 
             List<Guid> boxguids = new List<Guid>();
             List<int> boxpresets = new List<int>();
@@ -225,7 +226,7 @@ namespace MidiLiveSystem
                 boxpresets.Add(box.CurrentPreset);
             }
 
-            Memory[iButton] = new RecallMemory { CurrentPreset = iButton, BoxGuids = boxguids, BoxPresets = boxpresets };
+            Memory[iButton - 1] = new RecallMemory { CurrentPreset = iButton, BoxGuids = boxguids, BoxPresets = boxpresets };
         }
     }
 }
