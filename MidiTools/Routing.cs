@@ -2525,10 +2525,14 @@ namespace MidiTools
             if (dev == null)
             {
                 var indev = InputDevices.FirstOrDefault(d => d.Name.Equals(sDeviceIn));
-                var newdev = new MidiDevice(indev);
-                newdev.OnMidiEvent += DeviceIn_OnMidiEvent;
-                UsedDevicesIN.Add(newdev);
-                return newdev;
+                if (indev != null)
+                {
+                    var newdev = new MidiDevice(indev);
+                    newdev.OnMidiEvent += DeviceIn_OnMidiEvent;
+                    UsedDevicesIN.Add(newdev);
+                    return newdev;
+                }
+                else { return null; }
             }
             else { return dev; }
         }
