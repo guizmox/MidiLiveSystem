@@ -175,31 +175,28 @@ namespace MidiTools
                     {
                         return true;
                     }
-                    else { return false; }
                 }
-                else
+
+                if (DeviceInSequencer == null && sDeviceIn.Equals(Tools.INTERNAL_SEQUENCER)) //on est passé d'un device midi au séquenceur
                 {
-                    if (DeviceInSequencer == null && sDeviceIn.Equals(Tools.INTERNAL_SEQUENCER)) //on est passé d'un device midi au séquenceur
-                    {
-                        return true;
-                    }
-                    else if (DeviceInSequencer != null && sDeviceIn.Equals(Tools.INTERNAL_SEQUENCER)) //on est toujours sur le séquenceur
-                    {
-                        if (DeviceInSequencer.Channel != iChannel) //mais on a changé de canal midi
-                        {
-                            return true;
-                        }
-                        else
-                        {
-                            return false;
-                        }
-                    }
-                    else if (DeviceInSequencer != null && !sDeviceIn.Equals(Tools.INTERNAL_SEQUENCER)) //on est passé du séquenceur à un device midi ou l'internal generator
-                    {
-                        return true;
-                    }
-                    else { return false; }
+                    return true;
                 }
+                else if (DeviceInSequencer != null && sDeviceIn.Equals(Tools.INTERNAL_SEQUENCER)) //on est toujours sur le séquenceur
+                {
+                    if (DeviceInSequencer.Channel != iChannel) //mais on a changé de canal midi
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+                else if (DeviceInSequencer != null && !sDeviceIn.Equals(Tools.INTERNAL_SEQUENCER)) //on est passé du séquenceur à un device midi ou l'internal generator
+                {
+                    return true;
+                }
+                else { return false; }
             }
         }
 
@@ -2418,9 +2415,10 @@ namespace MidiTools
                         bool active = routing.Options.Active;
                         routing.Options.Active = false;
 
+                        routing.OnSequencerPlayNote -= MatrixItem_OnSequencerPlayNote;
+
                         if (sDeviceIn.Equals(Tools.INTERNAL_GENERATOR))
                         {
-                            routing.OnSequencerPlayNote -= MatrixItem_OnSequencerPlayNote;
                             routing.RemoveSequencer();
                             routing.OnSequencerPlayNote += MatrixItem_OnSequencerPlayNote;
                             routing.DeviceIn = null;
@@ -2430,7 +2428,6 @@ namespace MidiTools
                         {
                             if (DeviceInSequencer != null)
                             {
-                                routing.OnSequencerPlayNote -= MatrixItem_OnSequencerPlayNote;
                                 routing.AddSequencer(DeviceInSequencer);
                                 routing.OnSequencerPlayNote += MatrixItem_OnSequencerPlayNote;
                                 routing.DeviceIn = null;
@@ -2439,17 +2436,17 @@ namespace MidiTools
                         }
                         else
                         {
+                            routing.OnSequencerPlayNote -= MatrixItem_OnSequencerPlayNote;
+                            routing.RemoveSequencer();
+                            routing.DeviceInInternalName = "";
+
                             if (sDeviceIn.Length > 0)
                             {
-                                routing.OnSequencerPlayNote -= MatrixItem_OnSequencerPlayNote;
-                                routing.RemoveSequencer();
-                                routing.DeviceIn = AddNewInDevice(sDeviceIn);
-                                routing.DeviceInInternalName = "";
+                                routing.DeviceIn = AddNewInDevice(sDeviceIn);                 
                             }
                             else
                             {
                                 routing.DeviceIn = null;
-                                routing.DeviceInInternalName = "";
                             }
                         }
                         routing.ChannelIn = iChIn;
