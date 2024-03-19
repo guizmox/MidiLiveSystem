@@ -158,7 +158,11 @@ namespace MidiLiveSystem
 
         public async Task StartPlay(bool bFromActualWindow)
         {
-            if (!Playing)
+            if (Playing) //si on joue déjà, le deuxième message start éteint les séquences.
+            {
+                await StopPlay(bFromActualWindow);
+            }
+            else
             {
                 await btnPlaySequences.Dispatcher.InvokeAsync(() => btnPlaySequences.Background = Brushes.IndianRed);
                 await btnStopSequences.Dispatcher.InvokeAsync(() => btnStopSequences.Background = Brushes.DarkGray);

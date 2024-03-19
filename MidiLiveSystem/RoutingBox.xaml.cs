@@ -1150,7 +1150,7 @@ namespace MidiLiveSystem
         {
             await Dispatcher.InvokeAsync(() =>
             {
-                cbPresetButton.SelectedIndex = iPreset - 1;
+                cbPresetButton.SelectedIndex = iPreset;
             });
         }
 

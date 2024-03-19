@@ -1056,7 +1056,7 @@ namespace MidiTools
             {
                 try
                 {
-                    routing.cancellationToken.ThrowIfCancellationRequested();
+                    if (routing.cancellationToken.IsCancellationRequested) { continue; }
 
                     OutputMidiMessage?.Invoke(true, routing.RoutingGuid);
 
@@ -1068,18 +1068,13 @@ namespace MidiTools
                         {
                             foreach (var evToProcess in EventsToProcess)
                             {
-                                routing.cancellationToken.ThrowIfCancellationRequested();
+                                if (routing.cancellationToken.IsCancellationRequested) { break; }
 
                                 _eventsProcessedOUT += 1;
 
                                 if (evToProcess.Delay > 0)
                                 {
                                     Thread.Sleep(evToProcess.Delay);
-                                }
-
-                                if (evToProcess.Type == TypeEvent.CC) //je mémorise toujours les valeurs des CC pour pouvoir avoir une "image" à un instant T des paramètres joués
-                                {
-                                    routing.SetCC(evToProcess.Values[0], evToProcess.Values[1], false, evToProcess.Device, evToProcess.Channel);
                                 }
 
                                 routing.DeviceOut.SendMidiEvent(evToProcess);
@@ -1094,7 +1089,7 @@ namespace MidiTools
                             //lecture de tous les events qui ont été ajoutés par les options
                             foreach (var evToProcess in EventsToProcess)
                             {
-                                routing.cancellationToken.ThrowIfCancellationRequested();
+                                if (routing.cancellationToken.IsCancellationRequested) { break; }
 
                                 _eventsProcessedOUT += 1;
 
@@ -1107,13 +1102,6 @@ namespace MidiTools
                             }
                             OutputMidiMessage?.Invoke(false, routing.RoutingGuid);
                         });
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                    if (routing.DeviceOut != null)
-                    {
-                        await RoutingPanic(routing.DeviceOut, routing.ChannelOut);
                     }
                 }
                 catch (Exception)
@@ -1266,36 +1254,32 @@ namespace MidiTools
                     break;
 
                 case TypeEvent.CC: //smooth CC
-                    if (!bOutEvent) //!bOutevent parce qu'on ne veut pas que les évènements forcés (type changement preset) créent un smooth
+                    if (bOutEvent) //!bOutevent parce qu'on ne veut pas que les évènements forcés (type changement preset) créent un smooth
                     {
-                        //si l'item est bloqué à cause du smooth, on interdit les nouveaux entrants
-                        if (routing.IsBlocked(eventOUT.Values[0], eventOUT.Values[1]))
+                        routing.UnblockCC(eventOUT.Values[0]);
+                    }
+                    //si l'item est bloqué à cause du smooth, on interdit les nouveaux entrants
+                    if (routing.IsBlocked(eventOUT.Values[0], eventOUT.Values[1]))
+                    {
+                        bAvoidCCToSmooth = true;
+                    }
+                    else
+                    {
+                        //sinon on enregistre et on crée une liste d'events additionnels
+                        var newitems = routing.SetCC(eventOUT.Values[0], eventOUT.Values[1], routing.Options.SmoothCC, eventOUT.Device, eventOUT.Channel);
+                        int count = newitems.Count;
+
+                        if (routing.Options.SmoothCC && count > 0)
                         {
                             bAvoidCCToSmooth = true;
-                        }
-                        else
-                        {
-                            //sinon on enregistre et on crée une liste d'events additionnels
-                            var newitems = routing.SetCC(eventOUT.Values[0], eventOUT.Values[1], routing.Options.SmoothCC, eventOUT.Device, eventOUT.Channel);
-                            int count = newitems.Count;
 
-                            if (routing.Options.SmoothCC && count > 0)
+                            foreach (var cc in newitems)
                             {
-                                bAvoidCCToSmooth = true;
-
-                                foreach (var cc in newitems)
-                                {
-                                    cc.Delay = (int)(routing.Options.SmoothCCLength / count); //le smoooth doit durer 1sec
-                                    EventsToProcess.Add(cc);
-                                }
-                                routing.UnblockCC(eventOUT.Values[0]);
+                                cc.Delay = (int)(routing.Options.SmoothCCLength / count); //le smoooth doit durer 1sec
+                                EventsToProcess.Add(cc);
                             }
+                            routing.UnblockCC(eventOUT.Values[0]);
                         }
-                    }
-                    else //on mémorise juste la valeur et on débloque le CC si il est bloqué
-                    {
-                        routing.SetCC(eventOUT.Values[0], eventOUT.Values[1], false, eventOUT.Device, eventOUT.Channel);
-                        routing.UnblockCC(eventOUT.Values[0]);
                     }
 
                     if (!bAvoidCCToSmooth) //ne pas jouer le CC  trop rapide, il a été joué par le Smooth quelques lignes plus haut
@@ -2415,6 +2399,7 @@ namespace MidiTools
                 if (bINChanged)
                 {
                     await routing.CancelTask();
+                    await RoutingPanic(routing.DeviceOut, routing.ChannelOut);
 
                     if (EventPool.RoutingTasksRunning(routingGuid) == 0)
                     {
@@ -2463,6 +2448,7 @@ namespace MidiTools
                 if (bOUTChanged)
                 {
                     await routing.CancelTask();
+                    await RoutingPanic(routing.DeviceOut, routing.ChannelOut);
 
                     if (EventPool.RoutingTasksRunning(routingGuid) == 0)
                     {

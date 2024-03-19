@@ -16,8 +16,8 @@
     
     <Grid Margin="5,5,5,5" >
         <Grid.RowDefinitions>
-            <RowDefinition Height="65*" />
-            <RowDefinition Height="15*" />
+            <RowDefinition Height="75*" />
+            <RowDefinition Height="5*" />
             <RowDefinition Height="20*" />
         </Grid.RowDefinitions>
         <DockPanel Grid.Row="0">
@@ -33,7 +33,7 @@
                     <ColumnDefinition Width="12*"/>
                 </Grid.ColumnDefinitions>
 
-                <Button Name="btnRecall1" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="0" Background="CadetBlue" Click="btnPreset_Click" >
+                <Button Name="btnRecall1" Tag="1" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="0" Background="CadetBlue" Click="btnPreset_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -45,7 +45,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnRecall2" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="1" Background="CadetBlue" Click="btnPreset_Click" >
+                <Button Name="btnRecall2" Tag="2" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="1" Background="CadetBlue" Click="btnPreset_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -57,7 +57,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnRecall3" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="2" Background="CadetBlue" Click="btnPreset_Click" >
+                <Button Name="btnRecall3" Tag="3" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="2" Background="CadetBlue" Click="btnPreset_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -69,7 +69,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnRecall4" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="3" Background="CadetBlue" Click="btnPreset_Click" >
+                <Button Name="btnRecall4" Tag="4" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="3" Background="CadetBlue" Click="btnPreset_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -81,7 +81,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnRecall5" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="4" Background="CadetBlue" Click="btnPreset_Click" >
+                <Button Name="btnRecall5" Tag="5" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="4" Background="CadetBlue" Click="btnPreset_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -93,7 +93,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnRecall6" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="5" Background="CadetBlue" Click="btnPreset_Click" >
+                <Button Name="btnRecall6" Tag="6" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="5" Background="CadetBlue" Click="btnPreset_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -105,7 +105,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnRecall7" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="6" Background="CadetBlue" Click="btnPreset_Click" >
+                <Button Name="btnRecall7" Tag="7" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="6" Background="CadetBlue" Click="btnPreset_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -117,7 +117,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnRecall8" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="7" Background="CadetBlue" Click="btnPreset_Click" >
+                <Button Name="btnRecall8" Tag="8" Height="Auto" Width="Auto" Margin="5,5,5,5" Grid.Column="7" Background="CadetBlue" Click="btnPreset_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -132,8 +132,6 @@
             </Grid>
         </DockPanel>
 
-        <Border Grid.Row="1" Grid.RowSpan="2" BorderThickness="1" BorderBrush="Black" />
-
         <StackPanel Grid.Row="2">
             <Grid >
                 <Grid.ColumnDefinitions>
@@ -146,153 +144,15 @@
                     <ColumnDefinition Width="15*"/>
                     <ColumnDefinition Width="15*"/>
                 </Grid.ColumnDefinitions>
-                <Button x:Name="btnSaveUIState1" Margin="2,2,2,2" FontSize="8" Grid.Column="0" Content="Save UI State" Click="btnSaveUIState_Click"/>
-                <Button x:Name="btnSaveUIState2" Margin="2,2,2,2" FontSize="8" Grid.Column="1" Content="Save UI State" Click="btnSaveUIState_Click"/>
-                <Button x:Name="btnSaveUIState3" Margin="2,2,2,2" FontSize="8" Grid.Column="2" Content="Save UI State" Click="btnSaveUIState_Click"/>
-                <Button x:Name="btnSaveUIState4" Margin="2,2,2,2" FontSize="8" Grid.Column="3" Content="Save UI State" Click="btnSaveUIState_Click"/>
-                <Button x:Name="btnSaveUIState5" Margin="2,2,2,2" FontSize="8" Grid.Column="4" Content="Save UI State" Click="btnSaveUIState_Click"/>
-                <Button x:Name="btnSaveUIState6" Margin="2,2,2,2" FontSize="8" Grid.Column="5" Content="Save UI State" Click="btnSaveUIState_Click"/>
-                <Button x:Name="btnSaveUIState7" Margin="2,2,2,2" FontSize="8" Grid.Column="6" Content="Save UI State" Click="btnSaveUIState_Click"/>
-                <Button x:Name="btnSaveUIState8" Margin="2,2,2,2" FontSize="8" Grid.Column="7" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState1" Tag="1" Margin="2,2,2,2" FontSize="10" Grid.Column="0" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState2" Tag="2" Margin="2,2,2,2" FontSize="10" Grid.Column="1" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState3" Tag="3" Margin="2,2,2,2" FontSize="10" Grid.Column="2" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState4" Tag="4" Margin="2,2,2,2" FontSize="10" Grid.Column="3" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState5" Tag="5" Margin="2,2,2,2" FontSize="10" Grid.Column="4" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState6" Tag="6" Margin="2,2,2,2" FontSize="10" Grid.Column="5" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState7" Tag="7" Margin="2,2,2,2" FontSize="10" Grid.Column="6" Content="Save UI State" Click="btnSaveUIState_Click"/>
+                <Button x:Name="btnSaveUIState8" Tag="8" Margin="2,2,2,2" FontSize="10" Grid.Column="7" Content="Save UI State" Click="btnSaveUIState_Click"/>
             </Grid>
-
-        </StackPanel>
-        
-        <StackPanel Grid.Row="1">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="15*"/>
-                    <ColumnDefinition Width="15*"/>
-                    <ColumnDefinition Width="15*"/>
-                    <ColumnDefinition Width="15*"/>
-                    <ColumnDefinition Width="15*"/>
-                    <ColumnDefinition Width="15*"/>
-                    <ColumnDefinition Width="15*"/>
-                    <ColumnDefinition Width="15*"/>
-                </Grid.ColumnDefinitions>
-
-                <ComboBox Name="cbRecallSet1" BorderThickness="0" Grid.Column="0" SelectedValue="{Binding SelectedItem, Mode=TwoWay}" >
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="80*"/>
-                                    <ColumnDefinition Width="20*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding Description, Mode=TwoWay}" VerticalAlignment="Center"  HorizontalAlignment="Left"/>
-                                <TextBox Grid.Column="1" Width="40" Text="{Binding Value, Mode=TwoWay}" MaxLength="1" VerticalAlignment="Center" HorizontalAlignment="Right" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-
-                <ComboBox Name="cbRecallSet2" BorderThickness="0" Grid.Column="1" SelectedValue="{Binding SelectedItem, Mode=TwoWay}" >
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="30*"/>
-                                    <ColumnDefinition Width="70*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding Description, Mode=TwoWay}" VerticalAlignment="Center"  HorizontalAlignment="Left"/>
-                                <TextBox Grid.Column="1" Width="40" Text="{Binding Value, Mode=TwoWay}" MaxLength="1" VerticalAlignment="Center" HorizontalAlignment="Right" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-
-                <ComboBox Name="cbRecallSet3" BorderThickness="0" Grid.Column="2" SelectedValue="{Binding SelectedItem, Mode=TwoWay}" >
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="30*"/>
-                                    <ColumnDefinition Width="70*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding Description, Mode=TwoWay}" VerticalAlignment="Center"  HorizontalAlignment="Left"/>
-                                <TextBox Grid.Column="1" Width="40" Text="{Binding Value, Mode=TwoWay}" MaxLength="1" VerticalAlignment="Center" HorizontalAlignment="Right" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-
-                <ComboBox Name="cbRecallSet4" BorderThickness="0" Grid.Column="3" SelectedValue="{Binding SelectedItem, Mode=TwoWay}" >
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="30*"/>
-                                    <ColumnDefinition Width="70*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding Description, Mode=TwoWay}" VerticalAlignment="Center"  HorizontalAlignment="Left"/>
-                                <TextBox Grid.Column="1" Width="40" Text="{Binding Value, Mode=TwoWay}" MaxLength="1" VerticalAlignment="Center" HorizontalAlignment="Right" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-
-                <ComboBox Name="cbRecallSet5" BorderThickness="0" Grid.Column="4" SelectedValue="{Binding SelectedItem, Mode=TwoWay}" >
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="30*"/>
-                                    <ColumnDefinition Width="70*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding Description, Mode=TwoWay}" VerticalAlignment="Center"  HorizontalAlignment="Left"/>
-                                <TextBox Grid.Column="1" Width="40" Text="{Binding Value, Mode=TwoWay}" MaxLength="1" VerticalAlignment="Center" HorizontalAlignment="Right" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-
-                <ComboBox Name="cbRecallSet6" BorderThickness="0" Grid.Column="5" SelectedValue="{Binding SelectedItem, Mode=TwoWay}" >
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="30*"/>
-                                    <ColumnDefinition Width="70*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding Description, Mode=TwoWay}" VerticalAlignment="Center"  HorizontalAlignment="Left"/>
-                                <TextBox Grid.Column="1" Width="40" Text="{Binding Value, Mode=TwoWay}" MaxLength="1" VerticalAlignment="Center" HorizontalAlignment="Right" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-
-                <ComboBox Name="cbRecallSet7" BorderThickness="0" Grid.Column="6" SelectedValue="{Binding SelectedItem, Mode=TwoWay}" >
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="30*"/>
-                                    <ColumnDefinition Width="70*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding Description, Mode=TwoWay}" VerticalAlignment="Center"  HorizontalAlignment="Left"/>
-                                <TextBox Grid.Column="1" Width="40" Text="{Binding Value, Mode=TwoWay}" MaxLength="1" VerticalAlignment="Center" HorizontalAlignment="Right" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-
-                <ComboBox Name="cbRecallSet8" BorderThickness="0" Grid.Column="7" SelectedValue="{Binding SelectedItem, Mode=TwoWay}" >
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="30*"/>
-                                    <ColumnDefinition Width="70*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding Description, Mode=TwoWay}" VerticalAlignment="Center"  HorizontalAlignment="Left"/>
-                                <TextBox Grid.Column="1" Width="40" Text="{Binding Value, Mode=TwoWay}" MaxLength="1" VerticalAlignment="Center" HorizontalAlignment="Right" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-
-            </Grid>
-
         </StackPanel>
     </Grid>
 </Window>

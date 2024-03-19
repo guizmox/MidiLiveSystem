@@ -423,7 +423,6 @@ namespace MidiLiveSystem
                             await Routing.DeleteRouting(box.RoutingGuid);
                             Boxes.Remove(box);
                             await AddAllRoutingBoxes();
-                            await RecallWindow.UpdateBoxes();
                         }
                         break;
                     case "MOVE_NEXT":
@@ -437,7 +436,6 @@ namespace MidiLiveSystem
                             box.GridPosition++;
                             next.GridPosition--;
                             await AddAllRoutingBoxes();
-                            await RecallWindow.UpdateBoxes();
                         }
                         break;
                     case "MOVE_PREVIOUS":
@@ -451,7 +449,6 @@ namespace MidiLiveSystem
                             box.GridPosition--;
                             previous.GridPosition++;
                             await AddAllRoutingBoxes();
-                            await RecallWindow.UpdateBoxes();
                         }
                         break;
                     case "SOLO":
@@ -626,7 +623,6 @@ namespace MidiLiveSystem
             RoutingBox rtb = new RoutingBox(Project, MidiRouting.InputDevices, MidiRouting.OutputDevices, Boxes.Count);
             Boxes.Add(rtb);
             await AddRoutingBoxToFrame(rtb, true);
-            await RecallWindow.UpdateBoxes();
 
         }
 
@@ -984,8 +980,6 @@ namespace MidiLiveSystem
             }
 
             await Task.WhenAll(tasks);
-
-            await RecallWindow.UpdateBoxes();
         }
 
         private async Task AddRoutingBoxToFrame(RoutingBox rtb, bool bCreate)
