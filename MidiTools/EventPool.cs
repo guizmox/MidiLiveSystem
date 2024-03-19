@@ -96,10 +96,6 @@ namespace MidiTools
         private static RoutingActions BackgroundRoutingTasks = new RoutingActions();
         private static Timer timer;
 
-        public static  CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-        public static CancellationToken cancellationToken => cancellationTokenSource.Token;
-
-
         static EventPool()
         {
             timer = new Timer(CleanupCompletedTasks, null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
@@ -137,10 +133,5 @@ namespace MidiTools
             return BackgroundRoutingTasks.GetRoutingActions(routingGuid);
         }
 
-        internal static void CancelTask()
-        {
-            cancellationTokenSource.Cancel();
-            cancellationTokenSource = new CancellationTokenSource();
-        }
     }
 }

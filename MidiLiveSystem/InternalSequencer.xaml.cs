@@ -231,6 +231,7 @@ namespace MidiLiveSystem
 
                 }
 
+                await Routing.Panic();
                 Playing = false;
             }
         }

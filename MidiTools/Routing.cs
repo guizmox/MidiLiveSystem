@@ -16,6 +16,10 @@ namespace MidiTools
     [Serializable]
     internal class MatrixItem
     {
+        public CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+        public CancellationToken cancellationToken => cancellationTokenSource.Token;
+
+
         public delegate void SequencerPlayNote(List<MidiEvent> eventsON, List<MidiEvent> eventsOFF, MatrixItem matrix);
         public event SequencerPlayNote OnSequencerPlayNote;
 
@@ -86,32 +90,35 @@ namespace MidiTools
         {
             await EventPool.AddTask(() =>
             {
-                if (!DeviceInSequencer.Muted && DeviceOut != null && Options.Active)
+                if (!cancellationToken.IsCancellationRequested)
                 {
-                    List<MidiEvent> eventsON = new List<MidiEvent>();
-                    List<MidiEvent> eventsOFF = new List<MidiEvent>();
-
-                    foreach (var note in notes.NotesAndVelocity)
+                    if (!DeviceInSequencer.Muted && DeviceOut != null && Options.Active)
                     {
-                        int iNote = note[0] - DeviceInSequencer.TransposeOffset;
-                        int iVelocity = note[1];
+                        List<MidiEvent> eventsON = new List<MidiEvent>();
+                        List<MidiEvent> eventsOFF = new List<MidiEvent>();
 
-                        MidiEvent mvON = new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelocity }, Tools.GetChannel(ChannelOut), DeviceOut.Name);
-                        eventsON.Add(mvON);
+                        foreach (var note in notes.NotesAndVelocity)
+                        {
+                            int iNote = note[0] - DeviceInSequencer.TransposeOffset;
+                            int iVelocity = note[1];
+
+                            MidiEvent mvON = new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelocity }, Tools.GetChannel(ChannelOut), DeviceOut.Name);
+                            eventsON.Add(mvON);
+                        }
+
+                        foreach (var note in notes.NotesAndVelocity)
+                        {
+                            int iNote = note[0] - DeviceInSequencer.TransposeOffset;
+                            int iVelocity = note[1];
+                            int iLength = (int)Math.Round(lengthInMs);
+
+                            MidiEvent mvOFF = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, iVelocity }, Tools.GetChannel(ChannelOut), DeviceOut.Name);
+                            mvOFF.Delay = iLength;
+                            eventsOFF.Add(mvOFF);
+                        }
+
+                        OnSequencerPlayNote?.Invoke(eventsON, eventsOFF, this);
                     }
-
-                    foreach (var note in notes.NotesAndVelocity)
-                    {
-                        int iNote = note[0] - DeviceInSequencer.TransposeOffset;
-                        int iVelocity = note[1];
-                        int iLength = (int)Math.Round(lengthInMs);
-
-                        MidiEvent mvOFF = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, iVelocity }, Tools.GetChannel(ChannelOut), DeviceOut.Name);
-                        mvOFF.Delay = iLength;
-                        eventsOFF.Add(mvOFF);
-                    }
-
-                    OnSequencerPlayNote?.Invoke(eventsON, eventsOFF, this);
                 }
             });
         }
@@ -120,19 +127,22 @@ namespace MidiTools
         {
             await EventPool.AddTask(() =>
             {
-                if (Options.Active)
+                if (!cancellationToken.IsCancellationRequested)
                 {
-                    int iNote = note.Note;
-                    if (Options.PlayNote_LowestNote)
+                    if (Options.Active)
                     {
-                        iNote = iLowestNotePlayed;
+                        int iNote = note.Note;
+                        if (Options.PlayNote_LowestNote)
+                        {
+                            iNote = iLowestNotePlayed;
+                        }
+
+                        var evON = new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, note.Velocity }, Tools.GetChannel(note.Channel), DeviceOut.Name);
+                        var evOFF = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, note.Velocity }, Tools.GetChannel(note.Channel), DeviceOut.Name);
+                        evOFF.Delay = (int)note.Length;
+
+                        OnSequencerPlayNote?.Invoke(new List<MidiEvent> { evON }, new List<MidiEvent> { evOFF }, this);
                     }
-
-                    var evON = new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, note.Velocity }, Tools.GetChannel(note.Channel), DeviceOut.Name);
-                    var evOFF = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, note.Velocity }, Tools.GetChannel(note.Channel), DeviceOut.Name);
-                    evOFF.Delay = (int)note.Length;
-
-                    OnSequencerPlayNote?.Invoke(new List<MidiEvent> { evON }, new List<MidiEvent> { evOFF }, this);
                 }
             });
         }
@@ -792,6 +802,21 @@ namespace MidiTools
                 DeviceInSequencer = null;
             }
         }
+
+        internal async Task CancelTask()
+        {
+            cancellationTokenSource.Cancel();
+
+            await EventPool.AddTask(() =>
+            {
+                while (EventPool.RoutingTasksRunning(RoutingGuid) > 0)
+                {
+                    Thread.Sleep(10);
+                }
+            });
+
+            cancellationTokenSource = new CancellationTokenSource();
+        }
     }
 
     [Serializable]
@@ -913,12 +938,12 @@ namespace MidiTools
 
             foreach (var item in eventsON)
             {
-                tasks.Add(EventPool.AddTask(async () => await CreateOUTEvent(item, EventPool.cancellationToken, matrix)));
+                tasks.Add(EventPool.AddTask(async () => await CreateOUTEvent(item, matrix)));
             }
 
             foreach (var item in eventsOFF)
             {
-                tasks.Add(EventPool.AddTask(async () => await CreateOUTEvent(item, EventPool.cancellationToken, matrix)));
+                tasks.Add(EventPool.AddTask(async () => await CreateOUTEvent(item, matrix)));
             }
 
             await Task.WhenAll(tasks);
@@ -1000,7 +1025,7 @@ namespace MidiTools
 
             InputStaticMidiMessage?.Invoke(ev);
 
-            await CreateOUTEvent(ev, EventPool.cancellationToken, null);
+            await CreateOUTEvent(ev, null);
         }
 
         private static void DeviceIn_StaticOnMidiEvent(bool bIn, MidiEvent ev)
@@ -1013,100 +1038,91 @@ namespace MidiTools
             NewLog?.Invoke(sDevice, bIn, sLog);
         }
 
-        private async Task CreateOUTEvent(MidiEvent ev, CancellationToken cancellationToken, MatrixItem routingOUT = null)
+        private async Task CreateOUTEvent(MidiEvent ev, MatrixItem routingOUT = null)
         {
-            try
+            //attention : c'est bien un message du device IN qui arrive !
+            List<MatrixItem> matrix = new List<MatrixItem>();
+
+            if (routingOUT == null)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                //attention : c'est bien un message du device IN qui arrive !
-                List<MatrixItem> matrix = new List<MatrixItem>();
-
-                if (routingOUT == null)
-                {
-                    matrix = MidiMatrix.Where(i => i.DeviceOut != null && i.Options.Active && i.DeviceIn != null && i.DeviceIn.Name == ev.Device && Tools.GetChannel(i.ChannelIn) == ev.Channel).ToList();
-                }
-                else //c'est un message déjà OUT (ne venant pas d'un MIDI IN mais d'une invocation UI)
-                {
-                    matrix.Add(routingOUT);
-                }
-
-                foreach (MatrixItem routing in matrix.OrderBy(r => r.Options.PlayMode))
-                {
-                    try
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-
-                        OutputMidiMessage?.Invoke(true, routing.RoutingGuid);
-
-                        List<MidiEvent> EventsToProcess = await EventPreProcessor(cancellationToken, routing, ev, routingOUT == null ? false : true);
-
-                        if (routingOUT != null)
-                        {
-                            await EventPool.AddTaskRouting(routing.RoutingGuid, () =>
-                            {
-                                foreach (var evToProcess in EventsToProcess)
-                                {
-                                    cancellationToken.ThrowIfCancellationRequested();
-
-                                    _eventsProcessedOUT += 1;
-
-                                    if (evToProcess.Delay > 0)
-                                    {
-                                        Thread.Sleep(evToProcess.Delay);
-                                    }
-
-                                    if (evToProcess.Type == TypeEvent.CC) //je mémorise toujours les valeurs des CC pour pouvoir avoir une "image" à un instant T des paramètres joués
-                                    {
-                                        routing.SetCC(evToProcess.Values[0], evToProcess.Values[1], false, evToProcess.Device, evToProcess.Channel);
-                                    }
-
-                                    routing.DeviceOut.SendMidiEvent(evToProcess);
-                                }
-                                OutputMidiMessage?.Invoke(false, routing.RoutingGuid);
-                            });
-                        }
-                        else
-                        {
-                            await EventPool.AddTaskRouting(routing.RoutingGuid, () =>
-                            {
-                                //lecture de tous les events qui ont été ajoutés par les options
-                                foreach (var evToProcess in EventsToProcess)
-                                {
-                                    cancellationToken.ThrowIfCancellationRequested();
-
-                                    _eventsProcessedOUT += 1;
-
-                                    if (evToProcess.Delay > 0)
-                                    {
-                                        Thread.Sleep(evToProcess.Delay);
-                                    }
-
-                                    routing.DeviceOut.SendMidiEvent(evToProcess);
-                                }
-                                OutputMidiMessage?.Invoke(false, routing.RoutingGuid);
-                            });
-                        }
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        if (routing.DeviceOut != null)
-                        {
-                            await RoutingPanic(routing.DeviceOut, routing.ChannelOut);
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        if (routing.DeviceOut != null)
-                        {
-                            await RoutingPanic(routing.DeviceOut, routing.ChannelOut);
-                        }
-                    }
-                }
+                matrix = MidiMatrix.Where(i => i.DeviceOut != null && i.Options.Active && i.DeviceIn != null && i.DeviceIn.Name == ev.Device && Tools.GetChannel(i.ChannelIn) == ev.Channel).ToList();
             }
-            catch (OperationCanceledException)
+            else //c'est un message déjà OUT (ne venant pas d'un MIDI IN mais d'une invocation UI)
             {
+                matrix.Add(routingOUT);
+            }
 
+            foreach (MatrixItem routing in matrix.OrderBy(r => r.Options.PlayMode))
+            {
+                try
+                {
+                    routing.cancellationToken.ThrowIfCancellationRequested();
+
+                    OutputMidiMessage?.Invoke(true, routing.RoutingGuid);
+
+                    List<MidiEvent> EventsToProcess = await EventPreProcessor(routing.cancellationToken, routing, ev, routingOUT == null ? false : true);
+
+                    if (routingOUT != null)
+                    {
+                        await EventPool.AddTaskRouting(routing.RoutingGuid, () =>
+                        {
+                            foreach (var evToProcess in EventsToProcess)
+                            {
+                                routing.cancellationToken.ThrowIfCancellationRequested();
+
+                                _eventsProcessedOUT += 1;
+
+                                if (evToProcess.Delay > 0)
+                                {
+                                    Thread.Sleep(evToProcess.Delay);
+                                }
+
+                                if (evToProcess.Type == TypeEvent.CC) //je mémorise toujours les valeurs des CC pour pouvoir avoir une "image" à un instant T des paramètres joués
+                                {
+                                    routing.SetCC(evToProcess.Values[0], evToProcess.Values[1], false, evToProcess.Device, evToProcess.Channel);
+                                }
+
+                                routing.DeviceOut.SendMidiEvent(evToProcess);
+                            }
+                            OutputMidiMessage?.Invoke(false, routing.RoutingGuid);
+                        });
+                    }
+                    else
+                    {
+                        await EventPool.AddTaskRouting(routing.RoutingGuid, () =>
+                        {
+                            //lecture de tous les events qui ont été ajoutés par les options
+                            foreach (var evToProcess in EventsToProcess)
+                            {
+                                routing.cancellationToken.ThrowIfCancellationRequested();
+
+                                _eventsProcessedOUT += 1;
+
+                                if (evToProcess.Delay > 0)
+                                {
+                                    Thread.Sleep(evToProcess.Delay);
+                                }
+
+                                routing.DeviceOut.SendMidiEvent(evToProcess);
+                            }
+                            OutputMidiMessage?.Invoke(false, routing.RoutingGuid);
+                        });
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    if (routing.DeviceOut != null)
+                    {
+                        await RoutingPanic(routing.DeviceOut, routing.ChannelOut);
+                    }
+                }
+                catch (Exception)
+                {
+                    if (routing.DeviceOut != null)
+                    {
+                        await RoutingPanic(routing.DeviceOut, routing.ChannelOut);
+                    }
+                }
             }
         }
 
@@ -1428,39 +1444,39 @@ namespace MidiTools
                 {
                     if (routing.Options.CC_Attack_Value > -1 || (bInit && routing.Options.CC_Attack_Value > -1))
                     {
-                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Attack, routing.Options.CC_Attack_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), EventPool.cancellationToken, routing);
+                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Attack, routing.Options.CC_Attack_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
                     }
                     if (routing.Options.CC_Timbre_Value > -1 || (bInit && routing.Options.CC_Timbre_Value > -1))
                     {
-                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Timbre, routing.Options.CC_Timbre_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), EventPool.cancellationToken, routing);
+                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Timbre, routing.Options.CC_Timbre_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
                     }
                     if (routing.Options.CC_FilterCutOff_Value > -1 || (bInit && routing.Options.CC_FilterCutOff_Value > -1))
                     {
-                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_FilterCutOff, routing.Options.CC_FilterCutOff_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), EventPool.cancellationToken, routing);
+                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_FilterCutOff, routing.Options.CC_FilterCutOff_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
                     }
                     if (routing.Options.CC_Chorus_Value > -1 || (bInit && routing.Options.CC_Chorus_Value > -1))
                     {
-                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Chorus, routing.Options.CC_Chorus_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), EventPool.cancellationToken, routing);
+                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Chorus, routing.Options.CC_Chorus_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
                     }
                     if (routing.Options.CC_Decay_Value > -1 || (bInit && routing.Options.CC_Decay_Value > -1))
                     {
-                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Decay, routing.Options.CC_Decay_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), EventPool.cancellationToken, routing);
+                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Decay, routing.Options.CC_Decay_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
                     }
                     if (routing.Options.CC_Pan_Value > -1 || (bInit && routing.Options.CC_Pan_Value > -1))
                     {
-                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Pan, routing.Options.CC_Pan_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), EventPool.cancellationToken, routing);
+                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Pan, routing.Options.CC_Pan_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
                     }
                     if (routing.Options.CC_Release_Value > -1 || (bInit && routing.Options.CC_Release_Value > -1))
                     {
-                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Release, routing.Options.CC_Release_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), EventPool.cancellationToken, routing);
+                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Release, routing.Options.CC_Release_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
                     }
                     if (routing.Options.CC_Reverb_Value > -1 || (bInit && routing.Options.CC_Reverb_Value > -1))
                     {
-                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Reverb, routing.Options.CC_Reverb_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), EventPool.cancellationToken, routing);
+                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Reverb, routing.Options.CC_Reverb_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
                     }
                     if (routing.Options.CC_Volume_Value > -1 || (bInit && routing.Options.CC_Volume_Value > -1))
                     {
-                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Volume, routing.Options.CC_Volume_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), EventPool.cancellationToken, routing);
+                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Volume, routing.Options.CC_Volume_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
                     }
                 }
                 else
@@ -1473,39 +1489,39 @@ namespace MidiTools
                     //comparer
                     if (newop.CC_Attack_Value != routing.Options.CC_Attack_Value || (bInit && routing.Options.CC_Attack_Value > -1))
                     {
-                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Attack, newop.CC_Attack_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), EventPool.cancellationToken, routing);
+                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Attack, newop.CC_Attack_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
                     }
                     if (newop.CC_Timbre_Value != routing.Options.CC_Timbre_Value || (bInit && routing.Options.CC_Timbre_Value > -1))
                     {
-                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Timbre, newop.CC_Timbre_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), EventPool.cancellationToken, routing);
+                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Timbre, newop.CC_Timbre_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
                     }
                     if (newop.CC_FilterCutOff_Value != routing.Options.CC_FilterCutOff_Value || (bInit && routing.Options.CC_FilterCutOff_Value > -1))
                     {
-                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_FilterCutOff, newop.CC_FilterCutOff_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), EventPool.cancellationToken, routing);
+                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_FilterCutOff, newop.CC_FilterCutOff_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
                     }
                     if (newop.CC_Chorus_Value != routing.Options.CC_Chorus_Value || (bInit && routing.Options.CC_Chorus_Value > -1))
                     {
-                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Chorus, newop.CC_Chorus_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), EventPool.cancellationToken, routing);
+                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Chorus, newop.CC_Chorus_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
                     }
                     if (newop.CC_Decay_Value != routing.Options.CC_Decay_Value || (bInit && routing.Options.CC_Decay_Value > -1))
                     {
-                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Decay, newop.CC_Decay_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), EventPool.cancellationToken, routing);
+                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Decay, newop.CC_Decay_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
                     }
                     if (newop.CC_Pan_Value != routing.Options.CC_Pan_Value || (bInit && routing.Options.CC_Pan_Value > -1))
                     {
-                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Pan, newop.CC_Pan_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), EventPool.cancellationToken, routing);
+                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Pan, newop.CC_Pan_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
                     }
                     if (newop.CC_Release_Value != routing.Options.CC_Release_Value || (bInit && routing.Options.CC_Release_Value > -1))
                     {
-                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Release, newop.CC_Release_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), EventPool.cancellationToken, routing);
+                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Release, newop.CC_Release_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
                     }
                     if (newop.CC_Reverb_Value != routing.Options.CC_Reverb_Value || (bInit && routing.Options.CC_Reverb_Value > -1))
                     {
-                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Reverb, newop.CC_Reverb_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), EventPool.cancellationToken, routing);
+                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Reverb, newop.CC_Reverb_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
                     }
                     if (newop.CC_Volume_Value != routing.Options.CC_Volume_Value || (bInit && routing.Options.CC_Volume_Value > -1))
                     {
-                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Volume, newop.CC_Volume_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), EventPool.cancellationToken, routing);
+                        await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Volume, newop.CC_Volume_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
                     }
                 }
                 //if (bChanges) { routing.UnblockAllCC(); }
@@ -1544,9 +1560,9 @@ namespace MidiTools
 
                 if (routing.DeviceOut != null)
                 {
-                    await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { pc00.Control, pc00.Value }, pc00.Channel, routing.DeviceOut.Name), EventPool.cancellationToken, routing);
-                    await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { pc32.Control, pc32.Value }, pc32.Channel, routing.DeviceOut.Name), EventPool.cancellationToken, routing);
-                    await CreateOUTEvent(new MidiEvent(TypeEvent.PC, new List<int> { prg.Program }, prg.Channel, routing.DeviceOut.Name), EventPool.cancellationToken, routing);
+                    await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { pc00.Control, pc00.Value }, pc00.Channel, routing.DeviceOut.Name), routing);
+                    await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { pc32.Control, pc32.Value }, pc32.Channel, routing.DeviceOut.Name), routing);
+                    await CreateOUTEvent(new MidiEvent(TypeEvent.PC, new List<int> { prg.Program }, prg.Channel, routing.DeviceOut.Name), routing);
                 }
             }
         }
@@ -2015,7 +2031,7 @@ namespace MidiTools
 
         private async Task SendGenericMidiEvent(MidiEvent ev)
         {
-            await CreateOUTEvent(ev, EventPool.cancellationToken, null);
+            await CreateOUTEvent(ev, null);
         }
 
         private int RandomizeCCValue(int iCC, int iMax, string sDevice, Channel iChannel)
@@ -2398,7 +2414,7 @@ namespace MidiTools
 
                 if (bINChanged)
                 {
-                    EventPool.CancelTask();
+                    await routing.CancelTask();
 
                     if (EventPool.RoutingTasksRunning(routingGuid) == 0)
                     {
@@ -2446,7 +2462,7 @@ namespace MidiTools
 
                 if (bOUTChanged)
                 {
-                    EventPool.CancelTask();
+                    await routing.CancelTask();
 
                     if (EventPool.RoutingTasksRunning(routingGuid) == 0)
                     {
@@ -2630,7 +2646,7 @@ namespace MidiTools
             var routing = MidiMatrix.FirstOrDefault(d => d.RoutingGuid == routingGuid && d.DeviceOut != null);
             if (routing != null)
             {
-                await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { iCC, iValue }, Tools.GetChannel(iChannel), sDevice), EventPool.cancellationToken, routing);
+                await CreateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { iCC, iValue }, Tools.GetChannel(iChannel), sDevice), routing);
             }
         }
 
