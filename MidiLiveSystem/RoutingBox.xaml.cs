@@ -193,24 +193,21 @@ namespace MidiLiveSystem
 
         private async void cbPresetButton_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (cbPresetButton.SelectedIndex > -1)
+            var itemOLD = e.RemovedItems.Count > 0 ? (ComboBoxItem)e.RemovedItems[0] : null;
+            var itemNEW = e.AddedItems.Count > 0 ? (ComboBoxItem)e.AddedItems[0] : null;
+
+            if (itemOLD != null)
             {
-                var itemOLD = e.RemovedItems.Count > 0 ? (ComboBoxItem)e.RemovedItems[0] : null;
-                var itemNEW = e.AddedItems.Count > 0 ? (ComboBoxItem)e.AddedItems[0] : null;
+                var preset = await MemCurrentPreset();
+                int iPreset = Convert.ToInt32(itemOLD.Tag);
+                TempMemory[Convert.ToInt32(iPreset)] = preset;
+            }
 
-                if (itemOLD != null)
-                {
-                    var preset = await MemCurrentPreset();
-                    int iPreset = Convert.ToInt32(itemOLD.Tag);
-                    TempMemory[Convert.ToInt32(iPreset)] = preset;
-                }
-
-                if (itemNEW != null)
-                {
-                    int iPreset = Convert.ToInt32(itemNEW.Tag);
-                    CurrentPreset = iPreset;
-                    await PresetButtonPushed();
-                }
+            if (itemNEW != null)
+            {
+                int iPreset = Convert.ToInt32(itemNEW.Tag);
+                CurrentPreset = iPreset;
+                await PresetButtonPushed();
             }
         }
 
@@ -247,7 +244,7 @@ namespace MidiLiveSystem
                     {
                         InstrumentPresets.OnPresetChanged -= PresetBrowser_OnPresetChanged;
                     }
-                    
+
                     var preset = await GetPreset();
 
                     InstrumentPresets = new PresetBrowser(instr, preset);
@@ -464,10 +461,17 @@ namespace MidiLiveSystem
             }
         }
 
-        private void btnPreset_Click(object sender, RoutedEventArgs e)
+        private async void btnPreset_Click(object sender, RoutedEventArgs e)
         {
-            cbPresetButton.SelectedIndex = -1; //trick pour le forcer à bouger si on appuie 2 fois sur le même bouton
-            cbPresetButton.SelectedIndex = Convert.ToInt32(((Button)sender).Tag);
+            int i = Convert.ToInt32(((Button)sender).Tag);
+            if (cbPresetButton.SelectedIndex == i) //il ne déclenchera pas l'évènement...
+            {
+                await PresetButtonPushed();
+            }
+            else
+            {
+                cbPresetButton.SelectedIndex = i;
+            }
         }
 
         private async void btnCopyPreset_Click(object sender, RoutedEventArgs e)
@@ -1148,10 +1152,17 @@ namespace MidiLiveSystem
 
         internal async Task ChangePreset(int iPreset)
         {
-            await Dispatcher.InvokeAsync(() =>
+            if (await cbPresetButton.Dispatcher.InvokeAsync(() => cbPresetButton.SelectedIndex == iPreset)) //il ne déclenchera pas l'évènement...
             {
-                cbPresetButton.SelectedIndex = iPreset;
-            });
+                await PresetButtonPushed();
+            }
+            else
+            {
+                await cbPresetButton.Dispatcher.InvokeAsync(() =>
+                {
+                    cbPresetButton.SelectedIndex = iPreset;
+                });
+            }
         }
 
         internal async Task<List<string[]>> GetAllDevices()

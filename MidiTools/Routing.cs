@@ -807,13 +807,10 @@ namespace MidiTools
         {
             cancellationTokenSource.Cancel();
 
-            await EventPool.AddTask(() =>
+            while (EventPool.TasksRunning > 0)
             {
-                while (EventPool.RoutingTasksRunning(RoutingGuid) > 0)
-                {
-                    Thread.Sleep(10);
-                }
-            });
+                await Task.Delay(10);
+            }
 
             cancellationTokenSource = new CancellationTokenSource();
         }
@@ -1047,28 +1044,20 @@ namespace MidiTools
             {
                 matrix = MidiMatrix.Where(i => i.DeviceOut != null && i.Options.Active && i.DeviceIn != null && i.DeviceIn.Name == ev.Device && Tools.GetChannel(i.ChannelIn) == ev.Channel).ToList();
             }
-            else //c'est un message déjà OUT (ne venant pas d'un MIDI IN mais d'une invocation UI)
-            {
-                matrix.Add(routingOUT);
-            }
 
-            foreach (MatrixItem routing in matrix.OrderBy(r => r.Options.PlayMode))
+            if (routingOUT != null)
             {
                 try
                 {
-                    if (routing.cancellationToken.IsCancellationRequested) { continue; }
-
-                    OutputMidiMessage?.Invoke(true, routing.RoutingGuid);
-
-                    List<MidiEvent> EventsToProcess = await EventPreProcessor(routing.cancellationToken, routing, ev, routingOUT == null ? false : true);
+                    List<MidiEvent> EventsToProcess = await EventPreProcessor(routingOUT.cancellationToken, routingOUT, ev, routingOUT == null ? false : true);
 
                     if (routingOUT != null)
                     {
-                        await EventPool.AddTaskRouting(routing.RoutingGuid, () =>
+                        await EventPool.AddTask(() =>
                         {
                             foreach (var evToProcess in EventsToProcess)
                             {
-                                if (routing.cancellationToken.IsCancellationRequested) { break; }
+                                if (routingOUT.cancellationToken.IsCancellationRequested) { break; }
 
                                 _eventsProcessedOUT += 1;
 
@@ -1077,15 +1066,36 @@ namespace MidiTools
                                     Thread.Sleep(evToProcess.Delay);
                                 }
 
-                                routing.DeviceOut.SendMidiEvent(evToProcess);
+                                routingOUT.DeviceOut.SendMidiEvent(evToProcess);
                             }
-                            OutputMidiMessage?.Invoke(false, routing.RoutingGuid);
+                            OutputMidiMessage?.Invoke(false, routingOUT.RoutingGuid);
                         });
                     }
-                    else
+                }
+                catch (Exception)
+                {
+                    if (routingOUT.DeviceOut != null)
                     {
-                        await EventPool.AddTaskRouting(routing.RoutingGuid, () =>
+                        await RoutingPanic(routingOUT.DeviceOut, routingOUT.ChannelOut);
+                    }
+                }
+            }
+            else
+            {
+                List<Task> tasks = new List<Task>();
+
+                foreach (MatrixItem routing in matrix.OrderBy(r => r.Options.PlayMode))
+                {
+                    if (routing.cancellationToken.IsCancellationRequested) { break; }
+
+                    tasks.Add(EventPool.AddTask(async () =>
+                    {
+                        List<MidiEvent> EventsToProcess = await EventPreProcessor(routing.cancellationToken, routing, ev, routingOUT == null ? false : true);
+
+                        try
                         {
+                            OutputMidiMessage?.Invoke(true, routing.RoutingGuid);
+
                             //lecture de tous les events qui ont été ajoutés par les options
                             foreach (var evToProcess in EventsToProcess)
                             {
@@ -1101,16 +1111,18 @@ namespace MidiTools
                                 routing.DeviceOut.SendMidiEvent(evToProcess);
                             }
                             OutputMidiMessage?.Invoke(false, routing.RoutingGuid);
-                        });
-                    }
+                        }
+                        catch (Exception)
+                        {
+                            if (routing.DeviceOut != null)
+                            {
+                                await RoutingPanic(routing.DeviceOut, routing.ChannelOut);
+                            }
+                        }
+                    }));
                 }
-                catch (Exception)
-                {
-                    if (routing.DeviceOut != null)
-                    {
-                        await RoutingPanic(routing.DeviceOut, routing.ChannelOut);
-                    }
-                }
+
+                await Task.WhenAll(tasks);
             }
         }
 
@@ -2401,7 +2413,7 @@ namespace MidiTools
                     await routing.CancelTask();
                     await RoutingPanic(routing.DeviceOut, routing.ChannelOut);
 
-                    if (EventPool.RoutingTasksRunning(routingGuid) == 0)
+                    if (EventPool.TasksRunning == 0)
                     {
                         bool active = routing.Options.Active;
                         routing.Options.Active = false;
@@ -2450,7 +2462,7 @@ namespace MidiTools
                     await routing.CancelTask();
                     await RoutingPanic(routing.DeviceOut, routing.ChannelOut);
 
-                    if (EventPool.RoutingTasksRunning(routingGuid) == 0)
+                    if (EventPool.TasksRunning == 0)
                     {
                         bool active = routing.Options.Active;
                         routing.Options.Active = false;
