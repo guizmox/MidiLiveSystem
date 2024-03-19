@@ -972,14 +972,10 @@ namespace MidiLiveSystem
         {
             RemoveAllBoxes(CurrentHorizontalGrid, CurrentVerticalGrid);
 
-            List<Task> tasks = new List<Task>();
-
             foreach (var box in Boxes.OrderBy(b => b.GridPosition))
             {
-                tasks.Add(EventPool.AddTask(async () => await AddRoutingBoxToFrame(box, true)));
+                await AddRoutingBoxToFrame(box, true);
             }
-
-            await Task.WhenAll(tasks);
         }
 
         private async Task AddRoutingBoxToFrame(RoutingBox rtb, bool bCreate)

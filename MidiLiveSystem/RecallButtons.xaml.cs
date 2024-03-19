@@ -47,7 +47,7 @@ namespace MidiLiveSystem
         {
             foreach (var item in Project.RecallData)
             {
-                Memory[item.ButtonIndex - 1] = new RecallMemory { CurrentPreset = item.ButtonIndex, BoxGuids = item.BoxGuids, BoxPresets = item.BoxPresets };
+                Memory[item.ButtonIndex] = new RecallMemory { CurrentPreset = item.ButtonIndex, BoxGuids = item.BoxGuids, BoxPresets = item.BoxPresets };
             }
         }
 
