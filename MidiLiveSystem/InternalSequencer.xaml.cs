@@ -74,6 +74,9 @@ namespace MidiLiveSystem
                 frame.Navigate(box);
             };
 
+            tbLowKeyTranspose.Text = SequencerData.LowKeyTranspose.ToString();
+            tbHighKeyTranspose.Text = SequencerData.HighKeyTranspose.ToString();
+
             MidiRouting.InputStaticMidiMessage += Routing_IncomingMidiMessage;
         }
 
@@ -122,6 +125,12 @@ namespace MidiLiveSystem
             MidiRouting.InputStaticMidiMessage -= Routing_IncomingMidiMessage;
 
             await StopPlay(true);
+
+            string sLowKey = await tbLowKeyTranspose.Dispatcher.InvokeAsync(() => tbLowKeyTranspose.Text);
+            string sHighey = await tbHighKeyTranspose.Dispatcher.InvokeAsync(() => tbHighKeyTranspose.Text);
+            var result = SeqData.SetTransposition(sLowKey, sHighey);
+            await tbLowKeyTranspose.Dispatcher.InvokeAsync(() => tbLowKeyTranspose.Text = result[0].ToString());
+            await tbHighKeyTranspose.Dispatcher.InvokeAsync(() => tbHighKeyTranspose.Text = result[1].ToString());
         }
 
         private async void btnPlaySequences_Click(object sender, RoutedEventArgs e)
@@ -164,6 +173,12 @@ namespace MidiLiveSystem
             }
             else
             {
+                string sLowKey = await tbLowKeyTranspose.Dispatcher.InvokeAsync(() => tbLowKeyTranspose.Text);
+                string sHighey = await tbHighKeyTranspose.Dispatcher.InvokeAsync(() => tbHighKeyTranspose.Text);
+                var result = SeqData.SetTransposition(sLowKey, sHighey);
+                await tbLowKeyTranspose.Dispatcher.InvokeAsync(() => tbLowKeyTranspose.Text = result[0].ToString());
+                await tbHighKeyTranspose.Dispatcher.InvokeAsync(() => tbHighKeyTranspose.Text = result[1].ToString());
+
                 await btnPlaySequences.Dispatcher.InvokeAsync(() => btnPlaySequences.Background = Brushes.IndianRed);
                 await btnStopSequences.Dispatcher.InvokeAsync(() => btnStopSequences.Background = Brushes.DarkGray);
 
@@ -239,18 +254,5 @@ namespace MidiLiveSystem
                 Playing = false;
             }
         }
-    }
-
-    [Serializable]
-    public class SequencerData
-    {
-        public Sequencer[] Sequencer;
-        public string StartStopListener = "";
-
-        public SequencerData()
-        {
-
-        }
-
     }
 }

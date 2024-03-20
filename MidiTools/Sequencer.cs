@@ -10,7 +10,7 @@ namespace MidiTools
     [Serializable]
     public class Sequencer
     {
-        public delegate void SequencerStepHandler(SequenceStep notes, double lengthInMs, int lastPositionInSequence, int positionInSequence);
+        public delegate void SequencerStepHandler(SequenceStep notes, SequenceStep lastnotes, double lengthInMs, int lastPositionInSequence, int positionInSequence);
         public event SequencerStepHandler OnInternalSequencerStep;
 
         public bool[] LiveNotes = new bool[128];
@@ -60,7 +60,7 @@ namespace MidiTools
 
             if (Transpose)
             {
-                int iFirstNote = GetLowestNote();
+                int iFirstNote = GetLowestNote(SequencerData.LowKeyTranspose, SequencerData.HighKeyTranspose);
                 if (iFirstNote > -1)
                 {
                     int iDelta = StartNote - iFirstNote;
@@ -182,7 +182,7 @@ namespace MidiTools
             if (Sequence[Loop] != null) //c'est une tie
             {
                 double length = ((TimerFrequency * Sequence[Loop].StepCount) * (Sequence[Loop].GatePercent / 100.0));
-                OnInternalSequencerStep?.Invoke(Sequence[Loop], (int)length, LastPositionInSequence, Loop);
+                OnInternalSequencerStep?.Invoke(Sequence[Loop], Sequence[LastPositionInSequence], (int)length, LastPositionInSequence, Loop);
                 LastPositionInSequence = Loop;
             }
 
@@ -199,10 +199,10 @@ namespace MidiTools
             SetSequence(null);
         }
 
-        internal int GetLowestNote()
+        internal int GetLowestNote(int iLowNote, int iHighNote)
         {
             int iNote = -1;
-            for (int i = 0; i < 128; i++)
+            for (int i = iLowNote; i <= iHighNote; i++)
             {
                 if (LiveNotes[i])
                 {

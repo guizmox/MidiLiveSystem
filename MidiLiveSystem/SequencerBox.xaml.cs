@@ -259,6 +259,14 @@ namespace MidiLiveSystem
             });
         }
 
+        private async Task ChangeButtonTextPlay(int iStep)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                ButtonSteps[iStep].Content = ">";
+            });
+        }
+
         private void BtnStep_Click(object sender, RoutedEventArgs e)
         {
             if (!IsPlaying)
@@ -451,20 +459,14 @@ namespace MidiLiveSystem
             }
         }
 
-        private async void InternalSequence_OnInternalSequencerStep(SequenceStep notes, double lengthInMs, int lastpositionInSequence, int positionInSequence)
+        private async void InternalSequence_OnInternalSequencerStep(SequenceStep notes, SequenceStep lastnotes, double lengthInMs, int lastpositionInSequence, int positionInSequence)
         {
             if (await Dispatcher.InvokeAsync(() => MainWindow.IsVisible))
             {
-                if (notes.Step > 0)
-                {
-                    await ChangeButtonColor(lastpositionInSequence, Brushes.IndianRed);
-                    await ChangeButtonColor(positionInSequence, Brushes.Green);
-                }
-                else if (notes.Step == 0)
-                {
-                    await ChangeButtonColor(lastpositionInSequence, Brushes.IndianRed);
-                    await ChangeButtonColor(positionInSequence, Brushes.Green);
-                }
+                await ChangeButtonColor(lastpositionInSequence, Brushes.IndianRed);
+                await ChangeButtonColor(positionInSequence, Brushes.Green);
+                await ChangeButtonText(lastpositionInSequence, lastnotes);
+                await ChangeButtonTextPlay(positionInSequence);
             }
         }
     }

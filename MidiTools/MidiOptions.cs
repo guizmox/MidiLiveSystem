@@ -109,6 +109,8 @@ namespace MidiTools
             }
         }
 
+        public List<int> UndefinedCC = new List<int> { 14, 15, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 85, 86, 87, 89, 90, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119  };
+
         public PlayModes PlayMode = PlayModes.NORMAL;
 
         public bool AllowModulation = true;
@@ -119,7 +121,7 @@ namespace MidiTools
         public bool AllowAftertouch = true;
         public bool AllowPitchBend = true;
         public bool AllowProgramChange = true;
-
+        public bool AllowUndefinedCC = true;
 
         public int CC_ToVolume { get; set; } = -1; //convertisseur de CC pour le volume (ex : CC 102 -> CC 7)
 

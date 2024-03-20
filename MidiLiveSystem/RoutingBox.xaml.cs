@@ -784,6 +784,7 @@ namespace MidiLiveSystem
 
                 ckAllowAftertouch.IsChecked = bp.MidiOptions.AllowAftertouch;
                 ckAllowAllCC.IsChecked = bp.MidiOptions.AllowAllCC;
+                ckAllowUndefinedCC.IsChecked = bp.MidiOptions.AllowUndefinedCC;
                 ckAllowModulation.IsChecked = bp.MidiOptions.AllowModulation;
                 ckAllowNotes.IsChecked = bp.MidiOptions.AllowNotes;
                 ckAllowNrpn.IsChecked = bp.MidiOptions.AllowNrpn;
@@ -973,6 +974,7 @@ namespace MidiLiveSystem
                 options.TransposeNoteRange = ckTransposeNoteRange.IsChecked.Value;
 
                 options.AllowAftertouch = ckAllowAftertouch.IsChecked.Value;
+                options.AllowUndefinedCC = ckAllowUndefinedCC.IsChecked.Value;
                 options.AllowAllCC = ckAllowAllCC.IsChecked.Value;
                 options.AllowModulation = ckAllowModulation.IsChecked.Value;
                 options.AllowNotes = ckAllowNotes.IsChecked.Value;

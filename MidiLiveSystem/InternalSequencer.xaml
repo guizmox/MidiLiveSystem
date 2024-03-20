@@ -64,6 +64,23 @@
                     </StackPanel>
                 </Button>
 
+                <Label Content="Transposition Range"/>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="25*"/>
+                            <ColumnDefinition Width="20*"/>
+                            <ColumnDefinition Width="25*"/>
+                            <ColumnDefinition Width="20*"/>
+                        </Grid.ColumnDefinitions>
+                        <Label Grid.Column="0" Content="FROM"/>
+                        <TextBox x:Name="tbLowKeyTranspose" Text="21" Grid.Column="1" MaxLength="3"  materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                        <Label Grid.Column="2" Content="TO"/>
+                        <TextBox x:Name="tbHighKeyTranspose" Text="48" Grid.Column="3" MaxLength="3" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                    </Grid>
+                </StackPanel>
+         
+                
                 <Button Name="btnStopSequences" Background="DarkGray" Grid.Column="3" Width="140" Height="60" Click="btnStopSequences_Click" >
                     <StackPanel>
                         <TextBlock HorizontalAlignment="Center">

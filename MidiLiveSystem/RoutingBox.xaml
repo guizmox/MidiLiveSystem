@@ -370,14 +370,15 @@
                                     <CheckBox Content="{Binding Content}" IsChecked="{Binding IsChecked}"/>
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
-                            <CheckBox Name="ckAllowModulation" IsChecked="True" Content="Modulation"/>
-                            <CheckBox Name="ckAllowNotes" IsChecked="True" Content="Notes"/>
-                            <CheckBox Name="ckAllowAllCC"  IsChecked="True" Content="CC"/>
-                            <CheckBox Name="ckAllowSysex" IsChecked="True" Content="SysEx"/>
-                            <CheckBox Name="ckAllowNrpn" IsChecked="True" Content="Nrpn"/>
-                            <CheckBox Name="ckAllowAftertouch" IsChecked="True" Content="Aftertouch"/>
-                            <CheckBox Name="ckAllowPitchBend" IsChecked="True" Content="Pitch"/>
-                            <CheckBox Name="ckAllowProgramChange" IsChecked="True" Content="Prog. Change"/>
+                            <CheckBox Name="ckAllowModulation" IsChecked="True" Content="Allow Modulation"/>
+                            <CheckBox Name="ckAllowNotes" IsChecked="True" Content="Allow Notes"/>
+                            <CheckBox Name="ckAllowAllCC"  IsChecked="True" Content="Allow CC"/>
+                            <CheckBox Name="ckAllowUndefinedCC"  IsChecked="True" Content="Allow Undefined CC"/>
+                            <CheckBox Name="ckAllowSysex" IsChecked="True" Content="Allow SysEx"/>
+                            <CheckBox Name="ckAllowNrpn" IsChecked="True" Content="Allow Nrpn"/>
+                            <CheckBox Name="ckAllowAftertouch" IsChecked="True" Content="Allow Aftertouch"/>
+                            <CheckBox Name="ckAllowPitchBend" IsChecked="True" Content="Allow Pitch Bend"/>
+                            <CheckBox Name="ckAllowProgramChange" IsChecked="True" Content="Allow Prog. Change"/>
                         </ComboBox>
                         <TextBlock Grid.Column="0" Grid.Row="2" Text="CC CONVERT"/>
                         <StackPanel Grid.Column="2" Grid.Row="2" Grid.ColumnSpan="2" Grid.RowSpan="2">
