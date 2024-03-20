@@ -11,7 +11,7 @@ namespace MidiTools
 {
     public static class EventPool
     {
-        public static int TasksRunning
+        internal static int TasksRunning
         {
             get
             {

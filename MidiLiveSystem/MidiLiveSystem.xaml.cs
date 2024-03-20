@@ -98,7 +98,7 @@ namespace MidiLiveSystem
         {
             await Dispatcher.InvokeAsync(() =>
             {
-                Title = string.Concat(APP_NAME, " [", sMessage, " -" + EventPool.TasksRunning + " task(s) running]");
+                Title = string.Concat(APP_NAME, " [", sMessage, "]");
             });
         }
 
@@ -565,11 +565,11 @@ namespace MidiLiveSystem
             {
                 if (Routing.Events <= 16) //pour éviter de saturer les process avec des appels UI inutiles
                 {
-                    Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, " - UI Refresh Rate : ", UIRefreshRate.Interval / 1000, " Sec  - " + EventPool.TasksRunning + " task(s) running]");
+                    Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, " - UI Refresh Rate : ", UIRefreshRate.Interval / 1000, " Sec]");
                 }
                 else
                 {
-                    Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, " - UI events disabled - " + EventPool.TasksRunning + " task(s) running]");
+                    Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, " - UI events disabled]");
                 }
             });
         }

@@ -498,6 +498,29 @@ namespace MidiTools
             return newNotes;
         }
 
+        internal List<int> ClearPendingNotes()
+        {
+            List<int> NotesToRemove = new List<int>();
+
+            for (int i = 0; i < 128; i++)
+            {
+                if (NotesSentForPanic[i])
+                {
+                    NotesToRemove.Add(i);
+                    NotesSentForPanic[i] = false;
+                }
+            }
+
+            if (_noteHarmony > 0)
+            {
+                NotesToRemove.Add(_noteHarmony);
+                _noteHarmony = 0;
+                _harmony = Harmony.MAJOR;
+            }
+
+            return NotesToRemove;
+        }
+
         static List<int> FindClosestNumbers(List<int> numbers, int count)
         {
             if (count >= numbers.Count)
@@ -1049,7 +1072,7 @@ namespace MidiTools
             {
                 if (routingOUT.DeviceOut != null)
                 {
-                    await RoutingPanic(routingOUT.DeviceOut, routingOUT.ChannelOut);
+                    await RoutingPanic(routingOUT, routingOUT.ChannelOut);
                 }
             }
         }
@@ -1090,7 +1113,7 @@ namespace MidiTools
                     {
                         if (routing.DeviceOut != null)
                         {
-                            await RoutingPanic(routing.DeviceOut, routing.ChannelOut);
+                            await RoutingPanic(routing, routing.ChannelOut);
                         }
                     }
                 }));
@@ -1452,7 +1475,7 @@ namespace MidiTools
                 {
                     if (newop.TranspositionOffset != routing.Options.TranspositionOffset) //midi panic
                     {
-                        await RoutingPanic(routing.DeviceOut, routing.ChannelOut);
+                        await RoutingPanic(routing, routing.ChannelOut);
                     }
 
                     //comparer
@@ -2267,20 +2290,30 @@ namespace MidiTools
             await Task.WhenAll(devicesWork);
         }
 
-        private async Task RoutingPanic(MidiDevice deviceOut, int channelOut)
+        private async Task RoutingPanic(MatrixItem routing, int channelOut)
         {
-            if (deviceOut != null)
+            if (routing.DeviceOut != null)
             {
                 List<Task> tasks = new List<Task>();
+
+                tasks.Add(EventPool.AddTask(() =>
+                {
+                    List<int> pendingnotes = routing.ClearPendingNotes();
+
+                    foreach (var i in pendingnotes)
+                    {
+                        routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { i, 0 }, Tools.GetChannel(channelOut), routing.DeviceOut.Name));
+                    }
+                }));
 
                 for (int iKey = 0; iKey < 128; iKey++)
                 {
                     int iKeyCopy = iKey;
-                    if (deviceOut.GetLiveNOTEValue(channelOut, iKeyCopy))
+                    if (routing.DeviceOut.GetLiveNOTEValue(channelOut, iKeyCopy))
                     {
                         tasks.Add(EventPool.AddTask(() =>
                         {
-                            deviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKeyCopy, 0 }, Tools.GetChannel(channelOut), deviceOut.Name));
+                            routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKeyCopy, 0 }, Tools.GetChannel(channelOut), routing.DeviceOut.Name));
                         }));
                     }
                 }
@@ -2383,73 +2416,67 @@ namespace MidiTools
                 if (bINChanged)
                 {
                     await routing.CancelTask();
-                    await RoutingPanic(routing.DeviceOut, routing.ChannelOut);
+                    await RoutingPanic(routing, routing.ChannelOut);
 
-                    if (EventPool.TasksRunning == 0)
+                    bool active = routing.Options.Active;
+                    routing.Options.Active = false;
+
+                    routing.OnSequencerPlayNote -= MatrixItem_OnSequencerPlayNote;
+
+                    if (sDeviceIn.Equals(Tools.INTERNAL_GENERATOR))
                     {
-                        bool active = routing.Options.Active;
-                        routing.Options.Active = false;
-
-                        routing.OnSequencerPlayNote -= MatrixItem_OnSequencerPlayNote;
-
-                        if (sDeviceIn.Equals(Tools.INTERNAL_GENERATOR))
+                        routing.RemoveSequencer();
+                        routing.OnSequencerPlayNote += MatrixItem_OnSequencerPlayNote;
+                        routing.DeviceIn = null;
+                        routing.DeviceInInternalName = Tools.INTERNAL_GENERATOR;
+                    }
+                    else if (sDeviceIn.Equals(Tools.INTERNAL_SEQUENCER))
+                    {
+                        if (DeviceInSequencer != null)
                         {
-                            routing.RemoveSequencer();
+                            routing.AddSequencer(DeviceInSequencer);
                             routing.OnSequencerPlayNote += MatrixItem_OnSequencerPlayNote;
                             routing.DeviceIn = null;
-                            routing.DeviceInInternalName = Tools.INTERNAL_GENERATOR;
+                            routing.DeviceInInternalName = Tools.INTERNAL_SEQUENCER;
                         }
-                        else if (sDeviceIn.Equals(Tools.INTERNAL_SEQUENCER))
+                    }
+                    else
+                    {
+                        routing.OnSequencerPlayNote -= MatrixItem_OnSequencerPlayNote;
+                        routing.RemoveSequencer();
+                        routing.DeviceInInternalName = "";
+
+                        if (sDeviceIn.Length > 0)
                         {
-                            if (DeviceInSequencer != null)
-                            {
-                                routing.AddSequencer(DeviceInSequencer);
-                                routing.OnSequencerPlayNote += MatrixItem_OnSequencerPlayNote;
-                                routing.DeviceIn = null;
-                                routing.DeviceInInternalName = Tools.INTERNAL_SEQUENCER;
-                            }
+                            routing.DeviceIn = AddNewInDevice(sDeviceIn);
                         }
                         else
                         {
-                            routing.OnSequencerPlayNote -= MatrixItem_OnSequencerPlayNote;
-                            routing.RemoveSequencer();
-                            routing.DeviceInInternalName = "";
-
-                            if (sDeviceIn.Length > 0)
-                            {
-                                routing.DeviceIn = AddNewInDevice(sDeviceIn);
-                            }
-                            else
-                            {
-                                routing.DeviceIn = null;
-                            }
+                            routing.DeviceIn = null;
                         }
-                        routing.ChannelIn = iChIn;
-                        routing.Options.Active = active;
                     }
+                    routing.ChannelIn = iChIn;
+                    routing.Options.Active = active;
                 }
 
                 if (bOUTChanged)
                 {
                     await routing.CancelTask();
-                    await RoutingPanic(routing.DeviceOut, routing.ChannelOut);
+                    await RoutingPanic(routing, routing.ChannelOut);
 
-                    if (EventPool.TasksRunning == 0)
+                    bool active = routing.Options.Active;
+                    routing.Options.Active = false;
+
+                    if (sDeviceOut.Length > 0)
                     {
-                        bool active = routing.Options.Active;
-                        routing.Options.Active = false;
-
-                        if (sDeviceOut.Length > 0)
-                        {
-                            routing.DeviceOut = AddNewOutDevice(sDeviceOut);
-                        }
-                        else
-                        {
-                            routing.DeviceOut = null;
-                        }
-                        routing.ChannelOut = iChOut;
-                        routing.Options.Active = active;
+                        routing.DeviceOut = AddNewOutDevice(sDeviceOut);
                     }
+                    else
+                    {
+                        routing.DeviceOut = null;
+                    }
+                    routing.ChannelOut = iChOut;
+                    routing.Options.Active = active;
                 }
 
                 if (iChOut > 0 && iChOut <= 16)
@@ -2525,7 +2552,7 @@ namespace MidiTools
             var routingOff = MidiMatrix.Where(m => m.RoutingGuid != routingGuid);
             foreach (var r in routingOff)
             {
-                await RoutingPanic(r.DeviceOut, r.ChannelOut);
+                await RoutingPanic(r, r.ChannelOut);
                 r.TempActive = r.Options.Active;
                 r.Options.Active = false;
             }
@@ -2536,7 +2563,7 @@ namespace MidiTools
             var routingOn = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
             if (routingOn != null)
             {
-                await RoutingPanic(routingOn.DeviceOut, routingOn.ChannelOut);
+                await RoutingPanic(routingOn, routingOn.ChannelOut);
                 routingOn.TempActive = true;
                 routingOn.Options.Active = false;
             }
