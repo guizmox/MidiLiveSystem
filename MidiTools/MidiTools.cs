@@ -37,59 +37,22 @@ namespace MidiTools
 
         internal static int GetNoteInt(Key key)
         {
-            return Convert.ToInt32(key.ToString()[3..]);
+            return (int)key;
         }
 
         internal static int GetChannelInt(Channel ch)
         {
-            return Convert.ToInt32(ch.ToString()[7..]);
+            return (int)ch + 1;
         }
 
         internal static Key GetNote(int iNote)
         {
-            Enum.TryParse("Key" + iNote, out RtMidi.Core.Enums.Key nt);
-            return nt;
+            return (Key)iNote;
         }
 
         internal static Channel GetChannel(int iC)
         {
-            switch (iC)
-            {
-                case 1:
-                    return Channel.Channel1;
-                case 2:
-                    return Channel.Channel2;
-                case 3:
-                    return Channel.Channel3;
-                case 4:
-                    return Channel.Channel4;
-                case 5:
-                    return Channel.Channel5;
-                case 6:
-                    return Channel.Channel6;
-                case 7:
-                    return Channel.Channel7;
-                case 8:
-                    return Channel.Channel8;
-                case 9:
-                    return Channel.Channel9;
-                case 10:
-                    return Channel.Channel10;
-                case 11:
-                    return Channel.Channel11;
-                case 12:
-                    return Channel.Channel12;
-                case 13:
-                    return Channel.Channel13;
-                case 14:
-                    return Channel.Channel14;
-                case 15:
-                    return Channel.Channel15;
-                case 16:
-                    return Channel.Channel16;
-                default:
-                    return Channel.Channel1;
-            }
+            return (Channel)iC - 1;
         }
 
         internal static int[] GetNoteIndex(int key, int vel, MatrixItem routing, bool bNoteOff)
@@ -234,6 +197,25 @@ namespace MidiTools
             double intervalleTimerMs = dureeMesureMs; // On prend un quart de la mesure
 
             return (int)intervalleTimerMs;
+        }
+
+        internal static int FindIndexIn2dArray(int iChannel, bool[,] notesSentForPanic, bool bHighest)
+        {
+            if (bHighest)
+            {
+                for (int i = 127; i >= 0; i--)
+                {
+                    if (notesSentForPanic[iChannel, i]) { return i; }
+                }
+            }
+            else
+            {
+                for (int i = 0; i < 128; i++)
+                {
+                    if (notesSentForPanic[iChannel, i]) { return i; }
+                }
+            }
+            return -1;
         }
     }
 

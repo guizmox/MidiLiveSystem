@@ -407,17 +407,11 @@ namespace MidiTools
         {
             if (eventOUT.Type == TypeEvent.NOTE_ON)
             {
-                if (!NotesSentForPanic[eventOUT.Values[0]])
-                {
-                    NotesSentForPanic[eventOUT.Values[0]] = true;
-                }
+                NotesSentForPanic[eventOUT.Values[0]] = true;
             }
             else
             {
-                if (NotesSentForPanic[eventOUT.Values[0]])
-                {
-                    NotesSentForPanic[eventOUT.Values[0]] = false;
-                }
+                NotesSentForPanic[eventOUT.Values[0]] = false;
             }
         }
 
@@ -728,7 +722,7 @@ namespace MidiTools
             BlockIncomingCC[iCC] = false;
         }
 
-        internal bool IsBlocked(int iCC, int iCCValue)
+        internal bool IsBlocked(int iCC)
         {
             return BlockIncomingCC[iCC];
         }
@@ -741,37 +735,32 @@ namespace MidiTools
             }
         }
 
-        internal List<MidiEvent> SetCC(int iCC, int iCCValue, bool bSmooth, string sDevice, Channel iChannel)
+        internal List<MidiEvent> SetCC(int iCC, int iCCValue, MatrixItem routing)
         {
             //int iChannel = Tools.GetChannelInt(channel);
             List<MidiEvent> intermediate = new List<MidiEvent>();
 
-            var device = MidiRouting.UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDevice));
-
-            if (device != null)
+            if (routing.Options.SmoothCC)
             {
-                int liveCC = device.GetLiveCCValue(Tools.GetChannelInt(iChannel), iCC);
+                int liveCC = routing.DeviceOut.GetLiveCCValue(routing.ChannelOut, iCC);
 
-                if (bSmooth)
+                if (!CCToNotBlock.Contains(iCC))
                 {
-                    if (!CCToNotBlock.Contains(iCC))
+                    if ((liveCC + 16) < iCCValue)
                     {
-                        if ((liveCC + 16) < iCCValue)
+                        for (int i = liveCC; i < iCCValue; i += 2)
                         {
-                            for (int i = liveCC; i < iCCValue; i += 2)
-                            {
-                                intermediate.Add(new MidiEvent(TypeEvent.CC, new List<int> { iCC, i }, iChannel, sDevice));
-                            }
-                            BlockIncomingCC[iCC] = true;
+                            intermediate.Add(new MidiEvent(TypeEvent.CC, new List<int> { iCC, i }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
                         }
-                        else if ((liveCC - 16) > iCCValue)
+                        BlockIncomingCC[iCC] = true;
+                    }
+                    else if ((liveCC - 16) > iCCValue)
+                    {
+                        for (int i = liveCC; i > iCCValue; i -= 2)
                         {
-                            for (int i = liveCC; i > iCCValue; i -= 2)
-                            {
-                                intermediate.Add(new MidiEvent(TypeEvent.CC, new List<int> { iCC, i }, iChannel, sDevice));
-                            }
-                            BlockIncomingCC[iCC] = true;
+                            intermediate.Add(new MidiEvent(TypeEvent.CC, new List<int> { iCC, i }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
                         }
+                        BlockIncomingCC[iCC] = true;
                     }
                 }
             }
@@ -1255,28 +1244,23 @@ namespace MidiTools
                     break;
 
                 case TypeEvent.CC: //smooth CC
-                    if (bOutEvent) //!bOutevent parce qu'on ne veut pas que les évènements forcés (type changement preset) créent un smooth
-                    {
-                        routing.UnblockCC(eventOUT.Values[0]);
-                    }
                     //si l'item est bloqué à cause du smooth, on interdit les nouveaux entrants
-                    if (routing.IsBlocked(eventOUT.Values[0], eventOUT.Values[1]))
+                    if (routing.IsBlocked(eventOUT.Values[0]))
                     {
                         bAvoidCCToSmooth = true;
                     }
                     else
                     {
                         //sinon on enregistre et on crée une liste d'events additionnels
-                        var newitems = routing.SetCC(eventOUT.Values[0], eventOUT.Values[1], routing.Options.SmoothCC, eventOUT.Device, eventOUT.Channel);
-                        int count = newitems.Count;
+                        var newitems = routing.SetCC(eventOUT.Values[0], eventOUT.Values[1], routing);
 
-                        if (routing.Options.SmoothCC && count > 0)
+                        if (routing.Options.SmoothCC && newitems.Count > 0)
                         {
                             bAvoidCCToSmooth = true;
 
                             foreach (var cc in newitems)
                             {
-                                cc.Delay = (int)(routing.Options.SmoothCCLength / count); //le smoooth doit durer 1sec
+                                cc.Delay = (int)(routing.Options.SmoothCCLength / newitems.Count); //le smoooth doit durer 1sec
                                 EventsToProcess.Add(cc);
                             }
                             routing.UnblockCC(eventOUT.Values[0]);
@@ -1356,8 +1340,8 @@ namespace MidiTools
                                 int randomWaitON = random.Next(1, 40);
                                 int randomPB = random.Next(8192 - 400, 8192 + 400);
 
-                                int iNewVol = RandomizeCCValue(7, 5, eventOUT.Device, eventOUT.Channel);
-                                int iNewMod = RandomizeCCValue(1, 5, eventOUT.Device, eventOUT.Channel);
+                                int iNewVol = RandomizeCCValue(7, 5, routing);
+                                int iNewMod = RandomizeCCValue(1, 5, routing);
                                 //int iNewPan = 0; // routing.RandomizeCCValue(10, copiedevent.Channel, copiedevent.Device, 5);
 
                                 MidiEvent pbRandom = new MidiEvent(TypeEvent.PB, new List<int> { randomPB }, eventOUT.Channel, eventOUT.Device);
@@ -2019,10 +2003,9 @@ namespace MidiTools
             await GenerateOUTEvent(ev, routing);
         }
 
-        private int RandomizeCCValue(int iCC, int iMax, string sDevice, Channel iChannel)
+        private int RandomizeCCValue(int iCC, int iMax, MatrixItem routing)
         {
-            var device = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDevice));
-            int liveCC = device.GetLiveCCValue(Tools.GetChannelInt(iChannel), iCC);
+            int liveCC = routing.DeviceOut.GetLiveCCValue(routing.ChannelOut, iCC);
 
             Random random = new Random();
             int iVariation = random.Next(-iMax, iMax);
