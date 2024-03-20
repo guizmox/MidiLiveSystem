@@ -1038,30 +1038,23 @@ namespace MidiTools
             {
                 List<MidiEvent> EventsToProcess = await EventPreProcessor(routingOUT.cancellationToken, routingOUT, ev, true);
 
-                if (routingOUT != null)
+                await EventPool.AddTask(() =>
                 {
-
-                    List<Task> tasks = new List<Task>();
-
-                    foreach (var evToProcess in EventsToProcess)
+                    for (int i = 0; i < EventsToProcess.Count; i++)
                     {
-                        tasks.Add(EventPool.AddTask(() =>
+                        if (routingOUT.cancellationToken.IsCancellationRequested) { return; }
+
+                        _eventsProcessedOUT += 1;
+
+                        if (EventsToProcess[i].Delay > 0)
                         {
-                            if (routingOUT.cancellationToken.IsCancellationRequested) { return; }
+                            Thread.Sleep(EventsToProcess[i].Delay);
+                        }
 
-                            _eventsProcessedOUT += 1;
-
-                            if (evToProcess.Delay > 0)
-                            {
-                                Thread.Sleep(evToProcess.Delay);
-                            }
-
-                            routingOUT.DeviceOut.SendMidiEvent(evToProcess);
-                        }));
+                        routingOUT.DeviceOut.SendMidiEvent(EventsToProcess[i]);
                     }
-                    await Task.WhenAll();
-                    OutputMidiMessage?.Invoke(false, routingOUT.RoutingGuid);
-                }
+                });
+                OutputMidiMessage?.Invoke(false, routingOUT.RoutingGuid);
             }
             catch (Exception)
             {
@@ -1089,27 +1082,19 @@ namespace MidiTools
 
                     try
                     {
-                        OutputMidiMessage?.Invoke(true, routing.RoutingGuid);
-
-                        List<Task> tasksev = new List<Task>();
-                        //lecture de tous les events qui ont été ajoutés par les options
-                        foreach (var evToProcess in EventsToProcess)
+                        for (int i = 0; i < EventsToProcess.Count; i++)
                         {
-                            tasksev.Add(EventPool.AddTask(() =>
+                            if (routing.cancellationToken.IsCancellationRequested) { return; }
+
+                            _eventsProcessedOUT += 1;
+
+                            if (EventsToProcess[i].Delay > 0)
                             {
-                                if (routing.cancellationToken.IsCancellationRequested) { return; }
+                                Thread.Sleep(EventsToProcess[i].Delay);
+                            }
 
-                                _eventsProcessedOUT += 1;
-
-                                if (evToProcess.Delay > 0)
-                                {
-                                    Thread.Sleep(evToProcess.Delay);
-                                }
-
-                                routing.DeviceOut.SendMidiEvent(evToProcess);
-                            }));
+                            routing.DeviceOut.SendMidiEvent(EventsToProcess[i]);
                         }
-                        await Task.WhenAll(tasksev);
                         OutputMidiMessage?.Invoke(false, routing.RoutingGuid);
                     }
                     catch (Exception)
