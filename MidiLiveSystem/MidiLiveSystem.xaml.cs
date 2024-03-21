@@ -33,6 +33,9 @@ namespace MidiLiveSystem
     {
         private static string APP_NAME = "Midi Live System";
 
+        internal delegate void CCMixEventHandler(Guid RoutingGuid, List<int> sValues);
+        internal static event CCMixEventHandler CCMixData;
+
         private delegate void UIEventHandler(string sMessage);
         private static event UIEventHandler NewMessage;
 
@@ -49,6 +52,7 @@ namespace MidiLiveSystem
         public Conductor ConductorWindow;
         public RecallButtons RecallWindow;
         public InternalSequencer SequencerWindow;
+        public CCMixer ControlChangeMixer;
 
         private SequencerData SeqData = new SequencerData();
 
@@ -282,6 +286,11 @@ namespace MidiLiveSystem
             await Routing.DeleteAllRouting();
         }
 
+        private void ControlChangeMixer_Closed(object sender, EventArgs e)
+        {
+            ControlChangeMixer.OnUIEvent -= RoutingBox_UIEvent;
+        }
+
         private void RecallWindow_Closed(object sender, EventArgs e)
         {
             RecallWindow.SaveRecallsToProject();
@@ -451,6 +460,24 @@ namespace MidiLiveSystem
                             await AddAllRoutingBoxes();
                         }
                         break;
+                    case "OPEN_CC_MIX":
+                        if (box.RoutingGuid != Guid.Empty)
+                        {
+                            if (ControlChangeMixer != null) 
+                            { 
+                                ControlChangeMixer.Close();
+                                ControlChangeMixer.OnUIEvent -= RoutingBox_UIEvent;
+                                ControlChangeMixer.Closed -= ControlChangeMixer_Closed;
+                            }
+
+                            var options = await box.GetOptions();
+                            ControlChangeMixer = new CCMixer(box.BoxGuid, box.RoutingGuid, box.BoxName, options.DefaultCCMix);
+                            ControlChangeMixer.OnUIEvent += ControlChange_UIEvent;
+                            ControlChangeMixer.Closed += ControlChangeMixer_Closed;
+                            ControlChangeMixer.Show();
+                            await ControlChangeMixer.InitMixer();
+                        }
+                        break;
                     case "SOLO":
                         if (box.RoutingGuid != Guid.Empty)
                         {
@@ -544,6 +571,37 @@ namespace MidiLiveSystem
                         }
 
                         //SaveTemplate(); //pour obtenir une version propre de ce qui a été saisi et enregistré sur les box
+                        break;
+                }
+            }
+        }
+
+        private async void ControlChange_UIEvent(Guid gBox, string sControl, object sValue)
+        {
+            var box = Boxes.FirstOrDefault(b => b.BoxGuid == gBox);
+            if (box != null)
+            {
+                switch (sControl)
+                {
+                    case "CC_MIX_DATA":
+                        if (box.RoutingGuid != Guid.Empty)
+                        {
+                            List<int> sData = await Routing.GetCCData(box.RoutingGuid, (int[])sValue);
+                            CCMixData?.Invoke(box.RoutingGuid, sData);
+                        }
+                        break;
+                    case "CC_SEND_MIX_DATA":
+                        if (box.RoutingGuid != Guid.Empty)
+                        {
+                            int[] iCC = (int[])sValue;
+                            await Routing.SendCC(box.RoutingGuid, iCC[0], iCC[1]);
+                        }
+                        break;
+                    case "CC_SAVE_MIX_DEFAULT":
+                        if (box.RoutingGuid != Guid.Empty)
+                        {
+                            await box.InitDefaultCCMixer((int[])sValue);
+                        }
                         break;
                 }
             }

@@ -879,6 +879,9 @@ namespace MidiTools
         public delegate void InputMidiEventHandler(MidiEvent ev);
         public static event InputMidiEventHandler InputStaticMidiMessage;
 
+        public delegate void OutputCCMidiEventHandler(Guid routingGuid, List<int> CC);
+        public static event OutputCCMidiEventHandler OutputCCValues;
+
         public int Events { get { return _eventsProcessedINLast + _eventsProcessedOUTLast; } }
 
         public string CyclesInfo
@@ -1061,6 +1064,8 @@ namespace MidiTools
                 {
                     for (int i = 0; i < EventsToProcess.Count; i++)
                     {
+                        if (EventsToProcess[i].Type == TypeEvent.CC) { OutputCCValues?.Invoke(routingOUT.RoutingGuid, EventsToProcess[i].Values); }
+
                         if (routingOUT.cancellationToken.IsCancellationRequested) { return; }
 
                         _eventsProcessedOUT += 1;
@@ -1108,6 +1113,8 @@ namespace MidiTools
                     {
                         for (int i = 0; i < EventsToProcess.Count; i++)
                         {
+                            if (EventsToProcess[i].Type == TypeEvent.CC) { OutputCCValues?.Invoke(routing.RoutingGuid, EventsToProcess[i].Values); }
+
                             if (routing.cancellationToken.IsCancellationRequested) { return; }
 
                             _eventsProcessedOUT += 1;
@@ -2664,12 +2671,12 @@ namespace MidiTools
             MidiMatrix.Clear();
         }
 
-        public async Task SendCC(Guid routingGuid, int iCC, int iValue, int iChannel, string sDevice)
+        public async Task SendCC(Guid routingGuid, int iCC, int iValue)
         {
             var routing = MidiMatrix.FirstOrDefault(d => d.RoutingGuid == routingGuid && d.DeviceOut != null);
             if (routing != null)
             {
-                await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { iCC, iValue }, Tools.GetChannel(iChannel), sDevice), routing);
+                await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { iCC, iValue }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
             }
         }
 
@@ -2814,6 +2821,23 @@ namespace MidiTools
                 routing.SetRoutingGuid(newGuid);
             }
         }
+
+        public async Task<List<int>> GetCCData(Guid routingGuid, int[] sCC)
+        {
+            List<int> CCdata = new List<int>();
+            await Tasks.AddTask(() =>
+            {
+                var routing = MidiMatrix.FirstOrDefault(d => d.RoutingGuid == routingGuid);
+                if (routing != null && routing.DeviceOut != null)
+                {
+                    for (int i = 0; i < sCC.Length; i++)
+                    {
+                        CCdata.Add(routing.DeviceOut.GetLiveCCValue(routing.ChannelOut, sCC[i]));
+                    }
+                }
+            });
+            return CCdata;
+        }        
         #endregion
     }
 }

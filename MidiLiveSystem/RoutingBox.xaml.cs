@@ -100,7 +100,7 @@ namespace MidiLiveSystem
                     }
                     else
                     {
-                        tbRoutingPlay.Foreground = Brushes.White;
+                        tbRoutingPlay.Foreground = Brushes.Yellow;
                     }
                 });
             }
@@ -152,10 +152,7 @@ namespace MidiLiveSystem
 
         private void Menu_OpenMenu(object sender, MouseButtonEventArgs e)
         {
-            // Récupérer le contexte du menu à partir des ressources
             ContextMenu contextMenu = (ContextMenu)this.Resources["RoutingBoxContextMenu"];
-
-            // Ouvrir le menu contextuel
             contextMenu.IsOpen = true;
         }
 
@@ -294,6 +291,11 @@ namespace MidiLiveSystem
 
                 OnUIEvent?.Invoke(BoxGuid, "PRESET_CHANGE", preset);
             }
+        }
+
+        private void btnCCMix_Click(object sender, RoutedEventArgs e)
+        {
+            OnUIEvent?.Invoke(BoxGuid, "OPEN_CC_MIX", null);
         }
 
         private void tbSolo_Click(object sender, RoutedEventArgs e)
@@ -906,7 +908,7 @@ namespace MidiLiveSystem
 
         public async Task<MidiOptions> GetOptions()
         {
-            var options = new MidiOptions();
+            var options = TempMemory[CurrentPreset].MidiOptions;
 
             await Dispatcher.InvokeAsync(() =>
             {
@@ -1186,6 +1188,17 @@ namespace MidiLiveSystem
             }
             else
             { return new List<string[]>(); }
+        }
+
+        internal async Task InitDefaultCCMixer(int[] sCC)
+        {
+            await UIEventPool.AddTask(() =>
+            {
+                foreach (var mem in TempMemory)
+                {
+                    mem.MidiOptions.DefaultCCMix = sCC;
+                }
+            });
         }
     }
 

@@ -40,8 +40,8 @@
 
         <Grid Grid.Row="0" Grid.Column="1" Margin="2,2,2,2" >
             <Grid.RowDefinitions>
-                <RowDefinition Height="20*"/>
-                <RowDefinition Height="80*"/>
+                <RowDefinition Height="15*"/>
+                <RowDefinition Height="85*"/>
             </Grid.RowDefinitions>
             <TextBlock x:Name="tbRoutingBoxIncoming" MouseDown="Menu_OpenMenu" Grid.Row="0" HorizontalAlignment="Center">
                             <materialDesign:PackIcon
@@ -53,10 +53,12 @@
 
             <Grid Grid.Row="1">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="25*"/>
-                    <RowDefinition Height="25*"/>
-                    <RowDefinition Height="25*"/>
-                    <RowDefinition Height="25*"/>
+                    <RowDefinition Height="19*"/>
+                    <RowDefinition Height="19*"/>
+                    <RowDefinition Height="19*"/>
+                    <RowDefinition Height="5*"/>
+                    <RowDefinition Height="19*"/>
+                    <RowDefinition Height="19*"/>
                 </Grid.RowDefinitions>
                 <Button Name="tbSolo" Padding="3" Grid.Row="0" Background="DarkGray" Click="tbSolo_Click"  >
                     <StackPanel>
@@ -70,16 +72,27 @@
                 </Button>
                 <Button Name="tbMute" Padding="3" Grid.Row="1" Background="DarkGray" Click="tbMute_Click" >
                     <StackPanel>
-                            <TextBlock>
+                        <TextBlock>
                             <materialDesign:PackIcon
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
                                 Kind="Mute" />
-                            </TextBlock>
+                        </TextBlock>
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnCopyPreset" Padding="3" Grid.Row="2" Background="DarkGray" Click="btnCopyPreset_Click" >
+                <Button Name="btnCCMix" Padding="3" Grid.Row="2" Background="DarkGray" Click="btnCCMix_Click" >
+                    <StackPanel>
+                        <TextBlock>
+                            <materialDesign:PackIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Kind="MixerSettings" />
+                        </TextBlock>
+                    </StackPanel>
+                </Button>
+
+                <Button Name="btnCopyPreset" Padding="3" Grid.Row="4" Background="SlateGray" Click="btnCopyPreset_Click" >
                     <StackPanel>
                             <TextBlock>
                             <materialDesign:PackIcon
@@ -90,16 +103,17 @@
                     </StackPanel>
                 </Button>
 
-                <Button Name="btnPastePreset" Padding="3" Grid.Row="3" Background="DarkGray" Click="btnPastePreset_Click" >
+                <Button Name="btnPastePreset" Padding="3" Grid.Row="5" Background="SlateGray" Click="btnPastePreset_Click" >
                     <StackPanel>
-                            <TextBlock>
+                        <TextBlock>
                             <materialDesign:PackIcon
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
                                 Kind="ContentPaste" />
-                            </TextBlock>
+                        </TextBlock>
                     </StackPanel>
                 </Button>
+
             </Grid>
         </Grid>
 
@@ -116,6 +130,7 @@
                                 <TextBlock Name="tbRoutingName" Grid.Column="0" Text="Routing Name" VerticalAlignment="Center" HorizontalAlignment="Left" Foreground="IndianRed" />
                                 <TextBlock Name="tbRoutingPlay" Grid.Column="1" >  
                                 <materialDesign:PackIcon
+                                Foreground="Yellow"
                                 Kind="Play" />
                                 </TextBlock>
                             </Grid>
@@ -169,6 +184,7 @@
                             <materialDesign:PackIcon
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
+                                Foreground="Yellow"
                                 Kind="Tools" />
                         </TextBlock>
                     </StackPanel>
@@ -337,6 +353,7 @@
                             <materialDesign:PackIcon
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
+                                Foreground="Yellow"
                                 Kind="Hammer" />
                         </TextBlock>
                     </StackPanel>

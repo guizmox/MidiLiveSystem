@@ -27,6 +27,8 @@ namespace MidiTools
     [Serializable]
     public class MidiOptions
     {
+        public int[] DefaultCCMix = new int[] { 1, 7, 10, 11, 70, 71, 91, 93 };
+
         public bool Active = true;
 
         private int _TranspositionOffset = 0;

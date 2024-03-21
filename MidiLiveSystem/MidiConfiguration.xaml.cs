@@ -603,6 +603,7 @@ namespace MidiLiveSystem
 
         public string TriggerRecallButtons = "UI";
         public int TriggerRecallButtonsValue = 0;
+
         internal string TriggerRecallDevice { 
             get { return _triggerDevice; }
             set
