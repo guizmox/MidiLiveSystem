@@ -565,11 +565,11 @@ namespace MidiLiveSystem
             {
                 if (Routing.Events <= 16) //pour éviter de saturer les process avec des appels UI inutiles
                 {
-                    Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, " - UI Refresh Rate : ", UIRefreshRate.Interval / 1000, " Sec]");
+                    Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, "]");
                 }
                 else
                 {
-                    Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, " - UI events disabled]");
+                    Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, ". UI events disabled]");
                 }
             });
         }
@@ -1055,7 +1055,7 @@ namespace MidiLiveSystem
             for (int i = 0; i < Boxes.Count; i++)
             {
                 int index = i;
-                tasks.Add(EventPool.AddTask(async () => await ProcessBoxData(Boxes[index], false)));
+                tasks.Add(UIEventPool.AddTask(async () => await ProcessBoxData(Boxes[index], false)));
             }
 
             await Task.WhenAll(tasks);

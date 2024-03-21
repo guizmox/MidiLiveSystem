@@ -24,6 +24,7 @@ namespace MidiTools
         public string Device;
         public string SysExData;
         public int Delay = 0;
+        internal bool ReleaseCC = false;
 
         internal MidiEvent(MidiDevice.TypeEvent evType, List<int> values, Channel ch, string device)
         {

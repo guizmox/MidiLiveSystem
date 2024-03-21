@@ -263,7 +263,7 @@ namespace MidiLiveSystem
                 }
             }
 
-            if (sVersions.Count > 3)
+            if (sVersions.Count > 2) //historique des versions à supprimer
             {
                 sVersions = sVersions.GetRange(3, sVersions.Count - 3);
             }

@@ -1171,7 +1171,7 @@ namespace MidiLiveSystem
         {
             List<string[]> devices = new List<string[]>();
 
-            await EventPool.AddTask(() =>
+            await UIEventPool.AddTask(() =>
             {
                 for (int i = 0; i < TempMemory.Length; i++)
                 {

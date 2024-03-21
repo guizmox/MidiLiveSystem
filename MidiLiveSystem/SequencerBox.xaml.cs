@@ -189,7 +189,7 @@ namespace MidiLiveSystem
 
         private async Task ChangeQuantization(string sQuantize)
         {
-            await EventPool.AddTask(() =>
+            await UIEventPool.AddTask(() =>
             {
                 InternalSequence.Quantization = sQuantize;
             });
@@ -200,7 +200,7 @@ namespace MidiLiveSystem
 
         private async Task ClearButtons(int iMax)
         {
-            await EventPool.AddTask(() =>
+            await UIEventPool.AddTask(() =>
             {
                 InternalSequence.InitSequence(iMax);
 

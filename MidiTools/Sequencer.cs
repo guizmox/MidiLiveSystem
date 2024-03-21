@@ -10,6 +10,8 @@ namespace MidiTools
     [Serializable]
     public class Sequencer
     {
+        EventPool Tasks = new EventPool("Sequencer");
+
         public delegate void SequencerStepHandler(SequenceStep notes, SequenceStep lastnotes, double lengthInMs, int lastPositionInSequence, int positionInSequence);
         public event SequencerStepHandler OnInternalSequencerStep;
 
@@ -100,7 +102,7 @@ namespace MidiTools
 
         public async Task StartSequence()
         {
-            await EventPool.AddTask(() =>
+            await Tasks.AddTask(() =>
             {
                 if (SequenceHasData())
                 {
@@ -137,7 +139,7 @@ namespace MidiTools
 
         public async Task StopSequence()
         {
-            await EventPool.AddTask(() =>
+            await Tasks.AddTask(() =>
             {
                 if (SequenceHasData())
                 {
@@ -156,7 +158,7 @@ namespace MidiTools
 
         public async Task ChangeTempo(int iNewValue)
         {
-            await EventPool.AddTask(() =>
+            await Tasks.AddTask(() =>
             {
                 if (Tempo != iNewValue)
                 {

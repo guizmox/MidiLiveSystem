@@ -159,7 +159,7 @@ namespace MidiLiveSystem
                 for (int i = 0; i < Memory[iPreset].BoxGuids.Count; i++)
                 {
                     int item = i;
-                    tasks.Add(EventPool.AddTask(async () => await ProcessBox(Memory[iPreset].BoxGuids[item], Memory[iPreset].BoxPresets[item])));
+                    tasks.Add(UIEventPool.AddTask(async () => await ProcessBox(Memory[iPreset].BoxGuids[item], Memory[iPreset].BoxPresets[item])));
                 }
 
                 await Task.WhenAll(tasks);

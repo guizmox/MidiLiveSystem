@@ -1,0 +1,4 @@
+﻿- CC limiters : pouvoir limiter la valeur maximum d'un CC (routing box)
+- Ajout contrôle BDD au démarrage pour dire ou se trouve l'aide
+- pouvoir renommer en masse les devices dans la BDD si on a changé de matériel
+- A TESTER : Smooth CC : conflits

@@ -14,6 +14,8 @@ namespace MidiTools
     [Serializable]
     public class MidiSequence
     {
+        private EventPool Tasks = new EventPool("MidiSequence");
+
         public List<LiveData> SequencerDefault = new List<LiveData>();
 
         public delegate void SequenceFinishedHandler(string sInfo);
@@ -212,7 +214,7 @@ namespace MidiTools
 
         private async Task PlaySequence(List<MidiEvent> events, MidiRouting routing)
         {
-            await EventPool.AddTask(() =>
+            await Tasks.AddTask(() =>
             {
                 Stopwatch stopwatch = new Stopwatch(); // Créer un chronomètre
 
