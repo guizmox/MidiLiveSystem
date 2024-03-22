@@ -20,6 +20,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Xml.Linq;
 using System.Xml.Serialization;
+using TobiasErichsen.teVirtualMIDI;
 using static MidiLiveSystem.RoutingBox;
 using static System.Net.Mime.MediaTypeNames;
 
@@ -69,6 +70,10 @@ namespace MidiLiveSystem
         public MainWindow()
         {
             InitializeComponent();
+
+            VirtualMidiCable.InitVirtualMidiPort();
+            VirtualMidiCable.VirtualMidiCableException += VirtualMidiCable_VirtualMidiCableException;
+
             InitFrames(CurrentHorizontalGrid, CurrentVerticalGrid);
 
             UIRefreshRate = new System.Timers.Timer();
@@ -123,6 +128,14 @@ namespace MidiLiveSystem
                     }
                 }
             });
+        }
+
+        private async void VirtualMidiCable_VirtualMidiCableException(string sCableName, string sMessage)
+        {
+            if (LogWindow != null)
+            {
+                await LogWindow.AddLog(sCableName, true, sMessage);
+            }
         }
 
         private async void MidiRouting_InputMidiMessage(MidiEvent ev)
@@ -241,6 +254,9 @@ namespace MidiLiveSystem
 
         private async void Window_Closed(object sender, EventArgs e)
         {
+            await VirtualMidiCable.CloseVirtualMidiPort();
+            VirtualMidiCable.VirtualMidiCableException -= VirtualMidiCable_VirtualMidiCableException;
+
             NewMessage -= MainWindow_NewMessage;
             UIRefreshRate.Enabled = false;
             UIRefreshRate.Elapsed -= UIRefreshRate_Elapsed;

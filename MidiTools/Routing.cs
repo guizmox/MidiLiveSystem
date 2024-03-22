@@ -891,7 +891,7 @@ namespace MidiTools
                 string sMessage = "MIDI Average Processing Messages / Sec. : ";
                 sMessage = string.Concat(sMessage, " [IN] : " + (_eventsProcessedINLast).ToString());
                 sMessage = string.Concat(sMessage, " / [OUT] : " + (_eventsProcessedOUTLast).ToString());
-                sMessage = string.Concat(sMessage, " - Tasks/Min : ", MidiMatrix.Sum(m => m.Tasks.LastMinuteProcessing));
+                sMessage = string.Concat(sMessage, " - Tasks/Sec : ", (MidiMatrix.Sum(m => m.Tasks.LastMinuteProcessing) / 60));
                 return sMessage;
             }
         }
