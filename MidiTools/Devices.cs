@@ -10,9 +10,23 @@ using System.Threading;
 using System.Timers;
 using System.Linq;
 using System.IO;
+using CommonUtils.VSTPlugin;
+using VSTHost;
+using System.Threading.Tasks;
+using NAudio.Midi;
 
 namespace MidiTools
 {
+    [Serializable]
+    public class VSTHostInfo
+    {
+        public Guid VSTHostGuid = Guid.Empty;
+        public int SynthID = 0;
+        public string AsioDevice = "";
+        public int SampleRate = 48000;
+        public string VSTPath = "";
+        public string Error = "";
+    }
 
     [Serializable]
     public class MidiEvent
@@ -107,8 +121,11 @@ namespace MidiTools
 
         private readonly int MIDI_InOrOut; //IN = 1, OUT = 2
 
+        private readonly VSTHostInfo VSTHost;
+
         private MidiInputDeviceEvents MIDI_InputEvents;
         private MidiOutputDeviceEvents MIDI_OutputEvents;
+        private VSTOutputDeviceEvents VST_OutputEvents;
         internal bool UsedForRouting = false;
         internal bool IsReserverdForInternalPurposes = false;
 
@@ -143,6 +160,14 @@ namespace MidiTools
             {
                 SendSysExInitializer(instr);
             }
+        }
+
+        internal MidiDevice(VSTHostInfo vst)
+        {
+            MIDI_InOrOut = 2;
+            VSTHost = vst;
+            Name = Tools.VST_HOST;
+            OpenDevice();
         }
 
         private void MIDI_InputEvents_OnMidiEvent(MidiEvent ev)
@@ -192,60 +217,84 @@ namespace MidiTools
             }
             else //OUT
             {
-                try
+                if (VSTHost != null)
                 {
-                    if (MIDI_OutputEvents == null)
+                    try
                     {
-                        MIDI_OutputEvents = new MidiOutputDeviceEvents(Name);
-                        MIDI_OutputEvents.OnMidiEvent -= MIDI_OutputEvents_OnMidiEvent;
-                        MIDI_OutputEvents.OnMidiEvent += MIDI_OutputEvents_OnMidiEvent;
+                        VST_OutputEvents = new VSTOutputDeviceEvents(VSTHost);
+                        VST_OutputEvents.Open();
+                        VST_OutputEvents.OnMidiEvent += MIDI_OutputEvents_OnMidiEvent;
+                        return true;
                     }
-                    else
-                    {
-                        MIDI_OutputEvents.Open();
-                    }
-                    return true;
+                    catch { return false; }
                 }
-                catch { return false; }
+                else
+                {
+                    try
+                    {
+                        if (MIDI_OutputEvents == null)
+                        {
+                            MIDI_OutputEvents = new MidiOutputDeviceEvents(Name);
+                            MIDI_OutputEvents.OnMidiEvent -= MIDI_OutputEvents_OnMidiEvent;
+                            MIDI_OutputEvents.OnMidiEvent += MIDI_OutputEvents_OnMidiEvent;
+                        }
+                        else
+                        {
+                            MIDI_OutputEvents.Open();
+                        }
+                        return true;
+                    }
+                    catch { return false; }
+                }
             }
         }
 
         internal bool CloseDevice()
         {
-            if (MIDI_InOrOut == 1) //IN
+            if (VSTHost != null)
             {
-                try
-                {
-                    if (MIDI_InputEvents != null)
-                    {
-                        MIDI_InputEvents.Stop();
-                        MIDI_InputEvents.OnMidiEvent -= MIDI_InputEvents_OnMidiEvent;
-                        MIDI_InputEvents = null;
-                    }
-                    return true;
-                }
-                catch
-                {
-                    MIDI_InputEvents = null;
-                    return false;
-                }
+                VST_OutputEvents.OnMidiEvent -= MIDI_OutputEvents_OnMidiEvent;
+                VST_OutputEvents.Close();
+                VST_OutputEvents = null;
+                return true;
             }
-            else //OUT
+            else
             {
-                try
+                if (MIDI_InOrOut == 1) //IN
                 {
-                    if (MIDI_OutputEvents != null)
+                    try
                     {
-                        MIDI_OutputEvents.Stop();
-                        MIDI_OutputEvents.OnMidiEvent -= MIDI_OutputEvents_OnMidiEvent;
-                        MIDI_OutputEvents = null;
+                        if (MIDI_InputEvents != null)
+                        {
+                            MIDI_InputEvents.Stop();
+                            MIDI_InputEvents.OnMidiEvent -= MIDI_InputEvents_OnMidiEvent;
+                            MIDI_InputEvents = null;
+                        }
+                        return true;
                     }
-                    return true;
+                    catch
+                    {
+                        MIDI_InputEvents = null;
+                        return false;
+                    }
                 }
-                catch
+                else //OUT
                 {
-                    MIDI_OutputEvents = null;
-                    return false;
+                    try
+                    {
+                        if (MIDI_OutputEvents != null)
+                        {
+                            MIDI_OutputEvents.Stop();
+                            MIDI_OutputEvents.OnMidiEvent -= MIDI_OutputEvents_OnMidiEvent;
+                            MIDI_OutputEvents = null;
+                        }
+                        return true;
+                    }
+                    catch
+                    {
+                        MIDI_OutputEvents = null;
+                        return false;
+                    }
                 }
             }
         }
@@ -272,7 +321,14 @@ namespace MidiTools
 
         internal void SendMidiEvent(MidiEvent midiEvent)
         {
-            MIDI_OutputEvents.SendEvent(midiEvent); 
+            if (VSTHost != null)
+            {
+                VST_OutputEvents.SendEvent(midiEvent);
+            }
+            else
+            {
+                MIDI_OutputEvents.SendEvent(midiEvent);
+            }
         }
 
         internal void SendSysExInitializer(InstrumentData instr)
@@ -355,6 +411,92 @@ namespace MidiTools
 
             return iNote;
         }
+
+        internal void PlugVSTDevice(VST device)
+        {
+            if (VST_OutputEvents != null) 
+            {
+                VST_OutputEvents.VSTDevice = device;
+            }
+        }
+    }
+
+    internal class VSTOutputDeviceEvents
+    {
+        internal delegate void MidiEventHandler(MidiEvent ev);
+        internal event MidiEventHandler OnMidiEvent;
+
+        internal VSTHostInfo VSTSynth = null;
+        internal VST VSTDevice = null;
+
+        internal VSTOutputDeviceEvents(VSTHostInfo vst)
+        {
+            VSTSynth = vst;
+        }
+
+        internal bool Close()
+        {
+            try
+            {
+                UtilityAudio.StopAudio();
+                UtilityAudio.Dispose();
+                return true;
+            }
+            catch { return false; }
+        }
+
+        internal bool Open()
+        {
+            try
+            {
+                bool bOK = UtilityAudio.OpenAudio(VSTSynth.AsioDevice, VSTSynth.SampleRate);
+
+                if (bOK)
+                {
+                    UtilityAudio.StartAudio();
+                    UtilityAudio.AudioInitialized = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                VSTSynth.Error = "Unable to open audio device : " + ex.Message;
+                return false;
+            }
+            return true;
+        }
+
+        internal void SendEvent(MidiEvent ev)
+        {
+            if (VSTDevice != null)
+            {
+                ev.EventDate = DateTime.Now; //à cause des problèmes de timing à la lecture d'une séquence
+
+                switch (ev.Type)
+                {
+                    case MidiTools.MidiDevice.TypeEvent.CC:
+                        VSTDevice.MIDI_CC(Convert.ToByte(ev.Values[0]), Convert.ToByte(ev.Values[1]));
+                        break;
+                    case MidiTools.MidiDevice.TypeEvent.NOTE_ON:
+                        VSTDevice.MIDI_NoteOn(Convert.ToByte(ev.Values[0]), Convert.ToByte(ev.Values[1]));
+                        break;
+                    case MidiTools.MidiDevice.TypeEvent.NOTE_OFF:
+                        VSTDevice.MIDI_NoteOff(Convert.ToByte(ev.Values[0]), Convert.ToByte(ev.Values[1]));
+                        break;
+                    case MidiTools.MidiDevice.TypeEvent.PC:
+                        VSTDevice.MIDI_ProgramChange(Convert.ToByte(ev.Values[0]));
+                        break;
+                    case MidiTools.MidiDevice.TypeEvent.CH_PRES:
+                        VSTDevice.MIDI_Aftertouch(Convert.ToByte(ev.Values[0]));
+                        break;
+                    case MidiTools.MidiDevice.TypeEvent.POLY_PRES:
+                        VSTDevice.MIDI_PolyphonicAftertouch(Convert.ToByte(ev.Values[0]), Convert.ToByte(ev.Values[1]));
+                        break;
+                    case MidiTools.MidiDevice.TypeEvent.PB:
+                        VSTDevice.MIDI_PitchBend(ev.Values[0]);
+                        break;
+                }
+            }
+        }
     }
 
     internal class MidiOutputDeviceEvents
@@ -362,7 +504,7 @@ namespace MidiTools
         internal delegate void MidiEventHandler(MidiEvent ev);
         internal event MidiEventHandler OnMidiEvent;
 
-        internal int[,] CCmemory = new int[16,128];
+        internal int[,] CCmemory = new int[16, 128];
         internal bool[,] NOTEmemory = new bool[16, 128];
 
         private IMidiOutputDevice outputDevice;
@@ -592,7 +734,7 @@ namespace MidiTools
                     inputDevice.PolyphonicKeyPressure += PolyphonicPressure;
                     inputDevice.Start += InputDevice_Start;
                     inputDevice.Stop += InputDevice_Stop;
-                    
+
                     //inputDevice.Clock += ClockHandler;
                     inputDevice.Open();
                     AddLog(inputDevice.Name, true, Channel.Channel1, "[OPEN]", "", "", "");

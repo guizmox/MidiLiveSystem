@@ -20,6 +20,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using VSTHost;
 
 namespace MidiLiveSystem
 {
@@ -54,6 +55,8 @@ namespace MidiLiveSystem
 
     public partial class RoutingBox : Page
     {
+        public VSTHost.MainWindow VSTWindow;
+
         public Guid RoutingGuid { get; set; }
         public bool Detached { get; internal set; } = false;
         public int GridPosition = 0;
@@ -66,7 +69,8 @@ namespace MidiLiveSystem
         public delegate void RoutingBoxEventHandler(Guid gBox, string sControl, object sValue);
         public event RoutingBoxEventHandler OnUIEvent;
 
-        BoxPreset[] TempMemory;
+        BoxPreset[] TempMemory = new BoxPreset[8];
+        VSTHostInfo TempVST;
 
         PresetBrowser InstrumentPresets = null;
 
@@ -86,6 +90,23 @@ namespace MidiLiveSystem
             InitPage(inputDevices, outputDevices);
 
             MidiRouting.OutputMidiMessage += MidiRouting_OutputMidiMessage;
+        }
+
+        private async void VSTWindow_OnVSTHostEvent(VSTHostInfo vst, int iPreset, bool bClose)
+        {
+            if (bClose)
+            {
+                VSTWindow = null;
+            }
+            else
+            {
+                TempVST = vst;
+                var device = await VSTWindow.LoadPlugin();
+                if (device != null)
+                {
+                    OnUIEvent?.Invoke(BoxGuid, "PLUG_VST_TO_DEVICE", device);
+                }
+            }
         }
 
         private void MidiRouting_OutputMidiMessage(bool b, Guid routingGuid)
@@ -120,6 +141,7 @@ namespace MidiLiveSystem
             {
                 cbMidiOut.Items.Add(new ComboBoxItem() { Tag = s.Name, Content = s.Name });
             }
+            cbMidiOut.Items.Add(new ComboBoxItem() { Tag = Tools.VST_HOST, Content = Tools.VST_HOST });
 
             cbChannelMidiOut.Items.Add(new ComboBoxItem() { Tag = "0", Content = "NA" });
             for (int i = 0; i <= 16; i++)
@@ -160,32 +182,6 @@ namespace MidiLiveSystem
         {
             MenuItem menuItem = (MenuItem)sender;
             OnUIEvent?.Invoke(BoxGuid, menuItem.Tag.ToString(), null);
-        }
-
-        private void cbMidiIn_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            var item = e.AddedItems.Count > 0 ? (ComboBoxItem)e.AddedItems[0] : null;
-
-            if (item != null)
-            {
-                if (item.Tag.Equals(Tools.INTERNAL_GENERATOR))
-                {
-                    tbVelocityRangeLabel.Visibility = Visibility.Hidden;
-                    tbNoteRangeLabel.Visibility = Visibility.Hidden;
-                    pnlNoteRange.Visibility = Visibility.Hidden;
-                    pnlVelocityRange.Visibility = Visibility.Hidden;
-                    pnlInternalGenerator.Visibility = Visibility.Visible;
-                }
-                else
-                {
-                    tbVelocityRangeLabel.Visibility = Visibility.Visible;
-                    tbNoteRangeLabel.Visibility = Visibility.Visible;
-                    pnlNoteRange.Visibility = Visibility.Visible;
-                    pnlVelocityRange.Visibility = Visibility.Visible;
-                    pnlInternalGenerator.Visibility = Visibility.Hidden;
-                }
-            }
-
         }
 
         private async void cbPresetButton_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -328,22 +324,66 @@ namespace MidiLiveSystem
             }
         }
 
+        private void cbMidiIn_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var item = e.AddedItems.Count > 0 ? (ComboBoxItem)e.AddedItems[0] : null;
+
+            if (item != null)
+            {
+                if (item.Tag.Equals(Tools.INTERNAL_GENERATOR))
+                {
+                    tbVelocityRangeLabel.Visibility = Visibility.Hidden;
+                    tbNoteRangeLabel.Visibility = Visibility.Hidden;
+                    pnlNoteRange.Visibility = Visibility.Hidden;
+                    pnlVelocityRange.Visibility = Visibility.Hidden;
+                    pnlInternalGenerator.Visibility = Visibility.Visible;
+                }
+                else if (item.Tag.Equals(Tools.VST_HOST))
+                {
+                    tbVelocityRangeLabel.Visibility = Visibility.Hidden;
+                    tbNoteRangeLabel.Visibility = Visibility.Hidden;
+                    pnlNoteRange.Visibility = Visibility.Hidden;
+                    pnlVelocityRange.Visibility = Visibility.Hidden;
+                    pnlInternalGenerator.Visibility = Visibility.Hidden;
+                }
+                else
+                {
+                    tbVelocityRangeLabel.Visibility = Visibility.Visible;
+                    tbNoteRangeLabel.Visibility = Visibility.Visible;
+                    pnlNoteRange.Visibility = Visibility.Visible;
+                    pnlVelocityRange.Visibility = Visibility.Visible;
+                    pnlInternalGenerator.Visibility = Visibility.Hidden;
+                }
+            }
+
+        }
+
+        private async void cbMidiOut_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var item = e.AddedItems.Count > 0 ? (ComboBoxItem)e.AddedItems[0] : null;
+
+            if (item != null)
+            {
+                if (item.Tag.Equals(Tools.VST_HOST))
+                {
+                    tbChoosePreset.Visibility = Visibility.Hidden;
+                    tbOpenVST.Visibility = Visibility.Visible;
+                    tbProgram.Text = "VST HOST";
+                }
+                else
+                {
+                    tbChoosePreset.Visibility = Visibility.Visible;
+                    tbOpenVST.Visibility = Visibility.Hidden;
+                    tbProgram.Text = "PROGRAM";
+                    await CloseVSTHost();
+                }
+            }
+        }
+
         private void cbChannelMidiOut_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (cbMidiOut.SelectedItem != null && ((ComboBoxItem)e.AddedItems[0]).IsFocused && cbChannelMidiOut.SelectedIndex > 0)
             {
-                ComboBoxItem devOut = (ComboBoxItem)cbMidiOut.SelectedItem;
-
-                OnUIEvent?.Invoke(BoxGuid, "CHECK_OUT_CHANNEL", devOut.Tag.ToString() + "#|#" + cbChannelMidiOut.SelectedValue);
-            }
-        }
-
-        private void cbMidiOut_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (cbMidiOut.SelectedIndex > -1)
-            {
-                cbChannelMidiOut.SelectedIndex = 0;
-
                 ComboBoxItem devOut = (ComboBoxItem)cbMidiOut.SelectedItem;
 
                 OnUIEvent?.Invoke(BoxGuid, "CHECK_OUT_CHANNEL", devOut.Tag.ToString() + "#|#" + cbChannelMidiOut.SelectedValue);
@@ -473,6 +513,16 @@ namespace MidiLiveSystem
             else
             {
                 cbPresetButton.SelectedIndex = i;
+            }
+        }
+
+        private async void tbOpenVST_Click(object sender, RoutedEventArgs e)
+        {
+            if (VSTWindow == null)
+            {
+                VSTWindow = new VSTHost.MainWindow(RoutingGuid, BoxName, CurrentPreset, TempMemory[CurrentPreset].VSTData);
+                VSTWindow.OnVSTHostEvent += VSTWindow_OnVSTHostEvent;
+                VSTWindow.Show();
             }
         }
 
@@ -724,7 +774,8 @@ namespace MidiLiveSystem
                 var options = await GetOptions();
                 var preset = await GetPreset();
 
-                var bp = new BoxPreset(RoutingGuid, BoxGuid, routingname, presetname, options, preset, sDeviceIn, sDeviceOut, iChannelIn, iChannelOut);
+                var bp = new BoxPreset(RoutingGuid, BoxGuid, routingname, presetname, options, preset, sDeviceIn, sDeviceOut, TempVST, iChannelIn, iChannelOut);
+
                 boxPreset = bp;
 
             }
@@ -737,20 +788,6 @@ namespace MidiLiveSystem
         {
             await Dispatcher.InvokeAsync(() =>
             {
-                //if (bIsFirst)
-                //{
-                //    cbMidiIn.IsEnabled = true;
-                //    cbMidiOut.IsEnabled = true;
-                //    cbChannelMidiIn.IsEnabled = true;
-                //    cbChannelMidiOut.IsEnabled = true;
-                //}
-                //else
-                //{
-                //    cbMidiIn.IsEnabled = false;
-                //    cbMidiOut.IsEnabled = false;
-                //    cbChannelMidiIn.IsEnabled = false;
-                //    cbChannelMidiOut.IsEnabled = false;
-                //}
                 tbMute.Background = bp.MidiOptions.Active ? Brushes.DarkGray : Brushes.IndianRed;
 
                 //remplissage des champs
@@ -1200,11 +1237,27 @@ namespace MidiLiveSystem
                 }
             });
         }
+
+        internal async Task CloseVSTHost()
+        {
+            if (VSTWindow != null)
+            {
+                await UIEventPool.AddTask(() =>
+                {
+                    VSTWindow.OnVSTHostEvent -= VSTWindow_OnVSTHostEvent;
+                    VSTWindow.DisposePlugin();
+                    VSTWindow.Close();
+                    VSTWindow = null;
+                    TempVST = null;
+                });
+            }
+        }
     }
 
     [Serializable]
     public class BoxPreset
     {
+        public VSTHostInfo VSTData;
         public Guid RoutingGuid { get; set; } = Guid.Empty;
         public Guid BoxGuid { get; set; } = Guid.Empty;
         public string BoxName { get; set; } = "Routing Name";
@@ -1229,7 +1282,7 @@ namespace MidiLiveSystem
             BoxName = sBoxName;
         }
 
-        internal BoxPreset(Guid routingGuid, Guid boxGuid, string boxName, string presetName, MidiOptions midiOptions, MidiPreset midiPreset, string deviceIn, string deviceOut, int channelIn, int channelOut)
+        internal BoxPreset(Guid routingGuid, Guid boxGuid, string boxName, string presetName, MidiOptions midiOptions, MidiPreset midiPreset, string deviceIn, string deviceOut, VSTHostInfo vst, int channelIn, int channelOut)
         {
             RoutingGuid = routingGuid;
             BoxGuid = boxGuid;
@@ -1241,7 +1294,7 @@ namespace MidiLiveSystem
             DeviceOut = deviceOut;
             ChannelIn = channelIn;
             ChannelOut = channelOut;
+            VSTData = vst;
         }
-
     }
 }

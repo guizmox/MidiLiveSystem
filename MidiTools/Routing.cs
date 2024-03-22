@@ -1,4 +1,5 @@
-﻿using RtMidi.Core;
+﻿using CommonUtils.VSTPlugin;
+using RtMidi.Core;
 using RtMidi.Core.Enums;
 using RtMidi.Core.Messages;
 using System;
@@ -2347,7 +2348,7 @@ namespace MidiTools
             }
         }
 
-        public async Task<Guid> AddRouting(string sDeviceIn, string sDeviceOut, int iChIn, int iChOut, MidiOptions options, MidiPreset preset = null, Sequencer DeviceInSequencer = null)
+        public async Task<Guid> AddRouting(string sDeviceIn, string sDeviceOut, VSTHostInfo vst, int iChIn, int iChOut, MidiOptions options, MidiPreset preset = null, Sequencer DeviceInSequencer = null)
         {
             Guid GUID = new Guid();
 
@@ -2371,7 +2372,15 @@ namespace MidiTools
                 }
             }
 
-            if (devOUT != null && UsedDevicesOUT.Count(d => d.Name.Equals(sDeviceOut)) == 0)
+            if (sDeviceOut.Equals(Tools.VST_HOST))
+            {
+                if (vst != null)
+                {
+                    var device = new MidiDevice(vst);
+                    UsedDevicesOUT.Add(device);
+                }
+            }
+            else if (devOUT != null && UsedDevicesOUT.Count(d => d.Name.Equals(sDeviceOut)) == 0)
             {
                 var device = new MidiDevice(devOUT, CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(devOUT.Name)));
                 UsedDevicesOUT.Add(device);
@@ -2424,7 +2433,7 @@ namespace MidiTools
             return GUID;
         }
 
-        public async Task ModifyRouting(Guid routingGuid, string sDeviceIn, string sDeviceOut, int iChIn, int iChOut, MidiOptions options, MidiPreset preset = null, Sequencer DeviceInSequencer = null)
+        public async Task ModifyRouting(Guid routingGuid, string sDeviceIn, string sDeviceOut, VSTHostInfo vst, int iChIn, int iChOut, MidiOptions options, MidiPreset preset = null, Sequencer DeviceInSequencer = null)
         {
             bool bDeviceOutChanged = false;
 
@@ -2492,9 +2501,16 @@ namespace MidiTools
                     bool active = routing.Options.Active;
                     routing.Options.Active = false;
 
-                    if (sDeviceOut.Length > 0)
+                    if (sDeviceOut.Equals(Tools.VST_HOST))
                     {
-                        routing.DeviceOut = AddNewOutDevice(sDeviceOut);
+                        if (vst != null)
+                        {
+                            routing.DeviceOut = AddNewOutDevice(sDeviceOut, vst);
+                        }
+                    }
+                    else if (sDeviceOut.Length > 0)
+                    {
+                        routing.DeviceOut = AddNewOutDevice(sDeviceOut, null);
                     }
                     else
                     {
@@ -2512,6 +2528,18 @@ namespace MidiTools
                     await ChangeProgram(routing, preset, bDeviceOutChanged ? true : false);
                 }
             }
+        }
+
+        public async Task AddVSTDeviceToAsio(Guid routingGuid, VST device)
+        {
+            await UIEventPool.AddTask(() =>
+            {
+                var matrix = MidiMatrix.FirstOrDefault(r => r.RoutingGuid == routingGuid && r.DeviceOut != null && r.DeviceOut.Name.Equals(Tools.VST_HOST));
+                if (matrix != null)
+                {
+                    matrix.DeviceOut.PlugVSTDevice(device);
+                }
+            });
         }
 
         public async Task UpdateUsedDevices(List<string[]> devices)
@@ -2532,13 +2560,22 @@ namespace MidiTools
             });
         }
 
-        private MidiDevice AddNewOutDevice(string sDeviceOut)
+        private MidiDevice AddNewOutDevice(string sDeviceOut, VSTHostInfo vst = null)
         {
             var dev = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut));
             if (dev == null)
             {
                 var outdev = OutputDevices.FirstOrDefault(d => d.Name.Equals(sDeviceOut));
-                var newdev = new MidiDevice(outdev, CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(outdev.Name)));
+                MidiDevice newdev;
+                if (vst != null)
+                {
+                    newdev = new MidiDevice(vst);
+                }
+                else
+                {
+                    newdev = new MidiDevice(outdev, CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(outdev.Name)));
+                }
+
                 newdev.UsedForRouting = true;
                 UsedDevicesOUT.Add(newdev);
                 return newdev;

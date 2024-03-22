@@ -130,7 +130,7 @@
                                 <TextBlock Name="tbRoutingName" Grid.Column="0" Text="Routing Name" VerticalAlignment="Center" HorizontalAlignment="Left" Foreground="IndianRed" />
                                 <TextBlock Name="tbRoutingPlay" Grid.Column="1" >  
                                 <materialDesign:PackIcon
-                                Foreground="Yellow"
+                                Foreground="White"
                                 Kind="Play" />
                                 </TextBlock>
                             </Grid>
@@ -184,7 +184,7 @@
                             <materialDesign:PackIcon
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
-                                Foreground="Yellow"
+                                Foreground="White"
                                 Kind="Tools" />
                         </TextBlock>
                     </StackPanel>
@@ -219,7 +219,7 @@
                         <ComboBox Name="cbMidiOut" MinWidth="120" Grid.ColumnSpan="2" Grid.Column="1" Grid.Row="2" SelectedValuePath="Tag" SelectionChanged="cbMidiOut_SelectionChanged" />
                         <ComboBox Name="cbChannelMidiIn" MinWidth="40" Grid.Column="4" Grid.Row="1" SelectedValuePath="Tag"  />
                         <ComboBox Name="cbChannelMidiOut" MinWidth="40" Grid.Column="4" Grid.Row="2" SelectedValuePath="Tag" SelectionChanged="cbChannelMidiOut_SelectionChanged" />
-                        <TextBlock Grid.Column="0" Grid.Row="3" Text="PROGRAM"/>
+                        <TextBlock Name="tbProgram" Grid.Column="0" Grid.Row="3" Text="PROGRAM"/>
 
                         <StackPanel Grid.Column="1" Grid.Row="3" Grid.ColumnSpan="3">
                             <Grid>
@@ -227,9 +227,10 @@
                                     <ColumnDefinition Width="40*" />
                                     <ColumnDefinition Width="60*" />
                                 </Grid.ColumnDefinitions>
-                                <Viewbox>
-                                    <Button Name="tbChoosePreset" FontSize="9" Grid.Column="0" Height="20" Width="100" Click="tbChoosePreset_Click" Content="Sel. Program" />
-                                </Viewbox>
+                            
+                                <Button Name="tbChoosePreset" FontSize="9" Grid.Column="0" Height="20" Width="100" Click="tbChoosePreset_Click" Content="Sel. Program" />
+                                <Button Name="tbOpenVST" FontSize="9" Grid.Column="0" Height="20" Width="100" Click="tbOpenVST_Click" Content="Open VST Host" Visibility="Hidden" />
+                                
                                 <TextBlock Name="lbPreset" Grid.Column="1" Tag="0-0-0" Text="" VerticalAlignment="Center" />
                             </Grid>
                         </StackPanel>
@@ -353,7 +354,7 @@
                             <materialDesign:PackIcon
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
-                                Foreground="Yellow"
+                                Foreground="White"
                                 Kind="Hammer" />
                         </TextBlock>
                     </StackPanel>
