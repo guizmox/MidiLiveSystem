@@ -13,12 +13,6 @@ using System.Net.Security;
 // Modified by perivar@nerseth.com
 namespace VSTHost
 {
-    public enum AudioLibrary
-    {
-        Null,
-        NAudio
-    }
-
     public class VSTPlugin
     {
         public VST VSTSynth;
@@ -89,6 +83,8 @@ namespace VSTHost
 
     public static class UtilityAudio
     {
+        private static Thread AudioThread;
+
         private static IWavePlayer AudioDevice;
         internal static RecordableMixerStream32 AudioMixer;
         public static bool AudioInitialized = false;
@@ -99,13 +95,13 @@ namespace VSTHost
 
             if (AudioDevice == null) //asio pas encore initialisé
             {
-                Thread thread = new Thread(() =>
+                AudioThread = new Thread(() =>
                 {
                     StartSTA(asioDevice, iSampleRate, ref iOK);
                 });
 
-                thread.SetApartmentState(ApartmentState.STA);
-                thread.Start();
+                AudioThread.SetApartmentState(ApartmentState.STA);
+                AudioThread.Start();
 
                 while (iOK == 0)
                 {
@@ -161,12 +157,16 @@ namespace VSTHost
 
         public static void StartAudio()
         {
-            if (AudioDevice != null) AudioDevice.Play();
+            if (AudioDevice != null)
+            { 
+                AudioDevice.Play(); 
+            }
         }
 
         public static void StopAudio()
         {
-            if (AudioDevice != null) AudioDevice.Stop();
+            if (AudioDevice != null) { AudioDevice.Stop(); }
+            AudioThread = null;
         }
 
         public static void Dispose()

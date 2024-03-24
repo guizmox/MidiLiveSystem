@@ -8,7 +8,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
-using System.Windows.Shapes;
 using NAudio.Wave;
 using System.IO;
 using Microsoft.Win32;
@@ -28,6 +27,8 @@ namespace VSTHost
     {
         public delegate void VSTHostEventHandler(VSTHostInfo vst, int boxpreset, bool bClose);
         public event VSTHostEventHandler OnVSTHostEvent;
+
+        private System.Timers.Timer VSTParametersCheck;
 
         int BoxPreset = 0;
         Guid RoutingGuid = Guid.Empty;
@@ -125,10 +126,62 @@ namespace VSTHost
                         Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.EditorGetRect(out rect);
                         Width = rect.Width;
                         Height = rect.Height;
+                        ResizeMode = ResizeMode.NoResize;
                         device = Plugin.VSTSynth;
+
+                        try
+                        {
+                            VSTInfo.VSTName = Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.GetProductString();
+                            if (VSTInfo.VSTName.Length == 0)
+                            {
+                                VSTInfo.VSTName = Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.GetInputProperties(0).Label;
+                            }
+                        }
+                        catch
+                        {
+                            VSTInfo.VSTName = Path.GetFileName(VSTInfo.VSTPath);
+                        }
+
+                        if (VSTInfo.Program > -1)
+                        {
+                            try
+                            {
+                                Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.SetProgram(VSTInfo.Program);
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show("VST Program can't be set : " + ex.Message);
+                            }
+                        }
+
+                        if (VSTInfo.ParameterNames.Count > 0)
+                        {
+                            try
+                            {
+                                for (int iP = 0; iP < VSTInfo.ParameterNames.Count; iP++)
+                                {
+                                    Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.SetParameter(iP, VSTInfo.ParameterValues[iP]);
+                                }
+                           
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show("VST Parameters can't be set : " + ex.Message);
+                            }
+                        }
+
+                        if (VSTParametersCheck == null)
+                        {
+                            VSTParametersCheck = new System.Timers.Timer();
+                            VSTParametersCheck.Elapsed += VSTParametersCheck_Elapsed;
+                            VSTParametersCheck.Interval = 1000;
+                            VSTParametersCheck.Start();
+                        }
                     }
                     catch (Exception ex)
                     {
+                        if (Plugin != null) { Plugin.DisposeVST(); }
+                        VSTInfo = null;
                         MessageBox.Show("Unable to load VST : " + ex.Message);
                     }
                 }
@@ -141,10 +194,43 @@ namespace VSTHost
             return device;
         }
 
+        private void VSTParametersCheck_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
+        {
+
+            var props = Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.GetProgram();
+            if (props != null)
+            {
+                VSTInfo.Program = props;
+            }
+
+            VSTInfo.ParameterValues.Clear();
+            VSTInfo.ParameterNames.Clear();
+            for (int i = 0; i < 1000; i++)
+            {
+                var propName = Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.GetParameterName(i);
+                var propData = Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.GetParameter(i);
+                if (propName != null)
+                {
+                    VSTInfo.ParameterNames.Add(propName);
+                    VSTInfo.ParameterValues.Add(propData);
+                }
+                else { break; }
+            }
+        }
+
         public void DisposePlugin()
         {
+            if (VSTParametersCheck != null)
+            {
+                VSTParametersCheck.Stop();
+                VSTParametersCheck.Enabled = false;
+                VSTParametersCheck = null;
+            }
+
             if (Plugin != null)
             {
+                Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.Close();
+                Plugin.VSTSynth.pluginContext.Dispose();
                 Plugin.DisposeVST();
             }
         }

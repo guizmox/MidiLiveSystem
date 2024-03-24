@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:VSTHost"      
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
-        Title="MIDI Live System VST Host" Height="600" Width="800" WindowStartupLocation="CenterScreen" WindowStyle="ToolWindow" Background="DarkGray" Closed="Window_Closed">
+        Title="MIDI Live System VST Host" Height="100" Width="800" WindowStartupLocation="CenterScreen" WindowStyle="ToolWindow" Background="DarkGray" Closed="Window_Closed">
 
 
     <Window.Resources>
@@ -26,9 +26,7 @@
             <ColumnDefinition Width="17*"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions >
-            <RowDefinition Height="10*"/>
-            <RowDefinition Height="80*"/>
-            <RowDefinition Height="10*"/>
+            <RowDefinition Height="100*"/>
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="10,10,10,10" Grid.ColumnSpan="2">

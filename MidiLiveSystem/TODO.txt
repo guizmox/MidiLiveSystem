@@ -2,3 +2,4 @@
 - Ajout contrôle BDD au démarrage pour dire ou se trouve l'aide
 - pouvoir renommer en masse les devices dans la BDD si on a changé de matériel
 - A TESTER : Smooth CC : conflits
+- VST Host : les VST ne se rechargeront pas à l'ouverture du projet

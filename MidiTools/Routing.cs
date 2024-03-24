@@ -2212,25 +2212,21 @@ namespace MidiTools
 
         public int GetFreeChannelForDevice(string sDevice, int iWanted, bool bIn)
         {
-            int[] Channels = new int[16] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-
             if (iWanted == 0) { iWanted += 1; }
 
-            Channels[iWanted - 1] += 1;
 
-            var devicerouting = MidiMatrix.Where(m => m.DeviceOut != null && m.DeviceOut.Name.Equals(sDevice));
+            var devicerouting = MidiMatrix.Where(m => m.DeviceOut != null && m.ChannelOut > 0 && m.DeviceOut.Name.Equals(sDevice)).ToList();
 
             if (devicerouting != null && devicerouting.Count() > 0)
             {
-                foreach (var v in devicerouting)
+                int iDev = devicerouting.Count();
+                int[] Channels = new int[16] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+                foreach (var dev in devicerouting)
                 {
-                    if (v.ChannelOut > 0) //NA
-                    {
-                        Channels[v.ChannelOut - 1] += 1;
-                    }
+                    Channels[dev.ChannelOut - 1] += 1; 
                 }
 
-                if (Channels[iWanted - 1] > 1) //déja affecté
+                if (Channels[iWanted - 1] > 0) //déja affecté
                 {
                     for (int i = 0; i < Channels.Length; i++)
                     {
@@ -2318,7 +2314,7 @@ namespace MidiTools
 
         private async Task RoutingPanic(MatrixItem routing, int channelOut)
         {
-            if (routing.DeviceOut != null)
+            if (routing.DeviceOut != null && channelOut > 0)
             {
                 List<Task> tasks = new List<Task>();
 
@@ -2447,11 +2443,11 @@ namespace MidiTools
                 bool bINChanged = routing.CheckDeviceIn(sDeviceIn, iChIn);
                 bool bOUTChanged = routing.CheckDeviceOut(sDeviceOut);
 
+                if (iChIn != routing.ChannelIn) { bINChanged = true; }
+                if (iChOut != routing.ChannelOut) { bOUTChanged = true; }
+
                 if (bINChanged)
                 {
-                    await routing.CancelTask();
-                    await RoutingPanic(routing, routing.ChannelOut);
-
                     bool active = routing.Options.Active;
                     routing.Options.Active = false;
 
@@ -2520,6 +2516,8 @@ namespace MidiTools
                     routing.Options.Active = active;
                 }
 
+                if (sDeviceOut.Equals(Tools.VST_HOST) && vst == null) { return; }
+
                 if (iChOut > 0 && iChOut <= 16)
                 {
                     //hyper important d'être à la fin !
@@ -2546,6 +2544,9 @@ namespace MidiTools
         {
             await Tasks.AddTask(() =>
             {
+                lock (DevicesRoutingIN) { DevicesRoutingIN.Clear(); }
+                lock (DevicesRoutingOUT) { DevicesRoutingOUT.Clear(); }
+
                 foreach (var dev in devices)
                 {
                     if (dev[0].Equals("I") && dev[1].Length > 0 && !DevicesRoutingIN.Contains(dev[1]))

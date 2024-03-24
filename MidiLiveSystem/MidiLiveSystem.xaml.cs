@@ -754,6 +754,11 @@ namespace MidiLiveSystem
 
                 SequencerWindow.Close();
 
+                foreach (var box in Boxes)
+                {
+                    await box.CloseVSTHost();
+                }
+
                 //Id, ProjectGuid, Name, DateProject, Author, Active
                 List<string[]> projects = Database.GetProjects();
                 if (projects.Count > 0)
@@ -766,6 +771,7 @@ namespace MidiLiveSystem
                         UIRefreshRate.Enabled = false;
 
                         await Routing.DeleteAllRouting();
+
 
                         Project = project.Item2;
                         NewMessage?.Invoke("Project Loaded");
@@ -795,6 +801,11 @@ namespace MidiLiveSystem
                             if (Project.HorizontalGrid > -1)
                             {
                                 CurrentHorizontalGrid = Project.HorizontalGrid;
+                            }
+
+                            foreach (var box in Boxes.Where(b => b.HasVSTAttached))
+                            {
+                                await box.OpenVSTHost(true);
                             }
 
                             await AddAllRoutingBoxes();

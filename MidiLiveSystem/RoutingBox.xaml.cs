@@ -59,6 +59,8 @@ namespace MidiLiveSystem
 
         public Guid RoutingGuid { get; set; }
         public bool Detached { get; internal set; } = false;
+        public bool HasVSTAttached { get { return TempMemory[CurrentPreset].VSTData != null ? true : false; } }
+
         public int GridPosition = 0;
         public int CurrentPreset = 1;
 
@@ -364,6 +366,8 @@ namespace MidiLiveSystem
 
             if (item != null)
             {
+                await CloseVSTHost();
+
                 if (item.Tag.Equals(Tools.VST_HOST))
                 {
                     tbChoosePreset.Visibility = Visibility.Hidden;
@@ -375,8 +379,8 @@ namespace MidiLiveSystem
                     tbChoosePreset.Visibility = Visibility.Visible;
                     tbOpenVST.Visibility = Visibility.Hidden;
                     tbProgram.Text = "PROGRAM";
-                    await CloseVSTHost();
                 }
+                OnUIEvent?.Invoke(BoxGuid, "CHECK_OUT_CHANNEL", item.Tag.ToString() + "#|#" + cbChannelMidiOut.SelectedValue);
             }
         }
 
@@ -518,12 +522,7 @@ namespace MidiLiveSystem
 
         private async void tbOpenVST_Click(object sender, RoutedEventArgs e)
         {
-            if (VSTWindow == null)
-            {
-                VSTWindow = new VSTHost.MainWindow(RoutingGuid, BoxName, CurrentPreset, TempMemory[CurrentPreset].VSTData);
-                VSTWindow.OnVSTHostEvent += VSTWindow_OnVSTHostEvent;
-                VSTWindow.Show();
-            }
+            await OpenVSTHost(false);
         }
 
         private async void btnCopyPreset_Click(object sender, RoutedEventArgs e)
@@ -945,7 +944,8 @@ namespace MidiLiveSystem
 
         public async Task<MidiOptions> GetOptions()
         {
-            var options = TempMemory[CurrentPreset].MidiOptions;
+            var options = new MidiOptions();
+            //TempMemory[CurrentPreset].MidiOptions;
 
             await Dispatcher.InvokeAsync(() =>
             {
@@ -1242,7 +1242,7 @@ namespace MidiLiveSystem
         {
             if (VSTWindow != null)
             {
-                await UIEventPool.AddTask(() =>
+                await Dispatcher.InvokeAsync(() =>
                 {
                     VSTWindow.OnVSTHostEvent -= VSTWindow_OnVSTHostEvent;
                     VSTWindow.DisposePlugin();
@@ -1251,6 +1251,20 @@ namespace MidiLiveSystem
                     TempVST = null;
                 });
             }
+        }
+
+        internal async Task OpenVSTHost(bool bLoadProject)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                if (VSTWindow == null)
+                {
+                    if (bLoadProject) { TempVST = TempMemory[CurrentPreset].VSTData; }
+                    VSTWindow = new VSTHost.MainWindow(RoutingGuid, BoxName, CurrentPreset, TempMemory[CurrentPreset].VSTData);
+                    VSTWindow.OnVSTHostEvent += VSTWindow_OnVSTHostEvent;
+                    VSTWindow.Show();
+                }
+            });
         }
     }
 

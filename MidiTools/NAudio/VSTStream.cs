@@ -64,7 +64,7 @@ namespace CommonUtils.VSTPlugin
 
 			pluginContext.PluginCommandStub.Commands.SetBlockSize(blockSize);
 			pluginContext.PluginCommandStub.Commands.SetSampleRate(WaveFormat.SampleRate);
-			pluginContext.PluginCommandStub.Commands.SetProcessPrecision(VstProcessPrecision.Process32);
+			pluginContext.PluginCommandStub.Commands.SetProcessPrecision(VstProcessPrecision.Process64);
 
 			inputBuffers = inputMgr.Buffers.ToArray();
 			outputBuffers = outputMgr.Buffers.ToArray();
