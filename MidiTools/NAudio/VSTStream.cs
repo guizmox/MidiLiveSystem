@@ -64,7 +64,7 @@ namespace CommonUtils.VSTPlugin
 
 			pluginContext.PluginCommandStub.Commands.SetBlockSize(blockSize);
 			pluginContext.PluginCommandStub.Commands.SetSampleRate(WaveFormat.SampleRate);
-			pluginContext.PluginCommandStub.Commands.SetProcessPrecision(VstProcessPrecision.Process64);
+			pluginContext.PluginCommandStub.Commands.SetProcessPrecision(VstProcessPrecision.Process32);
 
 			inputBuffers = inputMgr.Buffers.ToArray();
 			outputBuffers = outputMgr.Buffers.ToArray();
@@ -118,9 +118,9 @@ namespace CommonUtils.VSTPlugin
 				pluginContext.PluginCommandStub.Commands.StopProcess();
 				//pluginContext.PluginCommandStub.MainsChanged(false);
 			}
-			catch (Exception ex)
+			catch
 			{
-				Console.Out.WriteLine(ex.Message);
+				throw;
 			}
 
 			int indexOutput = 0;

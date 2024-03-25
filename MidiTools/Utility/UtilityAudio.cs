@@ -130,6 +130,7 @@ namespace VSTHost
                     if (!string.IsNullOrEmpty(asioDevice))
                     {
                         AudioDevice = new AsioOut(asioDevice);
+
                     }
 
                     if (AudioDevice == null)

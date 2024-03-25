@@ -214,6 +214,7 @@ namespace NAudio.Wave
 
 			// sum the channels in
 			byte[] readBuffer = new byte[count];
+
 			foreach (WaveStream inputStream in inputStreams)
 			{
 				if (inputStream.HasData(count))

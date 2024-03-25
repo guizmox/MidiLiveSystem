@@ -162,7 +162,7 @@ namespace VSTHost
                                 {
                                     Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.SetParameter(iP, VSTInfo.ParameterValues[iP]);
                                 }
-                           
+
                             }
                             catch (Exception ex)
                             {
@@ -174,7 +174,7 @@ namespace VSTHost
                         {
                             VSTParametersCheck = new System.Timers.Timer();
                             VSTParametersCheck.Elapsed += VSTParametersCheck_Elapsed;
-                            VSTParametersCheck.Interval = 1000;
+                            VSTParametersCheck.Interval = 10000;
                             VSTParametersCheck.Start();
                         }
                     }
@@ -194,28 +194,40 @@ namespace VSTHost
             return device;
         }
 
-        private void VSTParametersCheck_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
+        private async void VSTParametersCheck_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
         {
-
-            var props = Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.GetProgram();
-            if (props != null)
+            await UIEventPool.AddTask(() =>
             {
-                VSTInfo.Program = props;
-            }
-
-            VSTInfo.ParameterValues.Clear();
-            VSTInfo.ParameterNames.Clear();
-            for (int i = 0; i < 1000; i++)
-            {
-                var propName = Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.GetParameterName(i);
-                var propData = Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.GetParameter(i);
-                if (propName != null)
+                var props = Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.GetProgram();
+                if (props != null)
                 {
-                    VSTInfo.ParameterNames.Add(propName);
-                    VSTInfo.ParameterValues.Add(propData);
+                    VSTInfo.Program = props;
                 }
-                else { break; }
-            }
+
+                VSTInfo.ParameterValues.Clear();
+                VSTInfo.ParameterNames.Clear();
+                for (int i = 0; i < VSTInfo.ParameterCount; i++)
+                {
+                    try
+                    {
+                        var properties = Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.GetParameterProperties(i);
+
+                        if (properties != null)
+                        {
+                            string propName = propName = Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.GetParameterName(i);
+                            var propData = Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.GetParameter(i);
+                            if (propName != null)
+                            {
+                                VSTInfo.ParameterNames.Add(propName);
+                                VSTInfo.ParameterValues.Add(propData);
+                            }
+                            else { VSTInfo.ParameterCount = i; break; }
+                        }
+                        else { VSTInfo.ParameterCount = i; break; }
+                    }
+                    catch { VSTInfo.ParameterCount = i; break; }
+                }
+            });
         }
 
         public void DisposePlugin()
@@ -229,9 +241,9 @@ namespace VSTHost
 
             if (Plugin != null)
             {
+                Plugin.DisposeVST();
                 Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.Close();
                 Plugin.VSTSynth.pluginContext.Dispose();
-                Plugin.DisposeVST();
             }
         }
     }

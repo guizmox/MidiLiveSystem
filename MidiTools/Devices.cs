@@ -30,6 +30,7 @@ namespace MidiTools
         public int Program = -1;
         public List<float> ParameterValues = new List<float>();
         public List<string> ParameterNames = new List<string>();
+        public int ParameterCount = 9999;
     }
 
     [Serializable]
