@@ -243,12 +243,16 @@ namespace MidiLiveSystem
 
         private async void Window_Closed(object sender, EventArgs e)
         {
+            MidiRouting.InputStaticMidiMessage -= MidiRouting_InputMidiMessage;
+
             NewMessage -= MainWindow_NewMessage;
             UIRefreshRate.Enabled = false;
-            UIRefreshRate.Elapsed -= UIRefreshRate_Elapsed;
             UIRefreshRate.Stop();
 
-            MidiRouting.InputStaticMidiMessage -= MidiRouting_InputMidiMessage;
+            while (UIEventPool.TasksRunning > 0)
+            {
+                await Task.Delay(100);
+            }
 
             if (LogWindow != null)
             {
@@ -282,6 +286,11 @@ namespace MidiLiveSystem
             foreach (var detached in DetachedWindows)
             {
                 detached.Close();
+            }
+
+            foreach (var box in Boxes)
+            {
+                await box.CloseVSTWindow();
             }
 
             Database.SaveInstruments(CubaseInstrumentData.Instruments);

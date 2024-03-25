@@ -54,7 +54,7 @@ namespace MidiTools
 
     public static class UIEventPool
     {
-        internal static int TasksRunning
+        public static int TasksRunning
         {
             get
             {
