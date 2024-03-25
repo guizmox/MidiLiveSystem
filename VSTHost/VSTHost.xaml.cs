@@ -52,6 +52,8 @@ namespace VSTHost
 
         private void Window_Closed(object sender, EventArgs e)
         {
+            VSTParametersCheck.Stop();
+            VSTParametersCheck.Enabled = false;
             OnVSTHostEvent?.Invoke(Plugin, BoxPreset, true);
         }
 
@@ -121,9 +123,10 @@ namespace VSTHost
                         Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.EditorOpen(windowHandle);
                         System.Drawing.Rectangle rect = new System.Drawing.Rectangle();
                         Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.EditorGetRect(out rect);
-                        Width = rect.Width;
-                        Height = rect.Height;
+                        Width = rect.Width + 20;
+                        Height = rect.Height + 50;
                         ResizeMode = ResizeMode.NoResize;
+
                         try
                         {
                             Plugin.VSTHostInfo.VSTName = Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.GetProductString();
@@ -170,6 +173,11 @@ namespace VSTHost
                             VSTParametersCheck = new System.Timers.Timer();
                             VSTParametersCheck.Elapsed += VSTParametersCheck_Elapsed;
                             VSTParametersCheck.Interval = 10000;
+                            VSTParametersCheck.Start();
+                        }
+                        else
+                        {
+                            VSTParametersCheck.Enabled = true;
                             VSTParametersCheck.Start();
                         }
                     }

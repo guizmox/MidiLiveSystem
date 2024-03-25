@@ -246,6 +246,7 @@ namespace MidiLiveSystem
             MidiRouting.InputStaticMidiMessage -= MidiRouting_InputMidiMessage;
 
             NewMessage -= MainWindow_NewMessage;
+            UIRefreshRate.Elapsed -= UIRefreshRate_Elapsed;
             UIRefreshRate.Enabled = false;
             UIRefreshRate.Stop();
 
@@ -290,7 +291,7 @@ namespace MidiLiveSystem
 
             foreach (var box in Boxes)
             {
-                await box.CloseVSTWindow();
+                box.CloseVSTWindow();
             }
 
             Database.SaveInstruments(CubaseInstrumentData.Instruments);
@@ -1145,10 +1146,6 @@ namespace MidiLiveSystem
             {
                 int index = i;
                 tasks.Add(UIEventPool.AddTask(async () => await ProcessBoxData(Boxes[index], false)));
-            }
-            if (Boxes.Count == 0)
-            {
-                await Routing.CloseUsedPorts(false);
             }
 
             await Task.WhenAll(tasks);

@@ -49,9 +49,12 @@ namespace CommonUtils.VSTPlugin
 
         internal void Dispose()
         {
-            StackTimer.Stop();
-            StackTimer.Enabled = false;
-            StackTimer = null;
+            if (StackTimer != null)
+            {
+                StackTimer.Stop();
+                StackTimer.Enabled = false;
+                StackTimer = null;
+            }
 
             //edit.Close();
             if (pluginContext != null)

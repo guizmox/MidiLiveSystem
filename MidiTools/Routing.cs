@@ -2555,6 +2555,7 @@ namespace MidiTools
                 var matrix = MidiMatrix.FirstOrDefault(r => r.RoutingGuid == routingGuid); // && r.DeviceOut != null && r.DeviceOut.Name.Equals(Tools.VST_HOST));
                 if (matrix != null && matrix.DeviceOut != null)
                 {
+                    plugin.DisposeVST();
                     matrix.DeviceOut.UnplugVSTDevice(plugin, matrix.ChannelOut - 1);
                 }
             });
@@ -2774,28 +2775,6 @@ namespace MidiTools
                     foreach (var dev in UsedDevicesOUT)
                     {
                         dev.OpenDevice();
-                    }
-                }
-            });
-        }
-
-        public async Task CloseUsedPorts(bool bIn)
-        {
-            await Tasks.AddTask(() =>
-            {
-                if (bIn)
-                {
-                    foreach (var dev in UsedDevicesIN)
-                    {
-                        dev.CloseDevice();
-                        dev.OnMidiEvent -= DeviceIn_OnMidiEvent;
-                    }
-                }
-                else
-                {
-                    foreach (var dev in UsedDevicesOUT)
-                    {
-                        dev.CloseDevice();
                     }
                 }
             });

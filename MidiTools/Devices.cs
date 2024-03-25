@@ -126,7 +126,7 @@ namespace MidiTools
 
         private readonly int MIDI_InOrOut; //IN = 1, OUT = 2
 
-        private readonly VSTHostInfo VSTHost;
+        private VSTHostInfo VSTHost;
 
         private MidiInputDeviceEvents MIDI_InputEvents;
         private MidiOutputDeviceEvents MIDI_OutputEvents;
@@ -266,6 +266,7 @@ namespace MidiTools
                 VST_OutputEvents.OnMidiEvent -= MIDI_OutputEvents_OnMidiEvent;
                 VST_OutputEvents.Close();
                 VST_OutputEvents = null;
+                VSTHost = null;
                 return true;
             }
             else
@@ -440,7 +441,7 @@ namespace MidiTools
             {
                 try
                 {
-                    VST_OutputEvents.VSTPlugins[iChannel].pluginContext.PluginCommandStub.Commands.Close();
+                    //VST_OutputEvents.VSTPlugins[iChannel].pluginContext.PluginCommandStub.Commands.Close();
                     //VST_OutputEvents.VSTPlugins[iChannel].pluginContext.Dispose();
                     VST_OutputEvents.VSTPlugins[iChannel].Dispose();
                 }

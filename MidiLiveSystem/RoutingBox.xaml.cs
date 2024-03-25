@@ -1241,17 +1241,20 @@ namespace MidiLiveSystem
             });
         }
 
-        internal async Task CloseVSTWindow()
+        internal void CloseVSTWindow()
         {
-            await Dispatcher.InvokeAsync(() =>
+            if (TempVST.VSTSynth != null)
             {
-                if (VSTWindow != null)
-                {
-                    VSTWindow.OnVSTHostEvent -= VSTWindow_OnVSTHostEvent;
-                    VSTWindow.Close();
-                    VSTWindow = null;
-                }
-            });
+                TempVST.DisposeVST();
+            }
+
+            if (VSTWindow != null)
+            {
+                VSTWindow.OnVSTHostEvent -= VSTWindow_OnVSTHostEvent;
+                VSTWindow.Close();
+                VSTWindow = null;
+            }
+            else { return; }
         }
 
         internal async Task CloseVSTHost()
