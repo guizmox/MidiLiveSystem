@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using VSTHost;
 using static MidiTools.MidiDevice;
 
 namespace MidiTools
@@ -2344,7 +2345,7 @@ namespace MidiTools
             }
         }
 
-        public async Task<Guid> AddRouting(string sDeviceIn, string sDeviceOut, VSTHostInfo vst, int iChIn, int iChOut, MidiOptions options, MidiPreset preset = null, Sequencer DeviceInSequencer = null)
+        public async Task<Guid> AddRouting(string sDeviceIn, string sDeviceOut, VSTPlugin vst, int iChIn, int iChOut, MidiOptions options, MidiPreset preset = null, Sequencer DeviceInSequencer = null)
         {
             Guid GUID = new Guid();
 
@@ -2370,9 +2371,9 @@ namespace MidiTools
 
             if (sDeviceOut.Equals(Tools.VST_HOST))
             {
-                if (vst != null)
+                if (vst.VSTHostInfo != null)
                 {
-                    var device = new MidiDevice(vst);
+                    var device = new MidiDevice(vst.VSTHostInfo);
                     UsedDevicesOUT.Add(device);
                 }
             }
@@ -2429,7 +2430,7 @@ namespace MidiTools
             return GUID;
         }
 
-        public async Task ModifyRouting(Guid routingGuid, string sDeviceIn, string sDeviceOut, VSTHostInfo vst, int iChIn, int iChOut, MidiOptions options, MidiPreset preset = null, Sequencer DeviceInSequencer = null)
+        public async Task ModifyRouting(Guid routingGuid, string sDeviceIn, string sDeviceOut, VSTPlugin vst, int iChIn, int iChOut, MidiOptions options, MidiPreset preset = null, Sequencer DeviceInSequencer = null)
         {
             bool bDeviceOutChanged = false;
 
@@ -2499,7 +2500,7 @@ namespace MidiTools
 
                     if (sDeviceOut.Equals(Tools.VST_HOST))
                     {
-                        if (vst != null)
+                        if (vst.VSTHostInfo != null)
                         {
                             routing.DeviceOut = AddNewOutDevice(sDeviceOut, vst);
                         }
@@ -2528,14 +2529,33 @@ namespace MidiTools
             }
         }
 
-        public async Task AddVSTDeviceToAsio(Guid routingGuid, VST device)
+        public async Task AddVSTDeviceToAsio(Guid routingGuid, VSTPlugin plugin)
         {
             await UIEventPool.AddTask(() =>
             {
-                var matrix = MidiMatrix.FirstOrDefault(r => r.RoutingGuid == routingGuid && r.DeviceOut != null && r.DeviceOut.Name.Equals(Tools.VST_HOST));
+                var matrix = MidiMatrix.FirstOrDefault(r => r.RoutingGuid == routingGuid && r.ChannelOut > 0); // && r.DeviceOut != null && r.DeviceOut.Name.Equals(Tools.VST_HOST));
                 if (matrix != null)
                 {
-                    matrix.DeviceOut.PlugVSTDevice(device);
+                    if (matrix.DeviceOut == null)
+                    {
+                        matrix.DeviceOut = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(Tools.VST_HOST));
+                    }
+                    if (matrix.DeviceOut != null)
+                    {
+                        matrix.DeviceOut.PlugVSTDevice(plugin, matrix.ChannelOut - 1);
+                    }
+                }
+            });
+        }
+        
+        public async Task RemoveVSTDeviceFromAsio(Guid routingGuid, VSTPlugin plugin)
+        {
+            await UIEventPool.AddTask(() =>
+            {
+                var matrix = MidiMatrix.FirstOrDefault(r => r.RoutingGuid == routingGuid); // && r.DeviceOut != null && r.DeviceOut.Name.Equals(Tools.VST_HOST));
+                if (matrix != null && matrix.DeviceOut != null)
+                {
+                    matrix.DeviceOut.UnplugVSTDevice(plugin, matrix.ChannelOut - 1);
                 }
             });
         }
@@ -2561,7 +2581,7 @@ namespace MidiTools
             });
         }
 
-        private MidiDevice AddNewOutDevice(string sDeviceOut, VSTHostInfo vst = null)
+        private MidiDevice AddNewOutDevice(string sDeviceOut, VSTPlugin vst = null)
         {
             var dev = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut));
             if (dev == null)
@@ -2570,7 +2590,7 @@ namespace MidiTools
                 MidiDevice newdev;
                 if (vst != null)
                 {
-                    newdev = new MidiDevice(vst);
+                    newdev = new MidiDevice(vst.VSTHostInfo);
                 }
                 else
                 {
@@ -2875,7 +2895,8 @@ namespace MidiTools
                 }
             });
             return CCdata;
-        }        
+        }
+
         #endregion
     }
 }

@@ -6,6 +6,8 @@ using CommonUtils.VSTPlugin;
 using Jacobi.Vst.Host.Interop;
 using System.Threading;
 using System.Net.Security;
+using Jacobi.Vst.Samples.Host;
+using MidiTools;
 
 // Copied from the microDRUM project
 // https://github.com/microDRUM
@@ -15,6 +17,7 @@ namespace VSTHost
 {
     public class VSTPlugin
     {
+        public VSTHostInfo VSTHostInfo;
         public VST VSTSynth;
         private VSTStream vstStream;
 
@@ -23,7 +26,7 @@ namespace VSTHost
 
         }
 
-        public VST LoadVST(string VSTFile, int iSampleRate)
+        public VST LoadVST()
         {
             DisposeVST();
 
@@ -33,9 +36,9 @@ namespace VSTHost
 
             try
             {
-                string sVSTPath = System.IO.Path.GetDirectoryName(VSTFile);
+                string sVSTPath = System.IO.Path.GetDirectoryName(VSTHostInfo.VSTPath);
 
-                VSTSynth.pluginContext = VstPluginContext.Create(VSTFile, hcs);
+                VSTSynth.pluginContext = VstPluginContext.Create(VSTHostInfo.VSTPath, hcs);
                 VSTSynth.pluginContext.PluginCommandStub.Commands.Open();
                 //pluginContext.PluginCommandStub.SetProgram(0);
                 //GeneralVST.pluginContext.PluginCommandStub.Commands.Open(hWnd);
@@ -44,7 +47,7 @@ namespace VSTHost
                 vstStream = new VSTStream();
                 vstStream.ProcessCalled += VSTSynth.Stream_ProcessCalled;
                 vstStream.pluginContext = VSTSynth.pluginContext;
-                vstStream.SetWaveFormat(iSampleRate, 2);
+                vstStream.SetWaveFormat(VSTHostInfo.SampleRate, 2);
 
                 UtilityAudio.AudioMixer.AddInputStream(vstStream);
 

@@ -425,11 +425,29 @@ namespace MidiTools
             return iNote;
         }
 
-        internal void PlugVSTDevice(VST device)
+        internal void PlugVSTDevice(VSTPlugin plugin, int iChannel)
         {
             if (VST_OutputEvents != null) 
             {
-                VST_OutputEvents.VSTDevice = device;
+                VST_OutputEvents.VSTPlugins[iChannel] = plugin.VSTSynth;
+                VST_OutputEvents.VSTSynths[iChannel] = plugin.VSTHostInfo;
+            }
+        }
+
+        internal void UnplugVSTDevice(VSTPlugin plugin, int iChannel)
+        {
+            if (VST_OutputEvents != null)
+            {
+                try
+                {
+                    VST_OutputEvents.VSTPlugins[iChannel].pluginContext.PluginCommandStub.Commands.Close();
+                    //VST_OutputEvents.VSTPlugins[iChannel].pluginContext.Dispose();
+                    VST_OutputEvents.VSTPlugins[iChannel].Dispose();
+                }
+                catch 
+                { }
+                VST_OutputEvents.VSTPlugins[iChannel] = null;
+                VST_OutputEvents.VSTSynths[iChannel] = null;
             }
         }
     }
@@ -439,13 +457,16 @@ namespace MidiTools
         internal delegate void MidiEventHandler(MidiEvent ev);
         internal event MidiEventHandler OnMidiEvent;
 
-        internal VSTHostInfo VSTSynth = null;
-        internal VST VSTDevice = null;
+        internal int[,] CCmemory = new int[16, 128];
+        internal bool[,] NOTEmemory = new bool[16, 128];
+
+        internal VSTHostInfo[] VSTSynths = new VSTHostInfo[16];
+        internal VST[] VSTPlugins = new VST[16];
         internal bool Locked = false;
 
         internal VSTOutputDeviceEvents(VSTHostInfo vst)
         {
-            VSTSynth = vst;
+            VSTSynths[0] = vst;
         }
 
         internal bool Close()
@@ -455,7 +476,21 @@ namespace MidiTools
                 UtilityAudio.StopAudio();
                 UtilityAudio.Dispose();
                 UtilityAudio.AudioInitialized = false;
-                AddLog(VSTSynth.AsioDevice, true, Channel.Channel1, "[CLOSE]", "", "", "");
+
+                foreach (var vst in VSTPlugins.Where(v => v != null))
+                {
+                    try
+                    {
+                        vst.Dispose();
+                    }
+                    catch
+                    { }
+                }
+
+                foreach (var vst in VSTSynths.Where(v => v != null))
+                {
+                    AddLog(vst.AsioDevice, true, Channel.Channel1, "[CLOSE]", "", "", "");
+                }
 
                 return true;
             }
@@ -466,23 +501,24 @@ namespace MidiTools
         {
             try
             {
+                //on ouvre l'ASIO uniquement avec le premier device
                 if (!Locked)
                 {
                     Locked = true;
 
-                    bool bOK = UtilityAudio.OpenAudio(VSTSynth.AsioDevice, VSTSynth.SampleRate);
+                    bool bOK = UtilityAudio.OpenAudio(VSTSynths[0].AsioDevice, VSTSynths[0].SampleRate);
 
                     if (bOK)
                     {
                         UtilityAudio.StartAudio();
                         UtilityAudio.AudioInitialized = true;
-                        AddLog(VSTSynth.AsioDevice, true, Channel.Channel1, "[OPEN]", "", "", "");
+                        AddLog(VSTSynths[0].AsioDevice, true, Channel.Channel1, "[OPEN]", "", "", "");
                     }
                 }
             }
             catch (Exception ex)
             {
-                VSTSynth.Error = "Unable to open audio device : " + ex.Message;
+                VSTSynths[0].Error = "Unable to open audio device : " + ex.Message;
                 return false;
             }
             return true;
@@ -490,7 +526,7 @@ namespace MidiTools
 
         internal void SendEvent(MidiEvent ev)
         {
-            if (VSTDevice != null)
+            if (VSTPlugins[Tools.GetChannelInt(ev.Channel) - 1] != null)
             {
                 ev.EventDate = DateTime.Now; //à cause des problèmes de timing à la lecture d'une séquence
 
@@ -499,38 +535,41 @@ namespace MidiTools
                     case TypeEvent.CLOCK:
                         break;
                     case TypeEvent.NOTE_ON:
-                        VSTDevice.MIDI_NoteOn(Convert.ToByte(ev.Values[0]), Convert.ToByte(ev.Values[1]));
-                        AddLog(VSTSynth.VSTName, false, ev.Channel, "Note On", ev.Values[0].ToString(), "Velocity", ev.Values[1].ToString());
+                        NOTEmemory[Tools.GetChannelInt(ev.Channel) - 1, ev.Values[0]] = true;
+                        VSTPlugins[Tools.GetChannelInt(ev.Channel) - 1].MIDI_NoteOn(Convert.ToByte(ev.Values[0]), Convert.ToByte(ev.Values[1]));
+                        AddLog(VSTSynths[Tools.GetChannelInt(ev.Channel) - 1].VSTName, false, ev.Channel, "Note On", ev.Values[0].ToString(), "Velocity", ev.Values[1].ToString());
                         break;
                     case TypeEvent.NOTE_OFF:
-                        VSTDevice.MIDI_NoteOff(Convert.ToByte(ev.Values[0]), Convert.ToByte(ev.Values[1]));
-                        AddLog(VSTSynth.VSTName, false, ev.Channel, "Note Off", ev.Values[0].ToString(), "Velocity", ev.Values[1].ToString());
+                        NOTEmemory[Tools.GetChannelInt(ev.Channel) - 1, ev.Values[0]] = false;
+                        VSTPlugins[Tools.GetChannelInt(ev.Channel) - 1].MIDI_NoteOff(Convert.ToByte(ev.Values[0]), Convert.ToByte(ev.Values[1]));
+                        AddLog(VSTSynths[Tools.GetChannelInt(ev.Channel) - 1].VSTName, false, ev.Channel, "Note Off", ev.Values[0].ToString(), "Velocity", ev.Values[1].ToString());
                         break;
                     case TypeEvent.NRPN:
-                        AddLog(VSTSynth.VSTName, false, ev.Channel, "Nrpn", ev.Values[0].ToString(), "Value", ev.Values[1].ToString());
+                        AddLog(VSTSynths[Tools.GetChannelInt(ev.Channel) - 1].VSTName, false, ev.Channel, "Nrpn", ev.Values[0].ToString(), "Value", ev.Values[1].ToString());
                         break;
                     case TypeEvent.PB:
-                        VSTDevice.MIDI_PitchBend(ev.Values[0]);
-                        AddLog(VSTSynth.VSTName, false, ev.Channel, "Pitch Bend", ev.Values[0].ToString(), "", "");
+                        VSTPlugins[Tools.GetChannelInt(ev.Channel) - 1].MIDI_PitchBend(ev.Values[0]);
+                        AddLog(VSTSynths[Tools.GetChannelInt(ev.Channel) - 1].VSTName, false, ev.Channel, "Pitch Bend", ev.Values[0].ToString(), "", "");
                         break;
                     case TypeEvent.PC:
-                        VSTDevice.MIDI_ProgramChange(Convert.ToByte(ev.Values[0]));
-                        AddLog(VSTSynth.VSTName, false, ev.Channel, "Program Change", ev.Values[0].ToString(), "", "");
+                        VSTPlugins[Tools.GetChannelInt(ev.Channel) - 1].MIDI_ProgramChange(Convert.ToByte(ev.Values[0]));
+                        AddLog(VSTSynths[Tools.GetChannelInt(ev.Channel) - 1].VSTName, false, ev.Channel, "Program Change", ev.Values[0].ToString(), "", "");
                         break;
                     case TypeEvent.SYSEX:
-                        AddLog(VSTSynth.VSTName, false, 0, "SysEx", ev.SysExData, "", "");
+                        AddLog(VSTSynths[Tools.GetChannelInt(ev.Channel) - 1].VSTName, false, 0, "SysEx", ev.SysExData, "", "");
                         break;
                     case TypeEvent.CC:
-                        VSTDevice.MIDI_CC(Convert.ToByte(ev.Values[0]), Convert.ToByte(ev.Values[1]));
-                        AddLog(VSTSynth.VSTName, false, ev.Channel, "Control Change", ev.Values[0].ToString(), "Value", ev.Values[1].ToString());
+                        CCmemory[Tools.GetChannelInt(ev.Channel) - 1, ev.Values[0]] = ev.Values[1];
+                        VSTPlugins[Tools.GetChannelInt(ev.Channel) - 1].MIDI_CC(Convert.ToByte(ev.Values[0]), Convert.ToByte(ev.Values[1]));
+                        AddLog(VSTSynths[Tools.GetChannelInt(ev.Channel) - 1].VSTName, false, ev.Channel, "Control Change", ev.Values[0].ToString(), "Value", ev.Values[1].ToString());
                         break;
                     case TypeEvent.CH_PRES:
-                        VSTDevice.MIDI_Aftertouch(Convert.ToByte(ev.Values[0]));
-                        AddLog(VSTSynth.VSTName, false, ev.Channel, "Channel Pressure", ev.Values[0].ToString(), "", "");
+                        VSTPlugins[Tools.GetChannelInt(ev.Channel) - 1].MIDI_Aftertouch(Convert.ToByte(ev.Values[0]));
+                        AddLog(VSTSynths[Tools.GetChannelInt(ev.Channel) - 1].VSTName, false, ev.Channel, "Channel Pressure", ev.Values[0].ToString(), "", "");
                         break;
                     case TypeEvent.POLY_PRES:
-                        VSTDevice.MIDI_PolyphonicAftertouch(Convert.ToByte(ev.Values[0]), Convert.ToByte(ev.Values[1]));
-                        AddLog(VSTSynth.VSTName, false, ev.Channel, "Poly. Channel Key", ev.Values[0].ToString(), "Pressure", ev.Values[1].ToString());
+                        VSTPlugins[Tools.GetChannelInt(ev.Channel) - 1].MIDI_PolyphonicAftertouch(Convert.ToByte(ev.Values[0]), Convert.ToByte(ev.Values[1]));
+                        AddLog(VSTSynths[Tools.GetChannelInt(ev.Channel) - 1].VSTName, false, ev.Channel, "Poly. Channel Key", ev.Values[0].ToString(), "Pressure", ev.Values[1].ToString());
                         break;
                 }
 

@@ -61,6 +61,8 @@ namespace MidiLiveSystem
         public bool Detached { get; internal set; } = false;
         public bool HasVSTAttached { get { return TempMemory[CurrentPreset].VSTData != null ? true : false; } }
 
+        public VSTPlugin GetVST { get { return TempVST; } }
+
         public int GridPosition = 0;
         public int CurrentPreset = 1;
 
@@ -72,7 +74,7 @@ namespace MidiLiveSystem
         public event RoutingBoxEventHandler OnUIEvent;
 
         BoxPreset[] TempMemory = new BoxPreset[8];
-        VSTHostInfo TempVST;
+        VSTPlugin TempVST = new VSTPlugin();
 
         PresetBrowser InstrumentPresets = null;
 
@@ -94,19 +96,20 @@ namespace MidiLiveSystem
             MidiRouting.OutputMidiMessage += MidiRouting_OutputMidiMessage;
         }
 
-        private async void VSTWindow_OnVSTHostEvent(VSTHostInfo vst, int iPreset, bool bClose)
+        private async void VSTWindow_OnVSTHostEvent(VSTPlugin plugin, int iPreset, bool bClose)
         {
             if (bClose)
             {
+                VSTWindow.OnVSTHostEvent -= VSTWindow_OnVSTHostEvent;
                 VSTWindow = null;
             }
             else
             {
-                TempVST = vst;
-                var device = await VSTWindow.LoadPlugin();
-                if (device != null)
+                if (plugin != null)
                 {
-                    OnUIEvent?.Invoke(BoxGuid, "PLUG_VST_TO_DEVICE", device);
+                    TempVST = plugin;
+                    TempVST = await VSTWindow.LoadPlugin();
+                    OnUIEvent?.Invoke(BoxGuid, "PLUG_VST_TO_DEVICE", plugin);
                 }
             }
         }
@@ -773,7 +776,7 @@ namespace MidiLiveSystem
                 var options = await GetOptions();
                 var preset = await GetPreset();
 
-                var bp = new BoxPreset(RoutingGuid, BoxGuid, routingname, presetname, options, preset, sDeviceIn, sDeviceOut, TempVST, iChannelIn, iChannelOut);
+                var bp = new BoxPreset(RoutingGuid, BoxGuid, routingname, presetname, options, preset, sDeviceIn, sDeviceOut, TempVST == null ? null : TempVST.VSTHostInfo, iChannelIn, iChannelOut);
 
                 boxPreset = bp;
 
@@ -1240,15 +1243,19 @@ namespace MidiLiveSystem
 
         internal async Task CloseVSTHost()
         {
-            if (VSTWindow != null)
+            if (TempVST != null)
             {
                 await Dispatcher.InvokeAsync(() =>
                 {
-                    VSTWindow.OnVSTHostEvent -= VSTWindow_OnVSTHostEvent;
-                    VSTWindow.DisposePlugin();
-                    VSTWindow.Close();
-                    VSTWindow = null;
-                    TempVST = null;
+                    OnUIEvent?.Invoke(BoxGuid, "REMOVE_VST_FROM_DEVICE", TempVST);
+                    if (VSTWindow != null)
+                    {
+                        VSTWindow.OnVSTHostEvent -= VSTWindow_OnVSTHostEvent;
+                        VSTWindow.Close();
+                        VSTWindow = null;
+                    }
+                    TempVST = new VSTPlugin();
+                    TempMemory[CurrentPreset].VSTData = null;
                 });
             }
         }
@@ -1259,7 +1266,7 @@ namespace MidiLiveSystem
             {
                 if (VSTWindow == null)
                 {
-                    if (bLoadProject) { TempVST = TempMemory[CurrentPreset].VSTData; }
+                    if (bLoadProject) { TempVST.VSTHostInfo = TempMemory[CurrentPreset].VSTData; }
                     VSTWindow = new VSTHost.MainWindow(RoutingGuid, BoxName, CurrentPreset, TempMemory[CurrentPreset].VSTData);
                     VSTWindow.OnVSTHostEvent += VSTWindow_OnVSTHostEvent;
                     VSTWindow.Show();

@@ -21,6 +21,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Xml.Linq;
 using System.Xml.Serialization;
+using VSTHost;
 using static MidiLiveSystem.RoutingBox;
 using static System.Net.Mime.MediaTypeNames;
 
@@ -283,11 +284,6 @@ namespace MidiLiveSystem
                 detached.Close();
             }
 
-            for (int i = 0; i < Boxes.Count; i++)
-            {
-                await Boxes[i].CloseVSTHost();
-            }
-
             Database.SaveInstruments(CubaseInstrumentData.Instruments);
             await Routing.DeleteAllRouting();
         }
@@ -529,7 +525,11 @@ namespace MidiLiveSystem
                         break;
 
                     case "PLUG_VST_TO_DEVICE":
-                        await Routing.AddVSTDeviceToAsio(box.RoutingGuid, (VST)sValue);
+                        await Routing.AddVSTDeviceToAsio(box.RoutingGuid, (VSTPlugin)sValue);
+                        break;
+
+                    case "REMOVE_VST_FROM_DEVICE":
+                        await Routing.RemoveVSTDeviceFromAsio(box.RoutingGuid, (VSTPlugin)sValue);
                         break;
 
                     case "PLAY_NOTE":
@@ -543,7 +543,7 @@ namespace MidiLiveSystem
 
                         if (bp1.RoutingGuid != Guid.Empty)
                         {
-                            await Routing.ModifyRouting(bp1.RoutingGuid, sDevIn1, sDevOut1, bp1.VSTData, iChIn1, iChOut1, bp1.MidiOptions, bp1.MidiPreset, sDevIn1.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn1 - 1 ? SeqData.Sequencer[iChIn1 - 1] : null);
+                            await Routing.ModifyRouting(bp1.RoutingGuid, sDevIn1, sDevOut1, box.GetVST, iChIn1, iChOut1, bp1.MidiOptions, bp1.MidiPreset, sDevIn1.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn1 - 1 ? SeqData.Sequencer[iChIn1 - 1] : null);
                             await Routing.SendNote(box.RoutingGuid, bp1.MidiOptions.PlayNote);
                         }
                         break;
@@ -559,7 +559,7 @@ namespace MidiLiveSystem
 
                         if (bp2.RoutingGuid != Guid.Empty)
                         {
-                            await Routing.ModifyRouting(bp2.RoutingGuid, sDevIn2, sDevOut2, bp2.VSTData, iChIn2, iChOut2, bp2.MidiOptions, bp2.MidiPreset, sDevIn2.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn2 - 1 ? SeqData.Sequencer[iChIn2 - 1] : null);
+                            await Routing.ModifyRouting(bp2.RoutingGuid, sDevIn2, sDevOut2, box.GetVST, iChIn2, iChOut2, bp2.MidiOptions, bp2.MidiPreset, sDevIn2.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn2 - 1 ? SeqData.Sequencer[iChIn2 - 1] : null);
                         }
                         break;
 
@@ -1155,7 +1155,7 @@ namespace MidiLiveSystem
             int iChOut = 0;
             MidiOptions options = null;
             MidiPreset preset = null;
-            VSTHostInfo vst = null;
+            VSTPlugin vst = null;
 
             var snapshot = await box.Snapshot(); //enregistrement du preset en cours
 
@@ -1165,7 +1165,7 @@ namespace MidiLiveSystem
             iChOut = snapshot.ChannelOut;
             options = snapshot.MidiOptions;
             preset = snapshot.MidiPreset;
-            vst = snapshot.VSTData;
+            vst = box.GetVST;
 
             if (box.RoutingGuid == Guid.Empty || bFromSave)
             {          
