@@ -52,8 +52,11 @@ namespace VSTHost
 
         private void Window_Closed(object sender, EventArgs e)
         {
-            VSTParametersCheck.Stop();
-            VSTParametersCheck.Enabled = false;
+            if (VSTParametersCheck != null)
+            {
+                VSTParametersCheck.Stop();
+                VSTParametersCheck.Enabled = false;
+            }
             OnVSTHostEvent?.Invoke(Plugin, BoxPreset, true);
         }
 
