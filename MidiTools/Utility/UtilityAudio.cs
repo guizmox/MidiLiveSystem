@@ -405,18 +405,12 @@ namespace VSTHost
 
             try
             {
-                string sVSTPath = System.IO.Path.GetDirectoryName(VSTHostInfo.VSTPath);
-
                 VSTSynth.pluginContext = VstPluginContext.Create(VSTHostInfo.VSTPath, hcs);
                 VSTSynth.pluginContext.PluginCommandStub.Commands.Open();
                 VSTHostInfo.ParameterCount = VSTSynth.pluginContext.PluginInfo.ParameterCount;
                 VSTHostInfo.PluginID = VSTSynth.pluginContext.PluginInfo.PluginID;
                 VSTHostInfo.AudioInputs = VSTSynth.pluginContext.PluginInfo.AudioInputCount;
                 VSTHostInfo.AudioOutputs = VSTSynth.pluginContext.PluginInfo.AudioOutputCount;
-
-                //pluginContext.PluginCommandStub.SetProgram(0);
-                //GeneralVST.pluginContext.PluginCommandStub.Commands.Open(hWnd);
-                //GeneralVST.pluginContext.PluginCommandStub.Commands.(true);
 
                 vstStream = new VSTStream();
                 vstStream.ProcessCalled += VSTSynth.Stream_ProcessCalled;
@@ -488,11 +482,9 @@ namespace VSTHost
 
         internal void DisposeVST()
         {
-            if (VSTSynth != null)
+            if (UtilityAudio.AudioMixer != null)
             {
-                VSTSynth.StopTimer();
-                VSTSynth.pluginContext.PluginCommandStub.Commands.Close();
-                //VSTSynth.pluginContext.Dispose();
+                UtilityAudio.AudioMixer.RemoveInputStream(vstStream);
             }
 
             if (vstStream != null)
@@ -502,9 +494,12 @@ namespace VSTHost
                 vstStream = null;
             }
 
-            if (UtilityAudio.AudioMixer != null)
-            { 
-                UtilityAudio.AudioMixer.RemoveInputStream(vstStream); 
+            if (VSTSynth != null)
+            {
+                VSTSynth.StopTimer();
+                VSTSynth.pluginContext.PluginCommandStub.Commands.StopProcess();
+                VSTSynth.pluginContext.PluginCommandStub.Commands.Close();
+                VSTSynth = null;
             }
         }
 

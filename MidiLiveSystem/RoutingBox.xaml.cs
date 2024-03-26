@@ -1275,15 +1275,11 @@ namespace MidiLiveSystem
         {
             await Dispatcher.InvokeAsync(() =>
             {
-                OnUIEvent?.Invoke(BoxGuid, "REMOVE_VST_FROM_DEVICE", TempVST);
                 if (VSTWindow != null)
                 {
-                    VSTWindow.OnVSTHostEvent -= VSTWindow_OnVSTHostEvent;
                     VSTWindow.Close();
-                    VSTWindow = null;
                 }
-                //TempVST = new VSTPlugin();
-                //TempMemory[CurrentPreset].VSTData = null;
+                OnUIEvent?.Invoke(BoxGuid, "REMOVE_VST_FROM_DEVICE", TempVST);
             });
         }
 
