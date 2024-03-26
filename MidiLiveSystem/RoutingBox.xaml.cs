@@ -781,7 +781,7 @@ namespace MidiLiveSystem
             try
             {
 
-                await Dispatcher.InvokeAsync(() =>
+                Dispatcher.Invoke(() =>
                 {
                     //mémorisation des données en cours
                     presetname = tbPresetName.Text.Trim();

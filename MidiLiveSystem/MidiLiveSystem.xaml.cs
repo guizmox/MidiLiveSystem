@@ -240,19 +240,17 @@ namespace MidiLiveSystem
             }
         }
 
-        private async void Window_Closed(object sender, EventArgs e)
+        private void Window_Closed(object sender, EventArgs e)
         {
-            MidiRouting.InputStaticMidiMessage -= MidiRouting_InputMidiMessage;
-
-            NewMessage -= MainWindow_NewMessage;
-            UIRefreshRate.Elapsed -= UIRefreshRate_Elapsed;
-            UIRefreshRate.Enabled = false;
-            UIRefreshRate.Stop();
-
             while (UIEventPool.TasksRunning > 0)
             {
-                await Task.Delay(100);
+                Thread.Sleep(1);
             }
+
+            MidiRouting.InputStaticMidiMessage -= MidiRouting_InputMidiMessage;
+            NewMessage -= MainWindow_NewMessage;
+            UIRefreshRate.Stop();
+            UIRefreshRate.Enabled = false;
 
             if (LogWindow != null)
             {
@@ -294,7 +292,8 @@ namespace MidiLiveSystem
             }
 
             Database.SaveInstruments(CubaseInstrumentData.Instruments);
-            await Routing.DeleteAllRouting();
+
+            Routing.DeleteAllRouting();
         }
 
         private void ControlChangeMixer_Closed(object sender, EventArgs e)
@@ -629,18 +628,10 @@ namespace MidiLiveSystem
 
         private async void UIRefreshRate_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            await tbNoteName.Dispatcher.InvokeAsync(() =>
-            {
-                tbNoteName.Text = "";
-            });
-
-            if (Routing.Events <= 16) //pour éviter de saturer les process avec des appels UI inutiles
-            {
-                await SaveTemplate();
-            }
-
             await Dispatcher.InvokeAsync(() =>
             {
+                tbNoteName.Text = "";
+
                 if (Routing.Events <= 16) //pour éviter de saturer les process avec des appels UI inutiles
                 {
                     Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, "]");
@@ -650,6 +641,11 @@ namespace MidiLiveSystem
                     Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, ". UI events disabled]");
                 }
             });
+
+            if (Routing.Events <= 16) //pour éviter de saturer les process avec des appels UI inutiles
+            {
+                await SaveTemplate();
+            }
         }
 
         private async void MidiRouting_NewLog(string sDevice, bool bIn, string sLog)
@@ -779,7 +775,7 @@ namespace MidiLiveSystem
                     {
                         UIRefreshRate.Enabled = false;
 
-                        await Routing.DeleteAllRouting();
+                        Routing.DeleteAllRouting();
 
 
                         Project = project.Item2;
@@ -817,7 +813,8 @@ namespace MidiLiveSystem
                                 await box.OpenVSTHost(true);
                             }
 
-                            await AddAllRoutingBoxes();
+                            await UIEventPool.AddTask(async () => await AddAllRoutingBoxes());
+
                             NewMessage?.Invoke("Routing Boxes Added");
 
                             await UpdateDevicesUsage();
@@ -827,7 +824,7 @@ namespace MidiLiveSystem
                                 try
                                 {
                                     NewMessage?.Invoke("Initializing Routing Box (" + (iB + 1) + "/" + Boxes.Count + ") : " + Boxes[iB].BoxName);
-                                    await ProcessBoxData(Boxes[iB], true);
+                                    await UIEventPool.AddTask(async () => await ProcessBoxData(Boxes[iB], true));
                                 }
                                 catch (Exception ex)
                                 {
@@ -1177,7 +1174,7 @@ namespace MidiLiveSystem
             MidiPreset preset = null;
             VSTPlugin vst = null;
 
-            var snapshot = await box.Snapshot(); //enregistrement du preset en cours
+            BoxPreset snapshot = await box.Snapshot();
 
             sDevIn = snapshot.DeviceIn;
             sDevOut = snapshot.DeviceOut;

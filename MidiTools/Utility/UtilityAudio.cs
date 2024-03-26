@@ -50,6 +50,8 @@ namespace VSTHost
 
     internal class VSTStream : WaveStream
     {
+        private VSTMidi VSTSynth;
+
         internal VstPluginContext pluginContext = null;
         internal event EventHandler<VSTStreamEventArgs> ProcessCalled;
 
@@ -61,7 +63,11 @@ namespace VSTHost
         private float[] output;
         private int BlockSize = 0;
 
-        private WaveChannel32 wavStream;
+        //private WaveChannel32 wavStream;
+        internal VSTStream(VSTMidi vstsynth)
+        {
+            VSTSynth = vstsynth;
+        }
 
         internal new void Dispose()
         {
@@ -90,7 +96,7 @@ namespace VSTHost
 
             pluginContext.PluginCommandStub.Commands.SetBlockSize(blockSize);
             pluginContext.PluginCommandStub.Commands.SetSampleRate(WaveFormat.SampleRate);
-            pluginContext.PluginCommandStub.Commands.SetProcessPrecision(VstProcessPrecision.Process32);
+            pluginContext.PluginCommandStub.Commands.SetProcessPrecision(VstProcessPrecision.Process64);
 
             inputBuffers = inputMgr.Buffers.ToArray();
             outputBuffers = outputMgr.Buffers.ToArray();
@@ -104,44 +110,54 @@ namespace VSTHost
             if (blockSize != BlockSize) UpdateBlockSize(blockSize);
 
             // check if we are processing a wavestream (VST) or if this is audio outputting only (VSTi)
-            if (wavStream != null)
-            {
-                int sampleCount = blockSize * 2;
-                int sampleCountx4 = sampleCount * 4;
-                int loopSize = sampleCount / WaveFormat.Channels;
+            //if (wavStream != null)
+            //{
+            //    int sampleCount = blockSize * 2;
+            //    int sampleCountx4 = sampleCount * 4;
+            //    int loopSize = sampleCount / WaveFormat.Channels;
 
-                // Convert byte array into float array and store in Vst Buffers
-                // naudio reads an buffer of interlaced float's
-                // must take every 4th byte and convert to float
-                // Vst.Net audio buffer format (-1 to 1 floats).
-                var naudioBuf = new byte[blockSize * WaveFormat.Channels * 4];
-                int bytesRead = wavStream.Read(naudioBuf, 0, sampleCountx4);
+            //    // Convert byte array into float array and store in Vst Buffers
+            //    // naudio reads an buffer of interlaced float's
+            //    // must take every 4th byte and convert to float
+            //    // Vst.Net audio buffer format (-1 to 1 floats).
+            //    var naudioBuf = new byte[blockSize * WaveFormat.Channels * 4];
+            //    int bytesRead = wavStream.Read(naudioBuf, 0, sampleCountx4);
 
-                // populate the inputbuffers with the incoming wave stream
-                // TODO: do not use unsafe - but like this http://vstnet.codeplex.com/discussions/246206 ?
-                // this whole section is modelled after http://vstnet.codeplex.com/discussions/228692
-                unsafe
-                {
-                    fixed (byte* byteBuf = &naudioBuf[0])
-                    {
-                        float* floatBuf = (float*)byteBuf;
-                        int j = 0;
-                        for (int i = 0; i < loopSize; i++)
-                        {
-                            inputBuffers[0][i] = *(floatBuf + j);
-                            j++;
-                            inputBuffers[1][i] = *(floatBuf + j);
-                            j++;
-                        }
-                    }
-                }
-            }
+            //    // populate the inputbuffers with the incoming wave stream
+            //    // TODO: do not use unsafe - but like this http://vstnet.codeplex.com/discussions/246206 ?
+            //    // this whole section is modelled after http://vstnet.codeplex.com/discussions/228692
+            //    unsafe
+            //    {
+            //        fixed (byte* byteBuf = &naudioBuf[0])
+            //        {
+            //            float* floatBuf = (float*)byteBuf;
+            //            int j = 0;
+            //            for (int i = 0; i < loopSize; i++)
+            //            {
+            //                inputBuffers[0][i] = *(floatBuf + j);
+            //                j++;
+            //                inputBuffers[1][i] = *(floatBuf + j);
+            //                j++;
+            //            }
+            //        }
+            //    }
+            //}
 
             try
             {
                 //pluginContext.PluginCommandStub.MainsChanged(true);
                 pluginContext.PluginCommandStub.Commands.StartProcess();
                 pluginContext.PluginCommandStub.Commands.ProcessReplacing(inputBuffers, outputBuffers);
+
+                lock (VSTSynth.MidiStack)
+                {
+                    if (VSTSynth.MidiStack.Count > 0)
+                    {
+                        pluginContext.PluginCommandStub.Commands.ProcessEvents(VSTSynth.MidiStack.ToArray());
+                        VSTSynth.MidiStack.Clear();
+                    }
+                }
+
                 pluginContext.PluginCommandStub.Commands.StopProcess();
                 //pluginContext.PluginCommandStub.MainsChanged(false);
             }
@@ -220,70 +236,33 @@ namespace VSTHost
 
     internal class VSTMidi
     {
-        private System.Timers.Timer StackTimer;
         internal VstPluginContext pluginContext = null;
-        private ConcurrentBag<VstEvent> MidiStack = new ConcurrentBag<VstEvent>();
-        private ConcurrentBag<VstEvent> MidiStackNoteOn = new ConcurrentBag<VstEvent>();
+        internal List<VstEvent> MidiStack = new List<VstEvent>();
         internal event EventHandler<VSTStreamEventArgs> StreamCall = null;
 
         internal VSTMidi()
         {
-            StackTimer = new System.Timers.Timer();
-            StackTimer.Elapsed += StackTimer_Elapsed;
-            StackTimer.Interval = 10;
-            StackTimer.Start();
-        }
 
-        private void StackTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
-        {
-            //je force les évènements NOTE ON à être lancés avant pour éviter le risque de notes non relâchées (NOTE OFF avant NOTE ON)
-            if (MidiStackNoteOn.Count > 0)
-            {
-                foreach (var ev in MidiStackNoteOn)
-                {
-                    pluginContext.PluginCommandStub.Commands.ProcessEvents(new VstEvent[] { ev });
-                }
-                MidiStackNoteOn.Clear();
-            }
-
-            if (MidiStack.Count > 0)
-            {
-                foreach (var ev in MidiStack)
-                {
-                    pluginContext.PluginCommandStub.Commands.ProcessEvents(new VstEvent[] { ev });
-                }
-                MidiStack.Clear();
-            }
         }
 
         //EditParametersForm edit = new EditParametersForm();
 
-        internal void StopTimer()
-        {
-            if (StackTimer != null)
-            {
-                StackTimer.Stop();
-                StackTimer.Enabled = false;
-                StackTimer = null;
-            }
-        }
-
         public void MIDI_NoteOn(byte Note, byte Velocity)
         {
             byte Cmd = 0x90;
-            MIDI(true, Cmd, Note, Velocity);
+            MIDI(Cmd, Note, Velocity);
         }
 
         public void MIDI_NoteOff(byte Note, byte Velocity)
         {
             byte Cmd = 0x80;
-            MIDI(false, Cmd, Note, Velocity);
+            MIDI(Cmd, Note, Velocity);
         }
 
         public void MIDI_ProgramChange(byte programNumber)
         {
             byte Cmd = 0xC0; // Code de commande MIDI pour le changement de programme
-            MIDI(false, Cmd, programNumber, 0); // La vélocité est généralement 0 pour un changement de programme
+            MIDI(Cmd, programNumber, 0); // La vélocité est généralement 0 pour un changement de programme
         }
 
         public void MIDI_PitchBend(int pitchValue)
@@ -299,7 +278,7 @@ namespace VSTHost
             byte msb = (byte)((pitchValue >> 7) & 0x7F);
 
             byte cmd = 0xE0; // Code de commande MIDI pour le pitch bend
-            MIDI(false, cmd, lsb, msb);
+            MIDI(cmd, lsb, msb);
         }
 
         public void MIDI_Aftertouch(byte pressureValue)
@@ -311,7 +290,7 @@ namespace VSTHost
             }
 
             byte cmd = 0xD0; // Code de commande MIDI pour l'aftertouch (pression du canal)
-            MIDI(false, cmd, pressureValue, 0); // Le deuxième paramètre est la valeur de pression, le troisième est souvent ignoré dans le cas de l'aftertouch
+            MIDI(cmd, pressureValue, 0); // Le deuxième paramètre est la valeur de pression, le troisième est souvent ignoré dans le cas de l'aftertouch
         }
 
         public void MIDI_PolyphonicAftertouch(byte note, byte pressureValue)
@@ -323,16 +302,16 @@ namespace VSTHost
             }
 
             byte cmd = 0xA0; // Code de commande MIDI pour le polyphonic aftertouch
-            MIDI(false, cmd, note, pressureValue);
+            MIDI(cmd, note, pressureValue);
         }
 
         public void MIDI_CC(byte Number, byte Value)
         {
             byte Cmd = 0xB0;
-            MIDI(false, Cmd, Number, Value);
+            MIDI(Cmd, Number, Value);
         }
 
-        private void MIDI(bool bNoteOn, byte Cmd, byte Val1, byte Val2)
+        private void MIDI(byte Cmd, byte Val1, byte Val2)
         {
             var midiData = new byte[4];
             midiData[0] = Cmd;
@@ -347,14 +326,7 @@ namespace VSTHost
                                        /*Detune*/        0,
                                        /*NoteOffVelocity*/ 0, true);
 
-            if (bNoteOn)
-            {
-                MidiStackNoteOn.Add(vse);
-            }
-            else
-            {
-                MidiStack.Add(vse);
-            }
+            lock (MidiStack) { MidiStack.Add(vse); }
         }
 
         //internal void ShowEditParameters()
@@ -412,7 +384,7 @@ namespace VSTHost
                 VSTHostInfo.AudioInputs = VSTSynth.pluginContext.PluginInfo.AudioInputCount;
                 VSTHostInfo.AudioOutputs = VSTSynth.pluginContext.PluginInfo.AudioOutputCount;
 
-                vstStream = new VSTStream();
+                vstStream = new VSTStream(VSTSynth);
                 vstStream.ProcessCalled += VSTSynth.Stream_ProcessCalled;
                 vstStream.pluginContext = VSTSynth.pluginContext;
                 vstStream.SetWaveFormat(VSTHostInfo.SampleRate, 2);
@@ -456,7 +428,7 @@ namespace VSTHost
                     }
                     catch (Exception ex)
                     {
-                       sInfo = "VST Parameters can't be set : " + ex.Message;
+                        sInfo = "VST Parameters can't be set : " + ex.Message;
                     }
                 }
             }
@@ -496,7 +468,6 @@ namespace VSTHost
 
             if (VSTSynth != null)
             {
-                VSTSynth.StopTimer();
                 VSTSynth.pluginContext.PluginCommandStub.Commands.StopProcess();
                 VSTSynth.pluginContext.PluginCommandStub.Commands.Close();
                 VSTSynth = null;
@@ -666,16 +637,16 @@ namespace VSTHost
                     AudioEvent?.Invoke("Dispose Audio Driver", DeviceName, DeviceSampleRate);
                     AudioDevice.Dispose();
                 }
-                catch 
-                { 
+                catch
+                {
                 }
                 AudioDevice = null;
             }
 
-            if (AudioMixer != null) 
+            if (AudioMixer != null)
             {
                 AudioEvent?.Invoke("Dispose Audio Mixer", DeviceName, DeviceSampleRate);
-                AudioMixer.Dispose(); 
+                AudioMixer.Dispose();
                 AudioMixer = null;
             }
 
