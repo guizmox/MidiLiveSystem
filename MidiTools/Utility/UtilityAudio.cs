@@ -369,73 +369,77 @@ namespace VSTHost
         {
             string sInfo = "";
 
-            DisposeVST();
+            bool bDisposed = DisposeVST();
 
-            VSTSynth = new VSTMidi();
-
-            var hcs = new HostCommandStub();
-
-            try
+            if (bDisposed)
             {
-                VSTSynth.pluginContext = VstPluginContext.Create(VSTHostInfo.VSTPath, hcs);
-                VSTSynth.pluginContext.PluginCommandStub.Commands.Open();
-                VSTHostInfo.ParameterCount = VSTSynth.pluginContext.PluginInfo.ParameterCount;
-                VSTHostInfo.PluginID = VSTSynth.pluginContext.PluginInfo.PluginID;
-                VSTHostInfo.AudioInputs = VSTSynth.pluginContext.PluginInfo.AudioInputCount;
-                VSTHostInfo.AudioOutputs = VSTSynth.pluginContext.PluginInfo.AudioOutputCount;
+                VSTSynth = new VSTMidi();
 
-                vstStream = new VSTStream(VSTSynth);
-                vstStream.ProcessCalled += VSTSynth.Stream_ProcessCalled;
-                vstStream.pluginContext = VSTSynth.pluginContext;
-                vstStream.SetWaveFormat(VSTHostInfo.SampleRate, 2);
-
-                UtilityAudio.AudioMixer.AddInputStream(vstStream);
+                var hcs = new HostCommandStub();
 
                 try
                 {
-                    VSTHostInfo.VSTName = VSTSynth.pluginContext.PluginCommandStub.Commands.GetProductString();
-                    if (VSTHostInfo.VSTName.Length == 0)
-                    {
-                        VSTHostInfo.VSTName = VSTSynth.pluginContext.PluginCommandStub.Commands.GetInputProperties(0).Label;
-                    }
-                }
-                catch
-                {
-                    VSTHostInfo.VSTName = Path.GetFileName(VSTHostInfo.VSTPath);
-                }
+                    VSTSynth.pluginContext = VstPluginContext.Create(VSTHostInfo.VSTPath, hcs);
+                    VSTSynth.pluginContext.PluginCommandStub.Commands.Open();
+                    VSTHostInfo.ParameterCount = VSTSynth.pluginContext.PluginInfo.ParameterCount;
+                    VSTHostInfo.PluginID = VSTSynth.pluginContext.PluginInfo.PluginID;
+                    VSTHostInfo.AudioInputs = VSTSynth.pluginContext.PluginInfo.AudioInputCount;
+                    VSTHostInfo.AudioOutputs = VSTSynth.pluginContext.PluginInfo.AudioOutputCount;
 
-                if (VSTHostInfo.Program > -1)
-                {
+                    vstStream = new VSTStream(VSTSynth);
+                    vstStream.ProcessCalled += VSTSynth.Stream_ProcessCalled;
+                    vstStream.pluginContext = VSTSynth.pluginContext;
+                    vstStream.SetWaveFormat(VSTHostInfo.SampleRate, 2);
+
+                    UtilityAudio.AudioMixer.AddInputStream(vstStream);
+
                     try
                     {
-                        VSTSynth.pluginContext.PluginCommandStub.Commands.SetProgram(VSTHostInfo.Program);
-                    }
-                    catch (Exception ex)
-                    {
-                        sInfo = "VST Program can't be set : " + ex.Message;
-                    }
-                }
-
-                if (VSTHostInfo.ParameterNames.Count > 0)
-                {
-                    try
-                    {
-                        for (int iP = 0; iP < VSTHostInfo.ParameterNames.Count; iP++)
+                        VSTHostInfo.VSTName = VSTSynth.pluginContext.PluginCommandStub.Commands.GetProductString();
+                        if (VSTHostInfo.VSTName.Length == 0)
                         {
-                            VSTSynth.pluginContext.PluginCommandStub.Commands.SetParameter(iP, VSTHostInfo.ParameterValues[iP]);
+                            VSTHostInfo.VSTName = VSTSynth.pluginContext.PluginCommandStub.Commands.GetInputProperties(0).Label;
                         }
-
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        sInfo = "VST Parameters can't be set : " + ex.Message;
+                        VSTHostInfo.VSTName = Path.GetFileName(VSTHostInfo.VSTPath);
+                    }
+
+                    if (VSTHostInfo.Program > -1)
+                    {
+                        try
+                        {
+                            VSTSynth.pluginContext.PluginCommandStub.Commands.SetProgram(VSTHostInfo.Program);
+                        }
+                        catch (Exception ex)
+                        {
+                            sInfo = "VST Program can't be set : " + ex.Message;
+                        }
+                    }
+
+                    if (VSTHostInfo.ParameterNames.Count > 0)
+                    {
+                        try
+                        {
+                            for (int iP = 0; iP < VSTHostInfo.ParameterNames.Count; iP++)
+                            {
+                                VSTSynth.pluginContext.PluginCommandStub.Commands.SetParameter(iP, VSTHostInfo.ParameterValues[iP]);
+                            }
+
+                        }
+                        catch (Exception ex)
+                        {
+                            sInfo = "VST Parameters can't be set : " + ex.Message;
+                        }
                     }
                 }
+                catch (Exception ex)
+                {
+                    sInfo = "Unable to init VST : " + ex.Message;
+                }
             }
-            catch
-            {
-                throw;
-            }
+            else { return "Unable to remove last VST"; }
 
             return sInfo;
         }
@@ -452,26 +456,34 @@ namespace VSTHost
             catch { return ""; }
         }
 
-        internal void DisposeVST()
+        internal bool DisposeVST()
         {
-            if (UtilityAudio.AudioMixer != null)
+            try
             {
-                UtilityAudio.AudioMixer.RemoveInputStream(vstStream);
+                if (UtilityAudio.AudioMixer != null)
+                {
+                    UtilityAudio.AudioMixer.RemoveInputStream(vstStream);
+                }
+
+                if (VSTSynth != null && VSTSynth.pluginContext != null)
+                {
+                    VSTSynth.pluginContext.PluginCommandStub.Commands.StopProcess();
+                    VSTSynth.pluginContext.PluginCommandStub.Commands.Close();
+                    VSTSynth = null;
+                }
+
+                if (vstStream != null)
+                {
+                    vstStream.Dispose();
+                    vstStream = null;
+                }
+            }
+            catch
+            { 
+                return false; 
             }
 
-            if (vstStream != null)
-            {
-                vstStream.ProcessCalled -= VSTSynth.Stream_ProcessCalled;
-                vstStream.Dispose();
-                vstStream = null;
-            }
-
-            if (VSTSynth != null)
-            {
-                VSTSynth.pluginContext.PluginCommandStub.Commands.StopProcess();
-                VSTSynth.pluginContext.PluginCommandStub.Commands.Close();
-                VSTSynth = null;
-            }
+            return true;
         }
 
         public void GetParameters()

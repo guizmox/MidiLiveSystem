@@ -537,7 +537,7 @@ namespace MidiLiveSystem
                         break;
 
                     case "REMOVE_VST_FROM_DEVICE":
-                        await Routing.RemoveVSTDeviceFromAsio(box.RoutingGuid, (VSTPlugin)sValue);
+                        await Routing.RemoveVSTDeviceFromAsio(box.RoutingGuid);
                         break;
 
                     case "PLAY_NOTE":

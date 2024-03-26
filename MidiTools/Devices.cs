@@ -415,11 +415,11 @@ namespace MidiTools
             }
         }
 
-        internal void UnplugVSTDevice(VSTPlugin plugin, int iChannel)
+        internal void UnplugVSTDevice(int iChannel)
         {
             if (VST_OutputEvents != null)
             {
-                VST_OutputEvents.RemovePlugin(plugin, iChannel);
+                VST_OutputEvents.RemovePlugin(iChannel);
 
             }
         }
@@ -455,7 +455,7 @@ namespace MidiTools
                     try
                     {
                         AddLog(vst.VSTHostInfo.VSTName, true, Channel.Channel1, "[CLOSE]", "", "", "");
-                        vst.DisposeVST();       
+                        bool bDisposed = vst.DisposeVST();       
                     }
                     catch
                     { }
@@ -548,20 +548,25 @@ namespace MidiTools
 
         internal void AddPlugin(VSTPlugin vst, int iChannel)
         {
+            bool bDisposed = true;
+
             if (Plugins[iChannel] != null)
             {
-                Plugins[iChannel].DisposeVST();
-                Plugins[iChannel] = null;
+                bDisposed = Plugins[iChannel].DisposeVST();
+                if (bDisposed)
+                {
+                    Plugins[iChannel] = null;
+                }
             }
-            Plugins[iChannel] = vst;
+            if (bDisposed) { Plugins[iChannel] = vst; }
         }
 
-        internal void RemovePlugin(VSTPlugin plugin, int iChannel)
+        internal void RemovePlugin(int iChannel)
         {
             if (Plugins[iChannel] != null)
             {
-                Plugins[iChannel].DisposeVST();
-                Plugins[iChannel] = null;
+                bool bDisposed = Plugins[iChannel].DisposeVST();
+                if (bDisposed) { Plugins[iChannel] = null; }
             }
         }
     }

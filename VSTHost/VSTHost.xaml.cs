@@ -91,6 +91,13 @@ namespace VSTHost
                     Plugin.VSTHostInfo.VSTHostGuid = Guid.NewGuid();
                     OnVSTHostEvent?.Invoke(BoxPreset, 1); //pour initialiser l'ASIO. Pas d'autre usage
                 }
+                else
+                {
+                    Plugin.VSTHostInfo.SampleRate = SampleRate;
+                    Plugin.VSTHostInfo.AsioDevice = AsioDevice;
+                    Plugin.VSTHostInfo.VSTPath = sVST;
+                    OnVSTHostEvent?.Invoke(BoxPreset, 1); //pour initialiser l'ASIO. Pas d'autre usage
+                }
             }
         }
 

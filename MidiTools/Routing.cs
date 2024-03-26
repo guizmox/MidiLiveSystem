@@ -2549,7 +2549,7 @@ namespace MidiTools
             });
         }
 
-        public async Task RemoveVSTDeviceFromAsio(Guid routingGuid, VSTPlugin plugin)
+        public async Task RemoveVSTDeviceFromAsio(Guid routingGuid)
         {
             await Tasks.AddTask(() =>
             {
@@ -2559,7 +2559,7 @@ namespace MidiTools
                     var used = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(Tools.VST_HOST));
                     if (used != null)
                     {
-                        used.UnplugVSTDevice(plugin, matrix.ChannelOut - 1);
+                        used.UnplugVSTDevice(matrix.ChannelOut - 1);
                     }
                 }
             });
