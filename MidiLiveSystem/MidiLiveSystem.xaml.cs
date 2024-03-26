@@ -813,7 +813,7 @@ namespace MidiLiveSystem
                                 await box.OpenVSTHost(true);
                             }
 
-                            await UIEventPool.AddTask(async () => await AddAllRoutingBoxes());
+                            await AddAllRoutingBoxes();
 
                             NewMessage?.Invoke("Routing Boxes Added");
 
