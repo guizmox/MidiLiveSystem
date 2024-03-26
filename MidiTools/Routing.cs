@@ -3,6 +3,7 @@ using RtMidi.Core;
 using RtMidi.Core.Enums;
 using RtMidi.Core.Messages;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -39,6 +40,8 @@ namespace MidiTools
 
         public int CurrentATValue = 0;
         public bool[] NotesSentForPanic = new bool[128];
+        internal int[] RandomizedCCValues = new int[128];
+
         public List<int> CurrentNotesPlayed
         {
             get
@@ -1390,8 +1393,8 @@ namespace MidiTools
                                 int randomWaitON = random.Next(1, 40);
                                 int randomPB = random.Next(8192 - 400, 8192 + 400);
 
-                                int iNewVol = RandomizeCCValue(7, 5, routing);
-                                int iNewMod = RandomizeCCValue(1, 5, routing);
+                                int iNewVol = RandomizeCCValue(7, 8, routing);
+                                int iNewMod = RandomizeCCValue(1, 8, routing);
                                 //int iNewPan = 0; // routing.RandomizeCCValue(10, copiedevent.Channel, copiedevent.Device, 5);
 
                                 MidiEvent pbRandom = new MidiEvent(TypeEvent.PB, new List<int> { randomPB }, eventOUT.Channel, eventOUT.Device);
@@ -1452,7 +1455,7 @@ namespace MidiTools
                     break;
             }
 
-            return EventsToProcess;
+            return EventsToProcess.OrderBy(ev => ev.Type).ToList();
         }
 
         private async Task ChangeOptions(MatrixItem routing, MidiOptions newop, bool bInit)
@@ -2059,10 +2062,11 @@ namespace MidiTools
 
             Random random = new Random();
             int iVariation = random.Next(-iMax, iMax);
-            int iNewValue = liveCC + iVariation;
+            int iNewValue = (liveCC - routing.RandomizedCCValues[iCC]) + iVariation;
 
             if (iNewValue > 0 && iNewValue < 127)
             {
+                routing.RandomizedCCValues[iCC] = iVariation;
                 return iNewValue;
             }
             else { return 0; }
@@ -2504,6 +2508,7 @@ namespace MidiTools
                         {
                             routing.DeviceOut = AddNewOutDevice(sDeviceOut, vst);
                         }
+                        else { return; }
                     }
                     else if (sDeviceOut.Length > 0)
                     {
@@ -2516,8 +2521,6 @@ namespace MidiTools
                     routing.ChannelOut = iChOut;
                     routing.Options.Active = active;
                 }
-
-                if (sDeviceOut.Equals(Tools.VST_HOST) && vst == null) { return; }
 
                 if (iChOut > 0 && iChOut <= 16)
                 {
@@ -2536,13 +2539,10 @@ namespace MidiTools
                 var matrix = MidiMatrix.FirstOrDefault(r => r.RoutingGuid == routingGuid && r.ChannelOut > 0); // && r.DeviceOut != null && r.DeviceOut.Name.Equals(Tools.VST_HOST));
                 if (matrix != null)
                 {
-                    if (matrix.DeviceOut == null)
+                    var used = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(Tools.VST_HOST));
+                    if (used != null)
                     {
-                        matrix.DeviceOut = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(Tools.VST_HOST));
-                    }
-                    if (matrix.DeviceOut != null)
-                    {
-                        matrix.DeviceOut.PlugVSTDevice(plugin, matrix.ChannelOut - 1);
+                        used.PlugVSTDevice(plugin, matrix.ChannelOut - 1);
                     }
                 }
             });
@@ -2553,32 +2553,42 @@ namespace MidiTools
             await UIEventPool.AddTask(() =>
             {
                 var matrix = MidiMatrix.FirstOrDefault(r => r.RoutingGuid == routingGuid); // && r.DeviceOut != null && r.DeviceOut.Name.Equals(Tools.VST_HOST));
-                if (matrix != null && matrix.DeviceOut != null)
+                if (matrix != null)
                 {
-                    plugin.DisposeVST();
-                    matrix.DeviceOut.UnplugVSTDevice(plugin, matrix.ChannelOut - 1);
+                    var used = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(Tools.VST_HOST));
+                    if (used != null)
+                    {
+                        used.UnplugVSTDevice(plugin, matrix.ChannelOut - 1);
+                    }
                 }
             });
         }
 
-        public async Task UpdateUsedDevices(List<string[]> devices)
+        public async Task UpdateUsedDevices(List<string> devices)
         {
             await Tasks.AddTask(() =>
             {
                 lock (DevicesRoutingIN) { DevicesRoutingIN.Clear(); }
                 lock (DevicesRoutingOUT) { DevicesRoutingOUT.Clear(); }
 
-                foreach (var dev in devices)
+                List<string> NewIN = new List<string>();
+                List<string> NewOUT = new List<string>();
+
+                foreach (var dev in devices.Distinct())
                 {
-                    if (dev[0].Equals("I") && dev[1].Length > 0 && !DevicesRoutingIN.Contains(dev[1]))
+                    if (dev.StartsWith("I-") && dev.Length > 2)
                     {
-                        DevicesRoutingIN.Add(dev[1]);
+                        NewIN.Add(dev[2..]);
                     }
-                    else if (dev[0].Equals("O") && dev[1].Length > 0 && !DevicesRoutingOUT.Contains(dev[1]))
+                    else if (dev.StartsWith("O-") && dev.Length > 2)
                     {
-                        DevicesRoutingOUT.Add(dev[1]);
+                        NewOUT.Add(dev[2..]);
                     }
                 }
+
+                lock (DevicesRoutingIN) { DevicesRoutingIN = NewIN; }
+                lock (DevicesRoutingOUT) { DevicesRoutingOUT = NewOUT; }
+
             });
         }
 

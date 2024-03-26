@@ -25,7 +25,7 @@ namespace VSTHost
     /// </summary>
     public partial class MainWindow : Window
     {
-        public delegate void VSTHostEventHandler(VSTPlugin plugin, int boxpreset, bool bClose);
+        public delegate void VSTHostEventHandler(VSTPlugin plugin, int boxpreset, int iAction);
         public event VSTHostEventHandler OnVSTHostEvent;
         public VSTPlugin Plugin = new VSTPlugin();
 
@@ -57,7 +57,7 @@ namespace VSTHost
                 VSTParametersCheck.Stop();
                 VSTParametersCheck.Enabled = false;
             }
-            OnVSTHostEvent?.Invoke(Plugin, BoxPreset, true);
+            OnVSTHostEvent?.Invoke(Plugin, BoxPreset, 0);
         }
 
         private void tbOpenVST_Click(object sender, RoutedEventArgs e)
@@ -84,7 +84,7 @@ namespace VSTHost
                     Plugin.VSTHostInfo.AsioDevice = AsioDevice;
                     Plugin.VSTHostInfo.VSTPath = sVST;
                     Plugin.VSTHostInfo.VSTHostGuid = Guid.NewGuid();
-                    OnVSTHostEvent?.Invoke(Plugin, BoxPreset, false);
+                    OnVSTHostEvent?.Invoke(Plugin, BoxPreset, 1); //pour initialiser l'ASIO. Pas d'autre usage
                 }
             }
         }
@@ -118,58 +118,20 @@ namespace VSTHost
                 {
                     try
                     {
-                        if (Plugin == null) { Plugin = new VSTPlugin(); }
-                        Plugin.VSTSynth = Plugin.LoadVST();
+                        string sInfo = Plugin.LoadVST();
+                        if (sInfo.Length > 0)
+                        {
+                            MessageBox.Show(sInfo);
+                        }
 
                         IntPtr windowHandle = new WindowInteropHelper(this).Handle;
 
-                        Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.EditorOpen(windowHandle);
+                        Plugin.OpenEditor(windowHandle);  
                         System.Drawing.Rectangle rect = new System.Drawing.Rectangle();
-                        Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.EditorGetRect(out rect);
+                        Plugin.GetWindowSize(out rect); 
                         Width = rect.Width + 20;
                         Height = rect.Height + 50;
                         ResizeMode = ResizeMode.NoResize;
-
-                        try
-                        {
-                            Plugin.VSTHostInfo.VSTName = Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.GetProductString();
-                            if (Plugin.VSTHostInfo.VSTName.Length == 0)
-                            {
-                                Plugin.VSTHostInfo.VSTName = Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.GetInputProperties(0).Label;
-                            }
-                        }
-                        catch
-                        {
-                            Plugin.VSTHostInfo.VSTName = Path.GetFileName(Plugin.VSTHostInfo.VSTPath);
-                        }
-
-                        if (Plugin.VSTHostInfo.Program > -1)
-                        {
-                            try
-                            {
-                                Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.SetProgram(Plugin.VSTHostInfo.Program);
-                            }
-                            catch (Exception ex)
-                            {
-                                MessageBox.Show("VST Program can't be set : " + ex.Message);
-                            }
-                        }
-
-                        if (Plugin.VSTHostInfo.ParameterNames.Count > 0)
-                        {
-                            try
-                            {
-                                for (int iP = 0; iP < Plugin.VSTHostInfo.ParameterNames.Count; iP++)
-                                {
-                                    Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.SetParameter(iP, Plugin.VSTHostInfo.ParameterValues[iP]);
-                                }
-
-                            }
-                            catch (Exception ex)
-                            {
-                                MessageBox.Show("VST Parameters can't be set : " + ex.Message);
-                            }
-                        }
 
                         if (VSTParametersCheck == null)
                         {
@@ -186,8 +148,6 @@ namespace VSTHost
                     }
                     catch (Exception ex)
                     {
-                        if (Plugin != null) { Plugin.DisposeVST(); }
-                        Plugin.VSTHostInfo = null;
                         MessageBox.Show("Unable to load VST : " + ex.Message);
                     }
                 }
@@ -204,38 +164,7 @@ namespace VSTHost
         {
             await UIEventPool.AddTask(() =>
             {
-                if (Plugin.VSTSynth.pluginContext.PluginCommandStub != null)
-                {
-                    var props = Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.GetProgram();
-                    if (props != null)
-                    {
-                        Plugin.VSTHostInfo.Program = props;
-                    }
-
-                    Plugin.VSTHostInfo.ParameterValues.Clear();
-                    Plugin.VSTHostInfo.ParameterNames.Clear();
-                    for (int i = 0; i < Plugin.VSTHostInfo.ParameterCount; i++)
-                    {
-                        try
-                        {
-                            var properties = Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.GetParameterProperties(i);
-
-                            if (properties != null)
-                            {
-                                string propName = propName = Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.GetParameterName(i);
-                                var propData = Plugin.VSTSynth.pluginContext.PluginCommandStub.Commands.GetParameter(i);
-                                if (propName != null)
-                                {
-                                    Plugin.VSTHostInfo.ParameterNames.Add(propName);
-                                    Plugin.VSTHostInfo.ParameterValues.Add(propData);
-                                }
-                                else { Plugin.VSTHostInfo.ParameterCount = i; break; }
-                            }
-                            else { Plugin.VSTHostInfo.ParameterCount = i; break; }
-                        }
-                        catch { Plugin.VSTHostInfo.ParameterCount = i; break; }
-                    }
-                }
+                Plugin.GetParameters();
             });
         }
 

@@ -96,19 +96,27 @@ namespace MidiLiveSystem
             MidiRouting.OutputMidiMessage += MidiRouting_OutputMidiMessage;
         }
 
-        private async void VSTWindow_OnVSTHostEvent(VSTPlugin plugin, int iPreset, bool bClose)
+        private async void VSTWindow_OnVSTHostEvent(VSTPlugin plugin, int iPreset, int iAction)
         {
-            if (bClose)
+            if (iAction == 0) //fermer la fenêtre
             {
                 VSTWindow.OnVSTHostEvent -= VSTWindow_OnVSTHostEvent;
                 VSTWindow = null;
             }
-            else
+            else if (iAction == 1) //chargement initial du VST
             {
                 if (plugin != null)
                 {
                     TempVST = plugin;
                     TempVST = await VSTWindow.LoadPlugin();
+                    OnUIEvent?.Invoke(BoxGuid, "PLUG_VST_TO_DEVICE", plugin);
+                }
+            }
+            else if (iAction == 3) //nouveau chargement
+            {
+                if (plugin != null)
+                {
+                    TempVST = plugin;
                     OnUIEvent?.Invoke(BoxGuid, "PLUG_VST_TO_DEVICE", plugin);
                 }
             }
@@ -369,7 +377,10 @@ namespace MidiLiveSystem
 
             if (item != null)
             {
-                await CloseVSTHost();
+                if (e.RemovedItems.Count > 0) //pour éviter de péter le VSTHost lorsqu'on charge un projet (removeditems est dans ce cas à vide)
+                {
+                    await CloseVSTHost();
+                }
 
                 if (item.Tag.Equals(Tools.VST_HOST))
                 {
@@ -1209,16 +1220,16 @@ namespace MidiLiveSystem
             }
         }
 
-        internal async Task<List<string[]>> GetAllDevices()
+        internal async Task<List<string>> GetAllDevices()
         {
-            List<string[]> devices = new List<string[]>();
+            List<string> devices = new List<string>();
 
             await UIEventPool.AddTask(() =>
             {
                 for (int i = 0; i < TempMemory.Length; i++)
                 {
-                    devices.Add(new string[] { "I", TempMemory[i].DeviceIn });
-                    devices.Add(new string[] { "O", TempMemory[i].DeviceOut });
+                    devices.Add("I-" + TempMemory[i].DeviceIn);
+                    devices.Add("O-" + TempMemory[i].DeviceOut);
                 }
             });
 
@@ -1227,7 +1238,7 @@ namespace MidiLiveSystem
                 return devices.ToList();
             }
             else
-            { return new List<string[]>(); }
+            { return new List<string>(); }
         }
 
         internal async Task InitDefaultCCMixer(int[] sCC)
@@ -1243,11 +1254,6 @@ namespace MidiLiveSystem
 
         internal void CloseVSTWindow()
         {
-            if (TempVST.VSTSynth != null)
-            {
-                TempVST.DisposeVST();
-            }
-
             if (VSTWindow != null)
             {
                 VSTWindow.OnVSTHostEvent -= VSTWindow_OnVSTHostEvent;
@@ -1259,21 +1265,18 @@ namespace MidiLiveSystem
 
         internal async Task CloseVSTHost()
         {
-            if (TempVST != null)
+            await Dispatcher.InvokeAsync(() =>
             {
-                await Dispatcher.InvokeAsync(() =>
+                OnUIEvent?.Invoke(BoxGuid, "REMOVE_VST_FROM_DEVICE", TempVST);
+                if (VSTWindow != null)
                 {
-                    OnUIEvent?.Invoke(BoxGuid, "REMOVE_VST_FROM_DEVICE", TempVST);
-                    if (VSTWindow != null)
-                    {
-                        VSTWindow.OnVSTHostEvent -= VSTWindow_OnVSTHostEvent;
-                        VSTWindow.Close();
-                        VSTWindow = null;
-                    }
-                    TempVST = new VSTPlugin();
-                    TempMemory[CurrentPreset].VSTData = null;
-                });
-            }
+                    VSTWindow.OnVSTHostEvent -= VSTWindow_OnVSTHostEvent;
+                    VSTWindow.Close();
+                    VSTWindow = null;
+                }
+                TempVST = new VSTPlugin();
+                //TempMemory[CurrentPreset].VSTData = null;
+            });
         }
 
         internal async Task OpenVSTHost(bool bLoadProject)
@@ -1282,7 +1285,10 @@ namespace MidiLiveSystem
             {
                 if (VSTWindow == null)
                 {
-                    if (bLoadProject) { TempVST.VSTHostInfo = TempMemory[CurrentPreset].VSTData; }
+                    if (bLoadProject)
+                    {
+                        TempVST.VSTHostInfo = TempMemory[CurrentPreset].VSTData;
+                    }
                     VSTWindow = new VSTHost.MainWindow(RoutingGuid, BoxName, CurrentPreset, TempMemory[CurrentPreset].VSTData);
                     VSTWindow.OnVSTHostEvent += VSTWindow_OnVSTHostEvent;
                     VSTWindow.Show();

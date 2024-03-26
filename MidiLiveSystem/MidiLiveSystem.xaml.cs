@@ -75,7 +75,7 @@ namespace MidiLiveSystem
 
             UIRefreshRate = new System.Timers.Timer();
             UIRefreshRate.Elapsed += UIRefreshRate_Elapsed;
-            UIRefreshRate.Interval = 1000;
+            UIRefreshRate.Interval = 10000;
             UIRefreshRate.Start();
 
             MidiRouting.InputStaticMidiMessage += MidiRouting_InputMidiMessage;
@@ -821,6 +821,8 @@ namespace MidiLiveSystem
                             await AddAllRoutingBoxes();
                             NewMessage?.Invoke("Routing Boxes Added");
 
+                            await UpdateDevicesUsage();
+
                             for (int iB = 0; iB < Boxes.Count; iB++)
                             {
                                 try
@@ -1138,9 +1140,22 @@ namespace MidiLiveSystem
             }
         }
 
+        private async Task UpdateDevicesUsage()
+        {
+            List<string> UsedDevices = new List<string>();
+            for (int iB = 0; iB < Boxes.Count; iB++) //mise à jour des pérophériques MIDI utilisés
+            {
+                var devices = await Boxes[iB].GetAllDevices();
+                UsedDevices.AddRange(devices);
+            }
+            await Routing.UpdateUsedDevices(UsedDevices);
+        }
+
         private async Task SaveTemplate()
         {
             List<Task> tasks = new List<Task>();
+
+            await UpdateDevicesUsage();
 
             for (int i = 0; i < Boxes.Count; i++)
             {
@@ -1184,14 +1199,10 @@ namespace MidiLiveSystem
                 {
                     box.RoutingGuid = await Routing.AddRouting(sDevIn, sDevOut, vst, iChIn, iChOut, options, preset, sDevIn.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn - 1 ? SeqData.Sequencer[iChIn - 1] : null);
                 }
-                var devices = await box.GetAllDevices();
-                await Routing.UpdateUsedDevices(devices);
             }
             else
             {
                 await Routing.ModifyRouting(snapshot.RoutingGuid, sDevIn, sDevOut, vst, iChIn, iChOut, options, preset, sDevIn.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn - 1 ? SeqData.Sequencer[iChIn - 1] : null);
-                var devices = await box.GetAllDevices();
-                await Routing.UpdateUsedDevices(devices);
             }
         }
 

@@ -1,19 +1,16 @@
-﻿using RtMidi.Core.Devices;
+﻿using RtMidi.Core;
+using RtMidi.Core.Devices;
 using RtMidi.Core.Enums;
 using RtMidi.Core.Messages;
-using RtMidi.Core;
 using System;
 using System.Collections.Generic;
-using static MidiTools.MidiDevice;
+using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Timers;
-using System.Linq;
-using System.IO;
-using CommonUtils.VSTPlugin;
 using VSTHost;
-using System.Threading.Tasks;
-using NAudio.Midi;
+using static MidiTools.MidiDevice;
 
 namespace MidiTools
 {
@@ -107,22 +104,22 @@ namespace MidiTools
 
         public enum TypeEvent
         {
-            NOTE_ON = 0,
-            NOTE_OFF = 1,
-            CC = 2,
-            SYSEX = 3,
-            PB = 4,
+            CC = 0,
+            PC = 1,
+            PB = 2,
+            CH_PRES = 3,
+            POLY_PRES = 4,
             NRPN = 5,
-            PC = 6,
-            CH_PRES = 7,
-            POLY_PRES = 8,
-            CLOCK = 9,
-            STOP = 10,
-            START = 11
+            CLOCK = 6,
+            STOP = 7,
+            START = 8,
+            SYSEX = 9,
+            NOTE_ON = 10,
+            NOTE_OFF = 11,
         }
 
         public string Name { get; internal set; }
-        public DateTime LastMessage { get; private set; }
+        public DateTime LastMessage { get; private set; } = DateTime.Now;
 
         private readonly int MIDI_InOrOut; //IN = 1, OUT = 2
 
@@ -199,7 +196,6 @@ namespace MidiTools
             OnMidiEvent?.Invoke(false, ev);
             OnMidiSequenceEventOUT?.Invoke(ev);
         }
-
 
         internal bool OpenDevice()
         {
@@ -443,7 +439,8 @@ namespace MidiTools
                 {
                     //VST_OutputEvents.VSTPlugins[iChannel].pluginContext.PluginCommandStub.Commands.Close();
                     //VST_OutputEvents.VSTPlugins[iChannel].pluginContext.Dispose();
-                    VST_OutputEvents.VSTPlugins[iChannel].Dispose();
+                    plugin.DisposeVST();
+                    VST_OutputEvents.VSTPlugins[iChannel].StopTimer();
                 }
                 catch 
                 { }
@@ -461,13 +458,14 @@ namespace MidiTools
         internal int[,] CCmemory = new int[16, 128];
         internal bool[,] NOTEmemory = new bool[16, 128];
 
+        private VSTHostInfo InitialAsioInfo;
         internal VSTHostInfo[] VSTSynths = new VSTHostInfo[16];
         internal VST[] VSTPlugins = new VST[16];
         internal bool Locked = false;
 
         internal VSTOutputDeviceEvents(VSTHostInfo vst)
         {
-            VSTSynths[0] = vst;
+            InitialAsioInfo = vst;
         }
 
         internal bool Close()
@@ -482,7 +480,7 @@ namespace MidiTools
                 {
                     try
                     {
-                        vst.Dispose();
+                        vst.StopTimer();
                     }
                     catch
                     { }
@@ -507,19 +505,19 @@ namespace MidiTools
                 {
                     Locked = true;
 
-                    bool bOK = UtilityAudio.OpenAudio(VSTSynths[0].AsioDevice, VSTSynths[0].SampleRate);
+                    bool bOK = UtilityAudio.OpenAudio(InitialAsioInfo.AsioDevice, InitialAsioInfo.SampleRate);
 
                     if (bOK)
                     {
                         UtilityAudio.StartAudio();
                         UtilityAudio.AudioInitialized = true;
-                        AddLog(VSTSynths[0].AsioDevice, true, Channel.Channel1, "[OPEN]", "", "", "");
+                        AddLog(InitialAsioInfo.AsioDevice, true, Channel.Channel1, "[OPEN]", "", "", "");
                     }
                 }
             }
             catch (Exception ex)
             {
-                VSTSynths[0].Error = "Unable to open audio device : " + ex.Message;
+                InitialAsioInfo.Error = "Unable to open audio device : " + ex.Message;
                 return false;
             }
             return true;
