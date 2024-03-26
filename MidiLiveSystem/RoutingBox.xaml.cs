@@ -87,10 +87,6 @@ namespace MidiLiveSystem
 
             GridPosition = gridPosition;
             BoxName = "Routing Box " + (GridPosition + 1).ToString();
-
-            TempMemory = new BoxPreset[8] { new BoxPreset(RoutingGuid, BoxGuid, "Preset 1", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 2", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 3", BoxName),
-                                            new BoxPreset(RoutingGuid, BoxGuid, "Preset 4", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 5", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 6", BoxName),
-                                            new BoxPreset(RoutingGuid, BoxGuid, "Preset 7", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 8", BoxName) };
             Project = conf;
 
             InitializeComponent();
@@ -1293,7 +1289,7 @@ namespace MidiLiveSystem
 
         internal async Task OpenVSTHost(bool bLoadProject)
         {
-            await Dispatcher.InvokeAsync(() =>
+            await Dispatcher.InvokeAsync(async () =>
             {
                 if (VSTWindow == null)
                 {
@@ -1301,9 +1297,16 @@ namespace MidiLiveSystem
                     {
                         TempVST.VSTHostInfo = TempMemory[CurrentPreset].VSTData;
                     }
+                    
                     VSTWindow = new VSTHost.MainWindow(RoutingGuid, BoxName, CurrentPreset, TempVST);
                     VSTWindow.OnVSTHostEvent += VSTWindow_OnVSTHostEvent;
                     VSTWindow.Show();
+                    
+                    if (bLoadProject)
+                    {
+                        await VSTWindow.LoadPlugin();
+                        OnUIEvent?.Invoke(BoxGuid, "PLUG_VST_TO_DEVICE", TempVST); //pour initialiser l'audio
+                    }
                 }
             });
         }

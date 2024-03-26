@@ -35,11 +35,6 @@ namespace VSTHost
             UtilityAudio.AudioEvent += UtilityAudio_AudioEvent;
 
             InitPage();
-
-            if (plugin.VSTHostInfo != null)
-            {
-                Dispatcher.Invoke(() => LoadPlugin());
-            }
         }
 
         private async void UtilityAudio_AudioEvent(string sMessage, string sDevice, int iSampleRate)
