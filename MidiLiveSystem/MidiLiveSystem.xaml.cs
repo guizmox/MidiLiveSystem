@@ -240,17 +240,17 @@ namespace MidiLiveSystem
             }
         }
 
-        private void Window_Closed(object sender, EventArgs e)
+        private async void Window_Closed(object sender, EventArgs e)
         {
-            while (UIEventPool.TasksRunning > 0)
-            {
-                Thread.Sleep(1);
-            }
-
             MidiRouting.InputStaticMidiMessage -= MidiRouting_InputMidiMessage;
             NewMessage -= MainWindow_NewMessage;
             UIRefreshRate.Stop();
             UIRefreshRate.Enabled = false;
+
+            while (UIEventPool.TasksRunning > 0)
+            {
+                await Task.Delay(1000);
+            }
 
             if (LogWindow != null)
             {
@@ -824,7 +824,7 @@ namespace MidiLiveSystem
                                 try
                                 {
                                     NewMessage?.Invoke("Initializing Routing Box (" + (iB + 1) + "/" + Boxes.Count + ") : " + Boxes[iB].BoxName);
-                                    await UIEventPool.AddTask(async () => await ProcessBoxData(Boxes[iB], true));
+                                    await ProcessBoxData(Boxes[iB], true);
                                 }
                                 catch (Exception ex)
                                 {
@@ -1156,7 +1156,7 @@ namespace MidiLiveSystem
             for (int i = 0; i < Boxes.Count; i++)
             {
                 int index = i;
-                tasks.Add(UIEventPool.AddTask(async () => await ProcessBoxData(Boxes[index], false)));
+                tasks.Add(ProcessBoxData(Boxes[index], false));
             }
 
             await Task.WhenAll(tasks);
