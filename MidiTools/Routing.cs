@@ -1,5 +1,4 @@
-﻿using CommonUtils.VSTPlugin;
-using RtMidi.Core;
+﻿using RtMidi.Core;
 using RtMidi.Core.Enums;
 using RtMidi.Core.Messages;
 using System;
@@ -2228,7 +2227,7 @@ namespace MidiTools
                 int[] Channels = new int[16] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
                 foreach (var dev in devicerouting)
                 {
-                    Channels[dev.ChannelOut - 1] += 1; 
+                    Channels[dev.ChannelOut - 1] += 1;
                 }
 
                 if (Channels[iWanted - 1] > 0) //déja affecté
@@ -2534,358 +2533,360 @@ namespace MidiTools
 
         public async Task AddVSTDeviceToAsio(Guid routingGuid, VSTPlugin plugin)
         {
-            await UIEventPool.AddTask(() =>
-            {
-                var matrix = MidiMatrix.FirstOrDefault(r => r.RoutingGuid == routingGuid && r.ChannelOut > 0); // && r.DeviceOut != null && r.DeviceOut.Name.Equals(Tools.VST_HOST));
-                if (matrix != null)
-                {
-                    var used = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(Tools.VST_HOST));
-                    if (used != null)
-                    {
-                        used.PlugVSTDevice(plugin, matrix.ChannelOut - 1);
-                    }
-                }
-            });
-        }
-        
-        public async Task RemoveVSTDeviceFromAsio(Guid routingGuid, VSTPlugin plugin)
-        {
-            await UIEventPool.AddTask(() =>
-            {
-                var matrix = MidiMatrix.FirstOrDefault(r => r.RoutingGuid == routingGuid); // && r.DeviceOut != null && r.DeviceOut.Name.Equals(Tools.VST_HOST));
-                if (matrix != null)
-                {
-                    var used = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(Tools.VST_HOST));
-                    if (used != null)
-                    {
-                        used.UnplugVSTDevice(plugin, matrix.ChannelOut - 1);
-                    }
-                }
-            });
-        }
-
-        public async Task UpdateUsedDevices(List<string> devices)
-        {
             await Tasks.AddTask(() =>
             {
-                lock (DevicesRoutingIN) { DevicesRoutingIN.Clear(); }
-                lock (DevicesRoutingOUT) { DevicesRoutingOUT.Clear(); }
-
-                List<string> NewIN = new List<string>();
-                List<string> NewOUT = new List<string>();
-
-                foreach (var dev in devices.Distinct())
+                MatrixItem matrix = null;
+                while (matrix == null)
                 {
-                    if (dev.StartsWith("I-") && dev.Length > 2)
-                    {
-                        NewIN.Add(dev[2..]);
-                    }
-                    else if (dev.StartsWith("O-") && dev.Length > 2)
-                    {
-                        NewOUT.Add(dev[2..]);
-                    }
+                    matrix = MidiMatrix.FirstOrDefault(r => r.RoutingGuid == routingGuid && r.ChannelOut > 0); // && r.DeviceOut != null && r.DeviceOut.Name.Equals(Tools.VST_HOST));
                 }
 
-                lock (DevicesRoutingIN) { DevicesRoutingIN = NewIN; }
-                lock (DevicesRoutingOUT) { DevicesRoutingOUT = NewOUT; }
-
+                var used = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(Tools.VST_HOST));
+                if (used != null)
+                {
+                    used.PlugVSTDevice(plugin, matrix.ChannelOut - 1);
+                }
             });
         }
 
-        private MidiDevice AddNewOutDevice(string sDeviceOut, VSTPlugin vst = null)
+    public async Task RemoveVSTDeviceFromAsio(Guid routingGuid, VSTPlugin plugin)
+    {
+        await Tasks.AddTask(() =>
         {
-            var dev = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut));
-            if (dev == null)
+            var matrix = MidiMatrix.FirstOrDefault(r => r.RoutingGuid == routingGuid); // && r.DeviceOut != null && r.DeviceOut.Name.Equals(Tools.VST_HOST));
+            if (matrix != null)
             {
-                var outdev = OutputDevices.FirstOrDefault(d => d.Name.Equals(sDeviceOut));
-                MidiDevice newdev;
-                if (vst != null)
+                var used = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(Tools.VST_HOST));
+                if (used != null)
                 {
-                    newdev = new MidiDevice(vst.VSTHostInfo);
+                    used.UnplugVSTDevice(plugin, matrix.ChannelOut - 1);
                 }
-                else
-                {
-                    newdev = new MidiDevice(outdev, CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(outdev.Name)));
-                }
+            }
+        });
+    }
 
-                newdev.UsedForRouting = true;
-                UsedDevicesOUT.Add(newdev);
+    public async Task UpdateUsedDevices(List<string> devices)
+    {
+        await Tasks.AddTask(() =>
+        {
+            lock (DevicesRoutingIN) { DevicesRoutingIN.Clear(); }
+            lock (DevicesRoutingOUT) { DevicesRoutingOUT.Clear(); }
+
+            List<string> NewIN = new List<string>();
+            List<string> NewOUT = new List<string>();
+
+            foreach (var dev in devices.Distinct())
+            {
+                if (dev.StartsWith("I-") && dev.Length > 2)
+                {
+                    NewIN.Add(dev[2..]);
+                }
+                else if (dev.StartsWith("O-") && dev.Length > 2)
+                {
+                    NewOUT.Add(dev[2..]);
+                }
+            }
+
+            lock (DevicesRoutingIN) { DevicesRoutingIN = NewIN; }
+            lock (DevicesRoutingOUT) { DevicesRoutingOUT = NewOUT; }
+
+        });
+    }
+
+    private MidiDevice AddNewOutDevice(string sDeviceOut, VSTPlugin vst = null)
+    {
+        var dev = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut));
+        if (dev == null)
+        {
+            var outdev = OutputDevices.FirstOrDefault(d => d.Name.Equals(sDeviceOut));
+            MidiDevice newdev;
+            if (vst != null)
+            {
+                newdev = new MidiDevice(vst.VSTHostInfo);
+            }
+            else
+            {
+                newdev = new MidiDevice(outdev, CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(outdev.Name)));
+            }
+
+            newdev.UsedForRouting = true;
+            UsedDevicesOUT.Add(newdev);
+            return newdev;
+        }
+        else { dev.UsedForRouting = true; return dev; }
+    }
+
+    private MidiDevice AddNewInDevice(string sDeviceIn)
+    {
+        var dev = UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDeviceIn));
+        if (dev == null)
+        {
+            var indev = InputDevices.FirstOrDefault(d => d.Name.Equals(sDeviceIn));
+            if (indev != null)
+            {
+                var newdev = new MidiDevice(indev);
+                newdev.OnMidiEvent += DeviceIn_OnMidiEvent;
+                UsedDevicesIN.Add(newdev);
                 return newdev;
             }
-            else { dev.UsedForRouting = true; return dev; }
+            else { return null; }
         }
-
-        private MidiDevice AddNewInDevice(string sDeviceIn)
-        {
-            var dev = UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDeviceIn));
-            if (dev == null)
-            {
-                var indev = InputDevices.FirstOrDefault(d => d.Name.Equals(sDeviceIn));
-                if (indev != null)
-                {
-                    var newdev = new MidiDevice(indev);
-                    newdev.OnMidiEvent += DeviceIn_OnMidiEvent;
-                    UsedDevicesIN.Add(newdev);
-                    return newdev;
-                }
-                else { return null; }
-            }
-            else { return dev; }
-        }
-
-        public async Task SetSolo(Guid routingGuid)
-        {
-            var routingOn = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
-
-            if (routingOn != null)
-            {
-                routingOn.TempActive = routingOn.Options.Active;
-                routingOn.Options.Active = true;
-            }
-
-            var routingOff = MidiMatrix.Where(m => m.RoutingGuid != routingGuid);
-            foreach (var r in routingOff)
-            {
-                await RoutingPanic(r, r.ChannelOut);
-                r.TempActive = r.Options.Active;
-                r.Options.Active = false;
-            }
-        }
-
-        public async Task MuteRouting(Guid routingGuid)
-        {
-            var routingOn = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
-            if (routingOn != null)
-            {
-                await routingOn.Tasks.AddTask(async () =>
-                {
-                    await RoutingPanic(routingOn, routingOn.ChannelOut);
-                    routingOn.TempActive = true;
-                    routingOn.Options.Active = false;
-                });
-            }
-        }
-
-        public async Task UnmuteRouting(Guid routingGuid)
-        {
-            var routingOff = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
-            if (routingOff != null)
-            {
-                await routingOff.Tasks.AddTask(() =>
-                {
-                    routingOff.TempActive = false;
-                    routingOff.Options.Active = true;
-                });
-            }
-
-        }
-
-        public async Task UnmuteAllRouting()
-        {
-            await Tasks.AddTask(() =>
-            {
-                foreach (var r in MidiMatrix)
-                {
-                    r.Options.Active = r.TempActive;
-                }
-            });
-        }
-
-        public async Task DeleteRouting(Guid routingGuid)
-        {
-            await Tasks.AddTask(() =>
-            {
-                var routing = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
-                if (routing != null)
-                {
-                    MidiMatrix.Remove(routing);
-                }
-            });
-        }
-
-        public async Task DeleteAllRouting()
-        {
-            await Panic();
-
-            MidiClock.Stop();
-            MidiClock.Enabled = false;
-            EventsCounter.Stop();
-            EventsCounter.Enabled = false;
-            CloseDevicesTimer.Stop();
-            CloseDevicesTimer.Enabled = false;
-
-            foreach (var device in UsedDevicesIN)
-            {
-                try
-                {
-                    device.CloseDevice();
-                    device.OnMidiEvent -= DeviceIn_OnMidiEvent;
-                }
-                catch { throw; }
-            }
-
-            foreach (var device in UsedDevicesOUT)
-            {
-                try
-                {
-                    device.CloseDevice();
-                }
-                catch { throw; }
-            }
-
-            UsedDevicesIN.Clear();
-
-            UsedDevicesOUT.Clear();
-
-            MidiMatrix.Clear();
-        }
-
-        public async Task SendCC(Guid routingGuid, int iCC, int iValue)
-        {
-            var routing = MidiMatrix.FirstOrDefault(d => d.RoutingGuid == routingGuid && d.DeviceOut != null);
-            if (routing != null)
-            {
-                await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { iCC, iValue }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
-            }
-        }
-
-        public async Task SendNote(Guid routingGuid, NoteGenerator note)
-        {
-            var routing = MidiMatrix.FirstOrDefault(d => d.RoutingGuid == routingGuid && d.DeviceOut != null);
-            if (routing != null)
-            {
-                await routing.CreateNote(note, LowestNoteRunning);
-            }
-        }
-
-        public async Task SendProgramChange(Guid routingGuid, MidiPreset mp)
-        {
-            var routing = MidiMatrix.FirstOrDefault(d => d.RoutingGuid == routingGuid && d.DeviceOut != null);
-            if (routing != null)
-            {
-                await ChangeProgram(routing, mp, false);
-            }
-        }
-
-        public async Task OpenUsedPorts(bool bIn)
-        {
-            await Tasks.AddTask(() =>
-            {
-                if (bIn)
-                {
-
-                    foreach (var dev in UsedDevicesIN)
-                    {
-                        dev.OpenDevice();
-                        dev.OnMidiEvent += DeviceIn_OnMidiEvent;
-                    }
-                }
-                else
-                {
-                    foreach (var dev in UsedDevicesOUT)
-                    {
-                        dev.OpenDevice();
-                    }
-                }
-            });
-        }
-
-        public async Task SetClock(bool bActivated, int iBPM, string sDevice)
-        {
-            await Tasks.AddTask(() =>
-            {
-                bool bChanged = false;
-
-                if (ClockRunning != bActivated || ClockBPM != iBPM || !ClockDevice.Equals(sDevice))
-                {
-                    bChanged = true;
-                }
-
-                if (bChanged)
-                {
-                    MidiClock.Stop(); //coupure de l'horloge interne
-                    MidiClock.Enabled = false;
-
-                    foreach (var device in UsedDevicesIN)  //coupure des horloges externes
-                    {
-                        device.DisableClock();
-                        device.OnMidiClockEvent -= MidiClock_OnEvent;
-                    }
-
-                    if (bActivated)
-                    {
-                        if (sDevice.Equals(Tools.INTERNAL_GENERATOR))
-                        {
-                            MidiClock.Interval = Tools.GetMidiClockInterval(iBPM); //valeur par défaut
-                            MidiClock.Start(); //coupure de l'horloge interne
-                            MidiClock.Enabled = true;
-                        }
-                        else
-                        {
-                            var masterdevice = UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDevice));
-                            masterdevice.EnableClock();
-                            masterdevice.OnMidiClockEvent += MidiClock_OnEvent;
-                        }
-                    }
-                }
-
-                ClockRunning = bActivated;
-                ClockBPM = iBPM;
-                ClockDevice = sDevice;
-            });
-        }
-
-        public async Task SetSequencerListener(string sDevice)
-        {
-            await Tasks.AddTask(() =>
-            {
-                if (sDevice.Length > 0)
-                {
-                    var exists = UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDevice));
-
-                    if (exists == null)
-                    {
-                        var newdev = AddNewInDevice(sDevice);
-                        newdev.IsReserverdForInternalPurposes = true;
-                    }
-                }
-            });
-        }
-
-        public void ReactivateTimers()
-        {
-            EventsCounter.Enabled = true;
-            EventsCounter.Start();
-            CloseDevicesTimer.Enabled = true;
-            CloseDevicesTimer.Start();
-        }
-
-        public void SetRoutingGuid(Guid oldGuid, Guid newGuid)
-        {
-            var routing = MidiMatrix.FirstOrDefault(d => d.RoutingGuid == oldGuid);
-            if (routing != null)
-            {
-                routing.SetRoutingGuid(newGuid);
-            }
-        }
-
-        public async Task<List<int>> GetCCData(Guid routingGuid, int[] sCC)
-        {
-            List<int> CCdata = new List<int>();
-            await Tasks.AddTask(() =>
-            {
-                var routing = MidiMatrix.FirstOrDefault(d => d.RoutingGuid == routingGuid);
-                if (routing != null && routing.DeviceOut != null)
-                {
-                    for (int i = 0; i < sCC.Length; i++)
-                    {
-                        CCdata.Add(routing.DeviceOut.GetLiveCCValue(routing.ChannelOut, sCC[i]));
-                    }
-                }
-            });
-            return CCdata;
-        }
-
-        #endregion
+        else { return dev; }
     }
+
+    public async Task SetSolo(Guid routingGuid)
+    {
+        var routingOn = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
+
+        if (routingOn != null)
+        {
+            routingOn.TempActive = routingOn.Options.Active;
+            routingOn.Options.Active = true;
+        }
+
+        var routingOff = MidiMatrix.Where(m => m.RoutingGuid != routingGuid);
+        foreach (var r in routingOff)
+        {
+            await RoutingPanic(r, r.ChannelOut);
+            r.TempActive = r.Options.Active;
+            r.Options.Active = false;
+        }
+    }
+
+    public async Task MuteRouting(Guid routingGuid)
+    {
+        var routingOn = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
+        if (routingOn != null)
+        {
+            await routingOn.Tasks.AddTask(async () =>
+            {
+                await RoutingPanic(routingOn, routingOn.ChannelOut);
+                routingOn.TempActive = true;
+                routingOn.Options.Active = false;
+            });
+        }
+    }
+
+    public async Task UnmuteRouting(Guid routingGuid)
+    {
+        var routingOff = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
+        if (routingOff != null)
+        {
+            await routingOff.Tasks.AddTask(() =>
+            {
+                routingOff.TempActive = false;
+                routingOff.Options.Active = true;
+            });
+        }
+
+    }
+
+    public async Task UnmuteAllRouting()
+    {
+        await Tasks.AddTask(() =>
+        {
+            foreach (var r in MidiMatrix)
+            {
+                r.Options.Active = r.TempActive;
+            }
+        });
+    }
+
+    public async Task DeleteRouting(Guid routingGuid)
+    {
+        await Tasks.AddTask(() =>
+        {
+            var routing = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
+            if (routing != null)
+            {
+                MidiMatrix.Remove(routing);
+            }
+        });
+    }
+
+    public async Task DeleteAllRouting()
+    {
+        await Panic();
+
+        MidiClock.Stop();
+        MidiClock.Enabled = false;
+        EventsCounter.Stop();
+        EventsCounter.Enabled = false;
+        CloseDevicesTimer.Stop();
+        CloseDevicesTimer.Enabled = false;
+
+        foreach (var device in UsedDevicesIN)
+        {
+            try
+            {
+                device.CloseDevice();
+                device.OnMidiEvent -= DeviceIn_OnMidiEvent;
+            }
+            catch { throw; }
+        }
+
+        foreach (var device in UsedDevicesOUT)
+        {
+            try
+            {
+                device.CloseDevice();
+            }
+            catch { throw; }
+        }
+
+        UsedDevicesIN.Clear();
+
+        UsedDevicesOUT.Clear();
+
+        MidiMatrix.Clear();
+    }
+
+    public async Task SendCC(Guid routingGuid, int iCC, int iValue)
+    {
+        var routing = MidiMatrix.FirstOrDefault(d => d.RoutingGuid == routingGuid && d.DeviceOut != null);
+        if (routing != null)
+        {
+            await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { iCC, iValue }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
+        }
+    }
+
+    public async Task SendNote(Guid routingGuid, NoteGenerator note)
+    {
+        var routing = MidiMatrix.FirstOrDefault(d => d.RoutingGuid == routingGuid && d.DeviceOut != null);
+        if (routing != null)
+        {
+            await routing.CreateNote(note, LowestNoteRunning);
+        }
+    }
+
+    public async Task SendProgramChange(Guid routingGuid, MidiPreset mp)
+    {
+        var routing = MidiMatrix.FirstOrDefault(d => d.RoutingGuid == routingGuid && d.DeviceOut != null);
+        if (routing != null)
+        {
+            await ChangeProgram(routing, mp, false);
+        }
+    }
+
+    public async Task OpenUsedPorts(bool bIn)
+    {
+        await Tasks.AddTask(() =>
+        {
+            if (bIn)
+            {
+
+                foreach (var dev in UsedDevicesIN)
+                {
+                    dev.OpenDevice();
+                    dev.OnMidiEvent += DeviceIn_OnMidiEvent;
+                }
+            }
+            else
+            {
+                foreach (var dev in UsedDevicesOUT)
+                {
+                    dev.OpenDevice();
+                }
+            }
+        });
+    }
+
+    public async Task SetClock(bool bActivated, int iBPM, string sDevice)
+    {
+        await Tasks.AddTask(() =>
+        {
+            bool bChanged = false;
+
+            if (ClockRunning != bActivated || ClockBPM != iBPM || !ClockDevice.Equals(sDevice))
+            {
+                bChanged = true;
+            }
+
+            if (bChanged)
+            {
+                MidiClock.Stop(); //coupure de l'horloge interne
+                MidiClock.Enabled = false;
+
+                foreach (var device in UsedDevicesIN)  //coupure des horloges externes
+                {
+                    device.DisableClock();
+                    device.OnMidiClockEvent -= MidiClock_OnEvent;
+                }
+
+                if (bActivated)
+                {
+                    if (sDevice.Equals(Tools.INTERNAL_GENERATOR))
+                    {
+                        MidiClock.Interval = Tools.GetMidiClockInterval(iBPM); //valeur par défaut
+                        MidiClock.Start(); //coupure de l'horloge interne
+                        MidiClock.Enabled = true;
+                    }
+                    else
+                    {
+                        var masterdevice = UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDevice));
+                        masterdevice.EnableClock();
+                        masterdevice.OnMidiClockEvent += MidiClock_OnEvent;
+                    }
+                }
+            }
+
+            ClockRunning = bActivated;
+            ClockBPM = iBPM;
+            ClockDevice = sDevice;
+        });
+    }
+
+    public async Task SetSequencerListener(string sDevice)
+    {
+        await Tasks.AddTask(() =>
+        {
+            if (sDevice.Length > 0)
+            {
+                var exists = UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDevice));
+
+                if (exists == null)
+                {
+                    var newdev = AddNewInDevice(sDevice);
+                    newdev.IsReserverdForInternalPurposes = true;
+                }
+            }
+        });
+    }
+
+    public void ReactivateTimers()
+    {
+        EventsCounter.Enabled = true;
+        EventsCounter.Start();
+        CloseDevicesTimer.Enabled = true;
+        CloseDevicesTimer.Start();
+    }
+
+    public void SetRoutingGuid(Guid oldGuid, Guid newGuid)
+    {
+        var routing = MidiMatrix.FirstOrDefault(d => d.RoutingGuid == oldGuid);
+        if (routing != null)
+        {
+            routing.SetRoutingGuid(newGuid);
+        }
+    }
+
+    public async Task<List<int>> GetCCData(Guid routingGuid, int[] sCC)
+    {
+        List<int> CCdata = new List<int>();
+        await Tasks.AddTask(() =>
+        {
+            var routing = MidiMatrix.FirstOrDefault(d => d.RoutingGuid == routingGuid);
+            if (routing != null && routing.DeviceOut != null)
+            {
+                for (int i = 0; i < sCC.Length; i++)
+                {
+                    CCdata.Add(routing.DeviceOut.GetLiveCCValue(routing.ChannelOut, sCC[i]));
+                }
+            }
+        });
+        return CCdata;
+    }
+
+    #endregion
+}
 }

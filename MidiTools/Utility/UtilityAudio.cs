@@ -1,18 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using NAudio.Wave;
-using Jacobi.Vst.Interop;
-using CommonUtils.VSTPlugin;
+﻿using Jacobi.Vst.Core;
 using Jacobi.Vst.Host.Interop;
-using System.Threading;
-using System.Net.Security;
 using Jacobi.Vst.Samples.Host;
 using MidiTools;
-using Jacobi.Vst.Core;
+using NAudio.Wave;
+using System;
 using System.Collections.Concurrent;
-using System.IO;
-using System.Windows.Forms;
 using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Threading;
 
 // Copied from the microDRUM project
 // https://github.com/microDRUM
@@ -20,16 +16,197 @@ using System.Drawing;
 // Modified by perivar@nerseth.com
 namespace VSTHost
 {
-    internal class VST
+    internal class VSTStreamEventArgs : EventArgs
+    {
+        internal float MaxL = float.MinValue;
+        internal float MaxR = float.MaxValue;
+
+        internal VSTStreamEventArgs(float maxL, float maxR)
+        {
+            MaxL = maxL;
+            MaxR = maxR;
+        }
+    }
+
+    internal class VSTStream : WaveStream
+    {
+        internal VstPluginContext pluginContext = null;
+        internal event EventHandler<VSTStreamEventArgs> ProcessCalled;
+
+
+        internal VstAudioBuffer[] inputBuffers;
+        internal VstAudioBuffer[] outputBuffers;
+
+        private float[] input;
+        private float[] output;
+        private int BlockSize = 0;
+
+        private WaveChannel32 wavStream;
+
+        internal new void Dispose()
+        {
+            base.Dispose();
+        }
+
+        private void RaiseProcessCalled(float maxL, float maxR)
+        {
+            EventHandler<VSTStreamEventArgs> handler = ProcessCalled;
+
+            if (handler != null)
+            {
+                handler(this, new VSTStreamEventArgs(maxL, maxR));
+            }
+        }
+
+        private void UpdateBlockSize(int blockSize)
+        {
+            BlockSize = blockSize;
+
+            int inputCount = pluginContext.PluginInfo.AudioInputCount;
+            int outputCount = pluginContext.PluginInfo.AudioOutputCount;
+
+            var inputMgr = new VstAudioBufferManager(inputCount, blockSize);
+            var outputMgr = new VstAudioBufferManager(outputCount, blockSize);
+
+            pluginContext.PluginCommandStub.Commands.SetBlockSize(blockSize);
+            pluginContext.PluginCommandStub.Commands.SetSampleRate(WaveFormat.SampleRate);
+            pluginContext.PluginCommandStub.Commands.SetProcessPrecision(VstProcessPrecision.Process32);
+
+            inputBuffers = inputMgr.Buffers.ToArray();
+            outputBuffers = outputMgr.Buffers.ToArray();
+
+            input = new float[WaveFormat.Channels * blockSize];
+            output = new float[WaveFormat.Channels * blockSize];
+        }
+
+        private float[] ProcessReplace(int blockSize)
+        {
+            if (blockSize != BlockSize) UpdateBlockSize(blockSize);
+
+            // check if we are processing a wavestream (VST) or if this is audio outputting only (VSTi)
+            if (wavStream != null)
+            {
+                int sampleCount = blockSize * 2;
+                int sampleCountx4 = sampleCount * 4;
+                int loopSize = sampleCount / WaveFormat.Channels;
+
+                // Convert byte array into float array and store in Vst Buffers
+                // naudio reads an buffer of interlaced float's
+                // must take every 4th byte and convert to float
+                // Vst.Net audio buffer format (-1 to 1 floats).
+                var naudioBuf = new byte[blockSize * WaveFormat.Channels * 4];
+                int bytesRead = wavStream.Read(naudioBuf, 0, sampleCountx4);
+
+                // populate the inputbuffers with the incoming wave stream
+                // TODO: do not use unsafe - but like this http://vstnet.codeplex.com/discussions/246206 ?
+                // this whole section is modelled after http://vstnet.codeplex.com/discussions/228692
+                unsafe
+                {
+                    fixed (byte* byteBuf = &naudioBuf[0])
+                    {
+                        float* floatBuf = (float*)byteBuf;
+                        int j = 0;
+                        for (int i = 0; i < loopSize; i++)
+                        {
+                            inputBuffers[0][i] = *(floatBuf + j);
+                            j++;
+                            inputBuffers[1][i] = *(floatBuf + j);
+                            j++;
+                        }
+                    }
+                }
+            }
+
+            try
+            {
+                //pluginContext.PluginCommandStub.MainsChanged(true);
+                pluginContext.PluginCommandStub.Commands.StartProcess();
+                pluginContext.PluginCommandStub.Commands.ProcessReplacing(inputBuffers, outputBuffers);
+                pluginContext.PluginCommandStub.Commands.StopProcess();
+                //pluginContext.PluginCommandStub.MainsChanged(false);
+            }
+            catch
+            {
+                throw;
+            }
+
+            int indexOutput = 0;
+
+            float maxL = float.MinValue;
+            float maxR = float.MinValue;
+
+            for (int j = 0; j < BlockSize; j++)
+            {
+                output[indexOutput] = outputBuffers[0][j];
+                output[indexOutput + 1] = outputBuffers[1][j];
+
+                maxL = Math.Max(maxL, output[indexOutput]);
+                maxR = Math.Max(maxR, output[indexOutput + 1]);
+                indexOutput += 2;
+            }
+            RaiseProcessCalled(maxL, maxR);
+            return output;
+        }
+
+        internal int Read(float[] buffer, int offset, int sampleCount)
+        {
+            // CALL VST PROCESS HERE WITH BLOCK SIZE OF sampleCount
+            float[] tempBuffer = ProcessReplace(sampleCount / 2);
+
+            // Copying Vst buffer inside Audio buffer, no conversion needed for WaveProvider32
+            for (int i = 0; i < sampleCount; i++)
+                buffer[i + offset] = tempBuffer[i];
+
+            return sampleCount;
+        }
+
+        private WaveFormat waveFormat;
+
+        internal void SetWaveFormat(int sampleRate, int channels)
+        {
+            this.waveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, channels);
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            var waveBuffer = new WaveBuffer(buffer);
+            int samplesRequired = count / 4;
+            int samplesRead = Read(waveBuffer.FloatBuffer, offset / 4, samplesRequired);
+            return samplesRead * 4;
+        }
+
+        public override WaveFormat WaveFormat
+        {
+            get { return waveFormat; }
+        }
+
+        public override long Length
+        {
+            get { return long.MaxValue; }
+        }
+
+        public override long Position
+        {
+            get
+            {
+                return 0;
+            }
+            set
+            {
+                long x = value;
+            }
+        }
+    }
+
+    internal class VSTMidi
     {
         private System.Timers.Timer StackTimer;
         internal VstPluginContext pluginContext = null;
         private ConcurrentBag<VstEvent> MidiStack = new ConcurrentBag<VstEvent>();
         private ConcurrentBag<VstEvent> MidiStackNoteOn = new ConcurrentBag<VstEvent>();
-
         internal event EventHandler<VSTStreamEventArgs> StreamCall = null;
 
-        internal VST()
+        internal VSTMidi()
         {
             StackTimer = new System.Timers.Timer();
             StackTimer.Elapsed += StackTimer_Elapsed;
@@ -42,13 +219,19 @@ namespace VSTHost
             //je force les évènements NOTE ON à être lancés avant pour éviter le risque de notes non relâchées (NOTE OFF avant NOTE ON)
             if (MidiStackNoteOn.Count > 0)
             {
-                pluginContext.PluginCommandStub.Commands.ProcessEvents(MidiStackNoteOn.ToArray());
+                foreach (var ev in MidiStackNoteOn)
+                {
+                    pluginContext.PluginCommandStub.Commands.ProcessEvents(new VstEvent[] { ev });
+                }
                 MidiStackNoteOn.Clear();
             }
 
             if (MidiStack.Count > 0)
             {
-                pluginContext.PluginCommandStub.Commands.ProcessEvents(MidiStack.ToArray());
+                foreach (var ev in MidiStack)
+                {
+                    pluginContext.PluginCommandStub.Commands.ProcessEvents(new VstEvent[] { ev });
+                }
                 MidiStack.Clear();
             }
         }
@@ -169,12 +352,25 @@ namespace VSTHost
     public class VSTPlugin
     {
         public VSTHostInfo VSTHostInfo;
-        internal VST VSTSynth;
+        internal VSTMidi VSTSynth;
         private VSTStream vstStream;
+        private Guid BoxGuid;
 
-        public VSTPlugin()
+        public VSTPlugin(Guid boxguid)
         {
+            BoxGuid = boxguid;
+        }
 
+        public string GetInfo()
+        {
+            if (vstStream != null && vstStream.inputBuffers != null && vstStream.outputBuffers != null)
+            {
+                return string.Concat(VSTHostInfo.VSTName + " : IN Buffers : ", vstStream.inputBuffers.Length, " - OUT Buffers : ", vstStream.outputBuffers.Length);
+            }
+            else
+            {
+                return string.Concat("VST Stream not initialized for " + VSTHostInfo.VSTName);
+            }
         }
 
         public string LoadVST()
@@ -183,7 +379,7 @@ namespace VSTHost
 
             DisposeVST();
 
-            VSTSynth = new VST();
+            VSTSynth = new VSTMidi();
 
             var hcs = new HostCommandStub();
 
@@ -267,23 +463,23 @@ namespace VSTHost
 
         internal void DisposeVST()
         {
+            if (VSTSynth != null)
+            {
+                VSTSynth.StopTimer();
+                VSTSynth.pluginContext.PluginCommandStub.Commands.Close();
+                //VSTSynth.pluginContext.Dispose();
+            }
+
             if (vstStream != null)
             {
                 vstStream.ProcessCalled -= VSTSynth.Stream_ProcessCalled;
-            }
-
-            if (UtilityAudio.AudioMixer != null) UtilityAudio.AudioMixer.RemoveInputStream(vstStream);
-
-            if (vstStream != null)
-            {
                 vstStream.Dispose();
                 vstStream = null;
             }
 
-            if (VSTSynth != null)
-            {
-                VSTSynth.pluginContext.PluginCommandStub.Commands.Close();
-                //VSTSynth.pluginContext.Dispose();
+            if (UtilityAudio.AudioMixer != null)
+            { 
+                UtilityAudio.AudioMixer.RemoveInputStream(vstStream); 
             }
         }
 
@@ -336,18 +532,27 @@ namespace VSTHost
 
     public static class UtilityAudio
     {
+        public delegate void AudioEventHandler(string sMessage, string sDevice, int iSampleRate);
+        public static event AudioEventHandler AudioEvent;
+
         private static Thread AudioThread;
 
         private static IWavePlayer AudioDevice;
         internal static RecordableMixerStream32 AudioMixer;
         public static bool AudioInitialized = false;
+        public static string DeviceName = "";
+        public static int DeviceSampleRate = 0;
 
         public static bool OpenAudio(string asioDevice, int iSampleRate)
         {
+            DeviceName = asioDevice;
+            DeviceSampleRate = iSampleRate;
+
             int iOK = 0;
 
             if (AudioDevice == null) //asio pas encore initialisé
             {
+                AudioEvent?.Invoke("Opening Audio Driver", asioDevice, iSampleRate);
                 AudioThread = new Thread(() =>
                 {
                     StartSTA(asioDevice, iSampleRate, ref iOK);
@@ -358,7 +563,7 @@ namespace VSTHost
 
                 while (iOK == 0)
                 {
-                    Thread.Sleep(10);
+                    Thread.Sleep(100);
                 }
             }
             else { iOK = 1; }
@@ -382,15 +587,17 @@ namespace VSTHost
 
                     if (!string.IsNullOrEmpty(asioDevice))
                     {
-                        AudioDevice = new AsioOut(asioDevice);
-
+                        var device = new AsioOut(asioDevice);
+                        AudioDevice = device;
+                        AudioEvent?.Invoke("ASIO Device Inputs : " + device.NumberOfInputChannels + " / Outputs : " + device.NumberOfOutputChannels + " / Latency : " + device.PlaybackLatency, asioDevice, iSampleRate);
                     }
 
                     if (AudioDevice == null)
                     {
-                        AudioDevice = new WaveOut();
+                        var device = new WaveOut();
+                        AudioDevice = device;
+                        AudioEvent?.Invoke("WaveOut Device Latency : " + device.DesiredLatency + " / Buffers : " + device.NumberOfBuffers, asioDevice, iSampleRate);
                     }
-
                     if (AudioDevice == null)
                     {
                         iOK = 2;
@@ -398,6 +605,7 @@ namespace VSTHost
 
                     if (iOK == 0)
                     {
+                        AudioEvent?.Invoke("Mixer Info : Wave Format : " + AudioMixer.WaveFormat + " / Inputs : " + AudioMixer.InputCount, asioDevice, iSampleRate);
                         AudioDevice.Init(AudioMixer);
                         iOK = 1;
                     }
@@ -412,13 +620,17 @@ namespace VSTHost
         public static void StartAudio()
         {
             if (AudioDevice != null)
-            { 
-                AudioDevice.Play(); 
+            {
+                AudioEvent?.Invoke("Starting Audio Driver", DeviceName, DeviceSampleRate);
+                AudioDevice.Play();
+                Thread.Sleep(100);
+                AudioEvent?.Invoke("Audio Driver Initialized", DeviceName, DeviceSampleRate);
             }
         }
 
         public static void StopAudio()
         {
+            AudioEvent?.Invoke("Stopping Audio Driver", DeviceName, DeviceSampleRate);
             if (AudioDevice != null) { AudioDevice.Stop(); }
             AudioThread = null;
         }
@@ -430,6 +642,7 @@ namespace VSTHost
                 AudioDevice.Stop();
                 try
                 {
+                    AudioEvent?.Invoke("Dispose Audio Driver", DeviceName, DeviceSampleRate);
                     AudioDevice.Dispose();
                 }
                 catch 
@@ -438,7 +651,12 @@ namespace VSTHost
                 AudioDevice = null;
             }
 
-            if (AudioMixer != null) { AudioMixer.Dispose(); AudioMixer = null; }
+            if (AudioMixer != null) 
+            {
+                AudioEvent?.Invoke("Dispose Audio Mixer", DeviceName, DeviceSampleRate);
+                AudioMixer.Dispose(); 
+                AudioMixer = null;
+            }
 
         }
 

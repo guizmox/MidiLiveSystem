@@ -57,7 +57,7 @@ namespace MidiLiveSystem
     {
         public VSTHost.MainWindow VSTWindow;
 
-        public Guid RoutingGuid { get; set; }
+        public Guid RoutingGuid { get; private set; }
         public bool Detached { get; internal set; } = false;
         public bool HasVSTAttached { get { return TempMemory[CurrentPreset].VSTData != null ? true : false; } }
 
@@ -66,20 +66,25 @@ namespace MidiLiveSystem
         public int GridPosition = 0;
         public int CurrentPreset = 1;
 
-        public Guid BoxGuid = Guid.NewGuid();
-        public string BoxName = "Routing Box";
+        public Guid BoxGuid { get; private set; } = Guid.NewGuid();
+        public string BoxName { get; private set; } = "Routing Box";
         private ProjectConfiguration Project;
 
         public delegate void RoutingBoxEventHandler(Guid gBox, string sControl, object sValue);
         public event RoutingBoxEventHandler OnUIEvent;
 
         BoxPreset[] TempMemory = new BoxPreset[8];
-        VSTPlugin TempVST = new VSTPlugin();
+        VSTPlugin TempVST;
 
         PresetBrowser InstrumentPresets = null;
 
-        public RoutingBox(ProjectConfiguration conf, List<IMidiInputDeviceInfo> inputDevices, List<IMidiOutputDeviceInfo> outputDevices, int gridPosition)
+        public RoutingBox(ProjectConfiguration conf, List<IMidiInputDeviceInfo> inputDevices, List<IMidiOutputDeviceInfo> outputDevices, int gridPosition, Guid boxGuid, string sBoxName, Guid routingGuid, BoxPreset[] presets)
         {
+            BoxGuid = boxGuid;
+            RoutingGuid = routingGuid;
+            TempVST = new VSTPlugin(boxGuid);           
+            LoadMemory(presets);
+
             GridPosition = gridPosition;
             BoxName = "Routing Box " + (GridPosition + 1).ToString();
 
@@ -90,35 +95,42 @@ namespace MidiLiveSystem
 
             InitializeComponent();
 
+            InitPage(inputDevices, outputDevices);
+
+            MidiRouting.OutputMidiMessage += MidiRouting_OutputMidiMessage;
+        }
+
+        public RoutingBox(ProjectConfiguration conf, List<IMidiInputDeviceInfo> inputDevices, List<IMidiOutputDeviceInfo> outputDevices, int gridPosition)
+        {
+            GridPosition = gridPosition;
+            BoxName = "Routing Box " + (GridPosition + 1).ToString();
+            TempVST = new VSTPlugin(BoxGuid);
+
+            TempMemory = new BoxPreset[8] { new BoxPreset(RoutingGuid, BoxGuid, "Preset 1", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 2", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 3", BoxName),
+                                            new BoxPreset(RoutingGuid, BoxGuid, "Preset 4", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 5", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 6", BoxName),
+                                            new BoxPreset(RoutingGuid, BoxGuid, "Preset 7", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 8", BoxName) };
+            Project = conf;
+
+            InitializeComponent();
 
             InitPage(inputDevices, outputDevices);
 
             MidiRouting.OutputMidiMessage += MidiRouting_OutputMidiMessage;
         }
 
-        private async void VSTWindow_OnVSTHostEvent(VSTPlugin plugin, int iPreset, int iAction)
+        private async void VSTWindow_OnVSTHostEvent(int iPreset, int iAction)
         {
             if (iAction == 0) //fermer la fenêtre
             {
+                TempMemory[CurrentPreset].VSTData = TempVST.VSTHostInfo; //pas certain
                 VSTWindow.OnVSTHostEvent -= VSTWindow_OnVSTHostEvent;
                 VSTWindow = null;
             }
             else if (iAction == 1) //chargement initial du VST
             {
-                if (plugin != null)
-                {
-                    TempVST = plugin;
-                    TempVST = await VSTWindow.LoadPlugin();
-                    OnUIEvent?.Invoke(BoxGuid, "PLUG_VST_TO_DEVICE", plugin);
-                }
-            }
-            else if (iAction == 3) //nouveau chargement
-            {
-                if (plugin != null)
-                {
-                    TempVST = plugin;
-                    OnUIEvent?.Invoke(BoxGuid, "PLUG_VST_TO_DEVICE", plugin);
-                }
+                TempMemory[CurrentPreset].VSTData = TempVST.VSTHostInfo; //pas certain
+                OnUIEvent?.Invoke(BoxGuid, "PLUG_VST_TO_DEVICE", TempVST); //pour initialiser l'audio
+                await VSTWindow.LoadPlugin();             
             }
         }
 
@@ -1274,7 +1286,7 @@ namespace MidiLiveSystem
                     VSTWindow.Close();
                     VSTWindow = null;
                 }
-                TempVST = new VSTPlugin();
+                //TempVST = new VSTPlugin();
                 //TempMemory[CurrentPreset].VSTData = null;
             });
         }
@@ -1289,11 +1301,21 @@ namespace MidiLiveSystem
                     {
                         TempVST.VSTHostInfo = TempMemory[CurrentPreset].VSTData;
                     }
-                    VSTWindow = new VSTHost.MainWindow(RoutingGuid, BoxName, CurrentPreset, TempMemory[CurrentPreset].VSTData);
+                    VSTWindow = new VSTHost.MainWindow(RoutingGuid, BoxName, CurrentPreset, TempVST);
                     VSTWindow.OnVSTHostEvent += VSTWindow_OnVSTHostEvent;
                     VSTWindow.Show();
                 }
             });
+        }
+
+        internal void SetRoutingGuid(Guid routingguid)
+        {
+            RoutingGuid = routingguid;
+        }
+
+        internal void SetBoxName(string boxname)
+        {
+            BoxName = boxname;
         }
     }
 

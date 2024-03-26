@@ -1,5 +1,4 @@
-﻿using CommonUtils.VSTPlugin;
-using MaterialDesignThemes.Wpf;
+﻿using MaterialDesignThemes.Wpf;
 using MidiTools;
 using RtMidi.Core.Enums;
 using System;
@@ -75,7 +74,7 @@ namespace MidiLiveSystem
 
             UIRefreshRate = new System.Timers.Timer();
             UIRefreshRate.Elapsed += UIRefreshRate_Elapsed;
-            UIRefreshRate.Interval = 10000;
+            UIRefreshRate.Interval = 1000;
             UIRefreshRate.Start();
 
             MidiRouting.InputStaticMidiMessage += MidiRouting_InputMidiMessage;
@@ -349,7 +348,7 @@ namespace MidiLiveSystem
                         var b = Boxes.FirstOrDefault(b => b.BoxGuid.ToString().Equals(boxname[1]));
                         if (b != null)
                         {
-                            b.BoxName = boxname[0];
+                            b.SetBoxName(boxname[0]);
                             b.GridPosition = Convert.ToInt32(boxname[2]);
                             Dispatcher.Invoke(() =>
                             {
@@ -1197,7 +1196,8 @@ namespace MidiLiveSystem
                 }
                 else
                 {
-                    box.RoutingGuid = await Routing.AddRouting(sDevIn, sDevOut, vst, iChIn, iChOut, options, preset, sDevIn.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn - 1 ? SeqData.Sequencer[iChIn - 1] : null);
+                    var routingguid = await Routing.AddRouting(sDevIn, sDevOut, vst, iChIn, iChOut, options, preset, sDevIn.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn - 1 ? SeqData.Sequencer[iChIn - 1] : null);
+                    box.SetRoutingGuid(routingguid); 
                 }
             }
             else
@@ -1238,11 +1238,7 @@ namespace MidiLiveSystem
                     }
                     else { iGridPosition++; }
 
-                    var box = new RoutingBox(project, MidiTools.MidiRouting.InputDevices, MidiTools.MidiRouting.OutputDevices, iGridPosition);
-                    box.BoxGuid = g;
-                    box.BoxName = presetsample.BoxName;
-                    box.RoutingGuid = presetsample.RoutingGuid;
-                    box.LoadMemory(AllPresets.Where(p => p.BoxGuid == g).ToArray());
+                    var box = new RoutingBox(project, MidiTools.MidiRouting.InputDevices, MidiTools.MidiRouting.OutputDevices, iGridPosition, g, presetsample.BoxName, presetsample.RoutingGuid, AllPresets.Where(p => p.BoxGuid == g).ToArray());
                     boxes.Add(box);
                 }
             }

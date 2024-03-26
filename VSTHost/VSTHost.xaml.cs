@@ -1,20 +1,11 @@
-﻿using System.Text;
-using MaterialDesignThemes.Wpf;
+﻿using Microsoft.Win32;
+using MidiTools;
+using NAudio.Wave;
+using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using NAudio.Wave;
-using System.IO;
-using Microsoft.Win32;
-using CommonUtils.VSTPlugin;
-using NAudio.Gui;
 using System.Windows.Interop;
-using MidiTools;
 
 namespace VSTHost
 {
@@ -25,39 +16,58 @@ namespace VSTHost
     /// </summary>
     public partial class MainWindow : Window
     {
-        public delegate void VSTHostEventHandler(VSTPlugin plugin, int boxpreset, int iAction);
+        public delegate void VSTHostEventHandler(int boxpreset, int iAction);
         public event VSTHostEventHandler OnVSTHostEvent;
-        public VSTPlugin Plugin = new VSTPlugin();
+        public VSTPlugin Plugin;
 
         private System.Timers.Timer VSTParametersCheck;
 
         private int BoxPreset = 0;
         private Guid RoutingGuid = Guid.Empty;
 
-        public MainWindow(Guid routingguid, string boxname, int preset, VSTHostInfo vst = null)
+        public MainWindow(Guid routingguid, string boxname, int preset, VSTPlugin plugin)
         {
             InitializeComponent();
             BoxPreset = preset;
             RoutingGuid = routingguid;
             Title = string.Concat(Title, " - ", boxname);
-            Plugin.VSTHostInfo = vst;
+            Plugin = plugin;
+            UtilityAudio.AudioEvent += UtilityAudio_AudioEvent;
 
             InitPage();
 
-            if (vst != null)
+            if (plugin.VSTHostInfo != null)
             {
                 Dispatcher.Invoke(() => LoadPlugin());
             }
         }
 
+        private async void UtilityAudio_AudioEvent(string sMessage, string sDevice, int iSampleRate)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                int iLast = Title.LastIndexOf("[");
+                if (iLast > 0)
+                {
+                    Title = string.Concat(Title[0..iLast].Trim(), " [", sMessage, " - ", sDevice, "]");
+                }
+                else
+                {
+                    Title = string.Concat(Title.Trim(), " [", sMessage, " - ", sDevice, "]");
+                }
+            });
+        }
+
         private void Window_Closed(object sender, EventArgs e)
         {
+            UtilityAudio.AudioEvent -= UtilityAudio_AudioEvent;
+
             if (VSTParametersCheck != null)
             {
                 VSTParametersCheck.Stop();
                 VSTParametersCheck.Enabled = false;
             }
-            OnVSTHostEvent?.Invoke(Plugin, BoxPreset, 0);
+            OnVSTHostEvent?.Invoke(BoxPreset, 0);
         }
 
         private void tbOpenVST_Click(object sender, RoutedEventArgs e)
@@ -84,7 +94,7 @@ namespace VSTHost
                     Plugin.VSTHostInfo.AsioDevice = AsioDevice;
                     Plugin.VSTHostInfo.VSTPath = sVST;
                     Plugin.VSTHostInfo.VSTHostGuid = Guid.NewGuid();
-                    OnVSTHostEvent?.Invoke(Plugin, BoxPreset, 1); //pour initialiser l'ASIO. Pas d'autre usage
+                    OnVSTHostEvent?.Invoke(BoxPreset, 1); //pour initialiser l'ASIO. Pas d'autre usage
                 }
             }
         }
@@ -105,14 +115,28 @@ namespace VSTHost
             }
         }
 
-        public async Task<VSTPlugin> LoadPlugin()
+        public async Task LoadPlugin()
         {
-            while (!UtilityAudio.AudioInitialized) //couper au bout de 10 secondes
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
+
+            while (!UtilityAudio.AudioInitialized && stopwatch.ElapsedMilliseconds < 10000)
             {
                 await Task.Delay(100);
             }
 
-            await Dispatcher.InvokeAsync(() =>
+            stopwatch.Stop();
+
+            if (stopwatch.ElapsedMilliseconds >= 10000)
+            {
+                UtilityAudio.StopAudio();
+                UtilityAudio.Dispose();
+                MessageBox.Show("Unable to initialize Audio !");
+                Close();
+            }
+            else
+            {
+                await Dispatcher.InvokeAsync(() =>
             {
                 try
                 {
@@ -126,9 +150,9 @@ namespace VSTHost
 
                         IntPtr windowHandle = new WindowInteropHelper(this).Handle;
 
-                        Plugin.OpenEditor(windowHandle);  
+                        Plugin.OpenEditor(windowHandle);
                         System.Drawing.Rectangle rect = new System.Drawing.Rectangle();
-                        Plugin.GetWindowSize(out rect); 
+                        Plugin.GetWindowSize(out rect);
                         Width = rect.Width + 20;
                         Height = rect.Height + 50;
                         ResizeMode = ResizeMode.NoResize;
@@ -156,8 +180,7 @@ namespace VSTHost
                     MessageBox.Show("Unable to load VST plugin : " + ex.Message);
                 }
             });
-
-            return Plugin;
+            }
         }
 
         private async void VSTParametersCheck_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
@@ -165,6 +188,21 @@ namespace VSTHost
             await UIEventPool.AddTask(() =>
             {
                 Plugin.GetParameters();
+            });
+
+            await Dispatcher.InvokeAsync(() =>
+            {
+                string sInfo = Plugin.GetInfo();
+
+                int iLast = Title.LastIndexOf("[");
+                if (iLast > 0)
+                {
+                    Title = string.Concat(Title[0..iLast].Trim(), " [", sInfo, "]");
+                }
+                else
+                {
+                    Title = string.Concat(Title.Trim(), " [", sInfo, "]");
+                }
             });
         }
 
