@@ -5,6 +5,7 @@ using MidiTools;
 using NAudio.Wave;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -16,6 +17,25 @@ using System.Threading;
 // Modified by perivar@nerseth.com
 namespace VSTHost
 {
+    [Serializable]
+    public class VSTHostInfo
+    {
+        public Guid VSTHostGuid = Guid.Empty;
+        public int SynthID = 0;
+        public string AsioDevice = "";
+        public int SampleRate = 48000;
+        public string VSTPath = "";
+        public string Error = "";
+        public string VSTName = "";
+        public int Program = -1;
+        public List<float> ParameterValues = new List<float>();
+        public List<string> ParameterNames = new List<string>();
+        public int ParameterCount = 9999;
+        public int PluginID = 0;
+        public int AudioInputs = 0;
+        public int AudioOutputs = 0;
+    }
+
     internal class VSTStreamEventArgs : EventArgs
     {
         internal float MaxL = float.MinValue;
@@ -389,6 +409,11 @@ namespace VSTHost
 
                 VSTSynth.pluginContext = VstPluginContext.Create(VSTHostInfo.VSTPath, hcs);
                 VSTSynth.pluginContext.PluginCommandStub.Commands.Open();
+                VSTHostInfo.ParameterCount = VSTSynth.pluginContext.PluginInfo.ParameterCount;
+                VSTHostInfo.PluginID = VSTSynth.pluginContext.PluginInfo.PluginID;
+                VSTHostInfo.AudioInputs = VSTSynth.pluginContext.PluginInfo.AudioInputCount;
+                VSTHostInfo.AudioOutputs = VSTSynth.pluginContext.PluginInfo.AudioOutputCount;
+
                 //pluginContext.PluginCommandStub.SetProgram(0);
                 //GeneralVST.pluginContext.PluginCommandStub.Commands.Open(hWnd);
                 //GeneralVST.pluginContext.PluginCommandStub.Commands.(true);
@@ -495,6 +520,7 @@ namespace VSTHost
 
                 VSTHostInfo.ParameterValues.Clear();
                 VSTHostInfo.ParameterNames.Clear();
+
                 for (int i = 0; i < VSTHostInfo.ParameterCount; i++)
                 {
                     try

@@ -14,21 +14,6 @@ using static MidiTools.MidiDevice;
 
 namespace MidiTools
 {
-    [Serializable]
-    public class VSTHostInfo
-    {
-        public Guid VSTHostGuid = Guid.Empty;
-        public int SynthID = 0;
-        public string AsioDevice = "";
-        public int SampleRate = 48000;
-        public string VSTPath = "";
-        public string Error = "";
-        public string VSTName = "";
-        public int Program = -1;
-        public List<float> ParameterValues = new List<float>();
-        public List<string> ParameterNames = new List<string>();
-        public int ParameterCount = 9999;
-    }
 
     [Serializable]
     public class MidiEvent
