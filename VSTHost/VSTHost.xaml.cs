@@ -67,7 +67,7 @@ namespace VSTHost
                 VSTParametersCheck.Stop();
                 VSTParametersCheck.Enabled = false;
             }
-            
+
             Plugin.CloseEditor();
 
             OnVSTHostEvent?.Invoke(BoxPreset, 0);
@@ -104,7 +104,7 @@ namespace VSTHost
                     Plugin.VSTHostInfo.SampleRate = SampleRate;
                     Plugin.VSTHostInfo.AsioDevice = AsioDevice;
                     Plugin.VSTHostInfo.VSTPath = sVST;
-                    OnVSTHostEvent?.Invoke(BoxPreset, 1); //pour initialiser l'ASIO. Pas d'autre usage
+                    OnVSTHostEvent?.Invoke(BoxPreset, 2); //pour initialiser le plugin. Pas d'autre usage
                 }
             }
         }
@@ -152,10 +152,13 @@ namespace VSTHost
                 {
                     try
                     {
-                        string sInfo = Plugin.LoadVST();
-                        if (sInfo.Length > 0)
+                        if (!Plugin.Loaded)
                         {
-                            MessageBox.Show(sInfo);
+                            string sInfo = Plugin.LoadVST();
+                            if (sInfo.Length > 0)
+                            {
+                                MessageBox.Show(sInfo);
+                            }
                         }
 
                         OpenPlugin();

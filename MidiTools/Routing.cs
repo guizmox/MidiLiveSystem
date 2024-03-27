@@ -2545,7 +2545,7 @@ namespace MidiTools
                 var used = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(Tools.VST_HOST));
                 if (used != null)
                 {
-                    used.PlugVSTDevice(plugin, matrix.ChannelOut - 1);
+                    used.PlugVSTDevice(plugin, plugin.VSTHostInfo.Slot - 1);
                 }
             });
         }

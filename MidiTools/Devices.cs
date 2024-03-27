@@ -410,11 +410,11 @@ namespace MidiTools
             return iNote;
         }
 
-        internal void PlugVSTDevice(VSTPlugin plugin, int iChannel)
+        internal void PlugVSTDevice(VSTPlugin plugin, int iSlot)
         {
             if (VST_OutputEvents != null) 
             {
-                VST_OutputEvents.AddPlugin(plugin, iChannel);
+                VST_OutputEvents.AddPlugin(plugin, iSlot);
             }
         }
 
@@ -560,19 +560,24 @@ namespace MidiTools
             }
         }
 
-        internal void AddPlugin(VSTPlugin vst, int iChannel)
+        internal void AddPlugin(VSTPlugin vst, int iSlot)
         {
             bool bDisposed = true;
 
-            if (Plugins[iChannel] != null)
+            if (Plugins[iSlot] != null)
             {
-                bDisposed = Plugins[iChannel].DisposeVST();
-                if (bDisposed)
+                if (Plugins[iSlot].VSTHostInfo.VSTName.Equals(vst.VSTHostInfo.VSTName)) //pour ne pas décharger/recharger inutilement le même plugin
+                { bDisposed = false; }
+                else
                 {
-                    Plugins[iChannel] = null;
+                    bDisposed = Plugins[iSlot].DisposeVST();
+                    if (bDisposed)
+                    {
+                        Plugins[iSlot] = null;
+                    }
                 }
             }
-            if (bDisposed) { Plugins[iChannel] = vst; }
+            if (bDisposed) { Plugins[iSlot] = vst; }
         }
 
         internal void RemovePlugin(int iChannel)

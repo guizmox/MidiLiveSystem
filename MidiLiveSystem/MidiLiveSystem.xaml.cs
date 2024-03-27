@@ -802,7 +802,6 @@ namespace MidiLiveSystem
 
                         Routing.DeleteAllRouting();
 
-
                         Project = project.Item2;
                         NewMessage?.Invoke("Project Loaded");
 
