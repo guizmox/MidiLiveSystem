@@ -2550,19 +2550,14 @@ namespace MidiTools
             });
         }
 
-        public async Task RemoveVSTDeviceFromAsio(Guid routingGuid)
+        public async Task RemoveVSTDeviceFromAsio(Guid routingGuid, int iSlot)
         {
             await Tasks.AddTask(() =>
             {
-                // && r.DeviceOut != null && r.DeviceOut.Name.Equals(Tools.VST_HOST) ?
-                var matrix = MidiMatrix.FirstOrDefault(r => r.RoutingGuid == routingGuid);
-                if (matrix != null)
+                var used = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(Tools.VST_HOST));
+                if (used != null)
                 {
-                    var used = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(Tools.VST_HOST));
-                    if (used != null)
-                    {
-                        used.UnplugVSTDevice(matrix.ChannelOut - 1);
-                    }
+                    used.UnplugVSTDevice(iSlot - 1);
                 }
             });
         }
@@ -2579,7 +2574,7 @@ namespace MidiTools
                     var used = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(Tools.VST_HOST));
                     if (used != null)
                     {
-                       plugin = used.GetVSTDeviceAtIndex(iChannel - 1);
+                        plugin = used.GetVSTDeviceAtIndex(iChannel - 1);
                     }
                 }
             });
@@ -2729,7 +2724,7 @@ namespace MidiTools
         public void DeleteAllRouting()
         {
             var task = Task.Factory.StartNew(() => Panic());
-           
+
             while (!task.IsCompleted)
             {
                 Thread.Sleep(100);

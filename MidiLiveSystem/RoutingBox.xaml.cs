@@ -395,7 +395,9 @@ namespace MidiLiveSystem
                 if (item.Tag.Equals(Tools.VST_HOST))
                 {
                     tbChoosePreset.Visibility = Visibility.Hidden;
+                    lbPreset.Visibility = Visibility.Hidden;
                     tbOpenVST.Visibility = Visibility.Visible;
+                    tbRemoveVST.Visibility = Visibility.Visible;
                     tbProgram.Text = "VST HOST";
 
                     for (int i = 0; i <= 16; i++)
@@ -409,7 +411,9 @@ namespace MidiLiveSystem
                 else
                 {
                     tbChoosePreset.Visibility = Visibility.Visible;
+                    lbPreset.Visibility = Visibility.Visible;
                     tbOpenVST.Visibility = Visibility.Hidden;
+                    tbRemoveVST.Visibility = Visibility.Hidden;
                     tbProgram.Text = "PROGRAM";
 
                     for (int i = 0; i <= 16; i++)
@@ -568,6 +572,22 @@ namespace MidiLiveSystem
         private async void tbOpenVST_Click(object sender, RoutedEventArgs e)
         {
             await OpenVSTHost(false);
+        }
+
+        private async void tbRemoveVST_Click(object sender, RoutedEventArgs e)
+        {
+            if (TempMemory[CurrentPreset].VSTData != null)
+            {
+                var result = MessageBox.Show("Are you sure to remove " + TempMemory[CurrentPreset].VSTData.VSTName + " ? If there are other presets using that VST instrument, they will also be deleted.", "Remove VST instrument", MessageBoxButton.YesNo);
+                if (result == MessageBoxResult.Yes)
+                {
+                    await CloseVSTHost(false);
+                }
+            }
+            else
+            {
+                MessageBox.Show("Nothing to remove.");
+            }
         }
 
         private async void btnCopyPreset_Click(object sender, RoutedEventArgs e)
@@ -808,7 +828,7 @@ namespace MidiLiveSystem
             try
             {
 
-                Dispatcher.Invoke(() =>
+                await Dispatcher.InvokeAsync(() =>
                 {
                     //mémorisation des données en cours
                     presetname = tbPresetName.Text.Trim();
@@ -836,6 +856,8 @@ namespace MidiLiveSystem
         {
             await Dispatcher.InvokeAsync(() =>
             {
+                tbOpenVST.Content = bp.VSTData == null ? "Open VST Host" : bp.VSTData.VSTName;
+
                 tbMute.Background = bp.MidiOptions.Active ? Brushes.DarkGray : Brushes.IndianRed;
 
                 //remplissage des champs
@@ -1308,7 +1330,7 @@ namespace MidiLiveSystem
                 }
                 if (!bDontRemovePlugin)
                 {
-                    OnUIEvent?.Invoke(BoxGuid, "REMOVE_VST_FROM_DEVICE", TempVST);
+                    OnUIEvent?.Invoke(BoxGuid, "REMOVE_VST_FROM_DEVICE", TempVST.Slot);
                 }
             });
         }
@@ -1398,6 +1420,15 @@ namespace MidiLiveSystem
         internal void SetBoxName(string boxname)
         {
             BoxName = boxname;
+        }
+
+        internal async Task ClearVST(int iPreset)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                TempVST = new VSTPlugin(BoxGuid, Convert.ToInt32(cbChannelMidiOut.SelectedValue));
+                TempMemory[iPreset].VSTData = null;
+            });
         }
     }
 

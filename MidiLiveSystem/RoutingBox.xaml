@@ -221,21 +221,22 @@
                         <ComboBox Name="cbChannelMidiOut" MinWidth="40" Grid.Column="4" Grid.Row="2" SelectedValuePath="Tag" SelectionChanged="cbChannelMidiOut_SelectionChanged" />
                         <TextBlock Name="tbProgram" Grid.Column="0" Grid.Row="3" Text="PROGRAM"/>
 
-                        <StackPanel Grid.Column="1" Grid.Row="3" Grid.ColumnSpan="3">
+                        <StackPanel Grid.Column="1" Grid.Row="3" Grid.ColumnSpan="4">
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="40*" />
-                                    <ColumnDefinition Width="60*" />
+                                    <ColumnDefinition Width="45*" />
+                                    <ColumnDefinition Width="10*" />
+                                    <ColumnDefinition Width="45*" />
                                 </Grid.ColumnDefinitions>
-                            
-                                <Button Name="tbChoosePreset" FontSize="9" Grid.Column="0" Height="20" Width="100" Click="tbChoosePreset_Click" Content="Sel. Program" />
-                                <Button Name="tbOpenVST" FontSize="9" Grid.Column="0" Height="20" Width="100" Click="tbOpenVST_Click" Content="Open VST Host" Visibility="Hidden" />
-                                
-                                <TextBlock Name="lbPreset" Grid.Column="1" Tag="0-0-0" Text="" VerticalAlignment="Center" />
+
+                                <Button Name="tbChoosePreset" FontSize="9" Grid.Column="0" Height="20" Click="tbChoosePreset_Click" Content="Sel. Program" />
+                                <Button Name="tbOpenVST" FontSize="9" Grid.Column="0"  Height="20" Click="tbOpenVST_Click" Content="Open VST Host" Visibility="Hidden" />
+                                <Button Name="tbRemoveVST" FontSize="9" Background="IndianRed" Grid.Column="2" Height="20" Click="tbRemoveVST_Click" Content="Remove VST" Visibility="Hidden" />
+
+                                <TextBlock Name="lbPreset" Grid.Column="2" Tag="0-0-0" Text="" VerticalAlignment="Center" />
                             </Grid>
                         </StackPanel>
                         <TextBlock Name="tbNoteRangeLabel" Grid.Column="0" Grid.Row="4" Text="NOTE RANGE"/>
-
 
                         <StackPanel x:Name="pnlInternalGenerator" Grid.Column="1" Grid.ColumnSpan="4" Grid.Row="4" Grid.RowSpan="2" Visibility="Hidden" >
                             <Grid>

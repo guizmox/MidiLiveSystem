@@ -3,6 +3,7 @@ using MidiTools;
 using RtMidi.Core.Enums;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -548,7 +549,8 @@ namespace MidiLiveSystem
                         break;
 
                     case "REMOVE_VST_FROM_DEVICE":
-                        await Routing.RemoveVSTDeviceFromAsio(box.RoutingGuid);
+                        await Routing.RemoveVSTDeviceFromAsio(box.RoutingGuid, (int)sValue);
+                        await box.ClearVST((int)sValue);
                         break;
 
                     case "PLAY_NOTE":
