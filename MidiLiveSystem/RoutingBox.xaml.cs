@@ -101,6 +101,7 @@ namespace MidiLiveSystem
         {
             GridPosition = gridPosition;
             BoxName = "Routing Box " + (GridPosition + 1).ToString();
+
             TempVST = new VSTPlugin(BoxGuid);
 
             TempMemory = new BoxPreset[8] { new BoxPreset(RoutingGuid, BoxGuid, "Preset 1", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 2", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 3", BoxName),
@@ -388,7 +389,7 @@ namespace MidiLiveSystem
             {
                 if (e.RemovedItems.Count > 0) //pour éviter de péter le VSTHost lorsqu'on charge un projet (removeditems est dans ce cas à vide)
                 {
-                    await CloseVSTHost();
+                    await CloseVSTHost(true); //je ne supprime pas le solut VST à ce stade pour pouvoir le réutiliser si besoin
                 }
 
                 if (item.Tag.Equals(Tools.VST_HOST))
@@ -613,6 +614,10 @@ namespace MidiLiveSystem
             {
                 OnUIEvent?.Invoke(BoxGuid, "PRESET_CHANGE", TempMemory[CurrentPreset]);
                 await LoadPreset(CurrentPreset);
+            }
+            if (TempMemory[CurrentPreset].DeviceOut.Equals(Tools.VST_HOST))
+            {
+                OnUIEvent?.Invoke(BoxGuid, "SWITCH_VST_HOST", cbChannelMidiOut.SelectedValue);
             }
         }
 
@@ -1293,7 +1298,7 @@ namespace MidiLiveSystem
             await OpenVSTHost(false);
         }
 
-        internal async Task CloseVSTHost()
+        internal async Task CloseVSTHost(bool bDontRemovePlugin)
         {
             await Dispatcher.InvokeAsync(() =>
             {
@@ -1301,7 +1306,10 @@ namespace MidiLiveSystem
                 {
                     VSTWindow.Close();
                 }
-                OnUIEvent?.Invoke(BoxGuid, "REMOVE_VST_FROM_DEVICE", TempVST);
+                if (!bDontRemovePlugin)
+                {
+                    OnUIEvent?.Invoke(BoxGuid, "REMOVE_VST_FROM_DEVICE", TempVST);
+                }
             });
         }
 
@@ -1338,6 +1346,8 @@ namespace MidiLiveSystem
                 {
                     VSTWindow.Close();
                 }
+                TempVST = new VSTPlugin(BoxGuid, Convert.ToInt32(cbChannelMidiOut.SelectedValue));
+                TempMemory[CurrentPreset].VSTData = null;
             }
             else
             {
@@ -1345,15 +1355,31 @@ namespace MidiLiveSystem
                 TempVST = preset;
                 TempMemory[CurrentPreset].VSTData = TempVST.VSTHostInfo;
 
-                if (VSTWindow != null)
+                bool bWasClosed = false;
+
+                if (VSTWindow == null) 
+                { 
+                    bWasClosed = true; 
+                }
+                else
                 {
                     VSTWindow.Close();
                 }
+
                 VSTWindow = new VSTHost.MainWindow(RoutingGuid, BoxName, CurrentPreset, TempVST);
                 VSTWindow.OnVSTHostEvent += VSTWindow_OnVSTHostEvent;
-                VSTWindow.Show();
+
+                if (!bWasClosed)
+                {
+                    VSTWindow.Show();
+                }
 
                 await VSTWindow.LoadPlugin();
+
+                if (bWasClosed) //trick pour forcer le passage à NULL de VSTWindow (par ricochet de l'évènement VSTWindow_OnVSTHostEvent)
+                {
+                    VSTWindow.Close();
+                }
             }
         }
 

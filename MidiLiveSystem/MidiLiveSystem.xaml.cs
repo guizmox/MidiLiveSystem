@@ -439,7 +439,9 @@ namespace MidiLiveSystem
                         var confirmation = MessageBox.Show("Are you sure ?", "Delete Box", MessageBoxButton.YesNo);
                         if (confirmation == MessageBoxResult.Yes)
                         {
-                            await box.CloseVSTHost();
+                            bool bDontRemovePlugin = CheckVSTUsage(box.BoxGuid, box.GetVST);
+                            
+                            await box.CloseVSTHost(bDontRemovePlugin);
                             await Routing.DeleteRouting(box.RoutingGuid);
                             Boxes.Remove(box);
                             await AddAllRoutingBoxes();
@@ -602,6 +604,18 @@ namespace MidiLiveSystem
                         break;
                 }
             }
+        }
+
+        private bool CheckVSTUsage(Guid intialboxguid, VSTPlugin vst)
+        {
+            foreach (var b in Boxes.Where(bb => bb.BoxGuid != intialboxguid))
+            {
+                if (b.HasVSTAttached && b.GetVST == vst)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private async void ControlChange_UIEvent(Guid gBox, string sControl, object sValue)
@@ -770,7 +784,7 @@ namespace MidiLiveSystem
 
                 foreach (var box in Boxes)
                 {
-                    await box.CloseVSTHost();
+                    await box.CloseVSTHost(false);
                 }
 
                 //Id, ProjectGuid, Name, DateProject, Author, Active

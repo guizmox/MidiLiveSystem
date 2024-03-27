@@ -313,9 +313,9 @@ namespace MidiTools
 
         internal void SendMidiEvent(MidiEvent midiEvent)
         {
-            if (VSTHost != null)
+            if (midiEvent.Device.Equals(Tools.VST_HOST))
             {
-                if (VST_OutputEvents != null)
+                if (VSTHost != null && VST_OutputEvents != null)
                 {
                     VST_OutputEvents.SendEvent(midiEvent);
                 }
