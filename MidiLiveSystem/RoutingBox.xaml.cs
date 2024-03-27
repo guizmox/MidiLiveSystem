@@ -1317,22 +1317,29 @@ namespace MidiLiveSystem
         {
             await Dispatcher.InvokeAsync(async () =>
             {
-                if (VSTWindow == null)
+                if (cbChannelMidiOut.SelectedIndex == 0)
                 {
-                    if (bLoadProject)
+                    MessageBox.Show("You must choose a VST slot.");
+                }
+                else
+                {
+                    if (VSTWindow == null)
                     {
-                        TempVST.VSTHostInfo = TempMemory[CurrentPreset].VSTData;
-                    }
+                        if (bLoadProject)
+                        {
+                            TempVST.VSTHostInfo = TempMemory[CurrentPreset].VSTData;
+                        }
 
-                    TempVST.SetSlot(Convert.ToInt32(cbChannelMidiOut.SelectedValue));
-                    VSTWindow = new VSTHost.MainWindow(RoutingGuid, BoxName, CurrentPreset, TempVST);
-                    VSTWindow.OnVSTHostEvent += VSTWindow_OnVSTHostEvent;
-                    VSTWindow.Show();
-                    
-                    if (bLoadProject)
-                    {
-                        await VSTWindow.LoadPlugin();
-                        OnUIEvent?.Invoke(BoxGuid, "PLUG_VST_TO_DEVICE", TempVST); //pour initialiser l'audio
+                        TempVST.SetSlot(Convert.ToInt32(cbChannelMidiOut.SelectedValue));
+                        VSTWindow = new VSTHost.MainWindow(RoutingGuid, BoxName, CurrentPreset, TempVST);
+                        VSTWindow.OnVSTHostEvent += VSTWindow_OnVSTHostEvent;
+                        VSTWindow.Show();
+
+                        if (bLoadProject)
+                        {
+                            await VSTWindow.LoadPlugin();
+                            OnUIEvent?.Invoke(BoxGuid, "PLUG_VST_TO_DEVICE", TempVST); //pour initialiser l'audio
+                        }
                     }
                 }
             });

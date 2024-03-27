@@ -20,11 +20,6 @@ namespace NAudio.Wave
 		private int bytesPerSample;
 		private bool autoStop;
 
-		// Declarations to support the streamToDisk recording methodology
-		private bool streamToDisk;
-		private string streamToDiskFileName;
-		WaveFileWriter writer;
-
 		/// <summary>
 		/// Creates a new 32 bit WaveMixerStream
 		/// </summary>
@@ -126,65 +121,6 @@ namespace NAudio.Wave
 			set { autoStop = value; }
 		}
 
-
-		/// <summary>
-		/// Starts the Strem To Disk recording if a file name to save the stream to has been setup
-		/// </summary>
-		public void StartStreamingToDisk()
-		{
-			if (!String.IsNullOrEmpty(streamToDiskFileName))
-			{
-				streamToDisk = true;
-			}
-		}
-
-		/// <summary>
-		/// Pause's the stream to disk recording (No further blocks are written during the mixing)
-		/// </summary>
-		public void PauseStreamingToDisk()
-		{
-			streamToDisk = false;
-		}
-
-		/// <summary>
-		/// Resume streaming to disk
-		/// </summary>
-		public void ResumeStreamingToDisk()
-		{
-			streamToDisk = true;
-		}
-
-		/// <summary>
-		/// Stop the streaming to disk and clean up
-		/// </summary>
-		public void StopStreamingToDisk()
-		{
-			streamToDisk = false;
-			if(writer!=null) writer.Close();
-		}
-
-		/// <summary>
-		/// Setup the StreamMixToDisk file and initalise the WaveFileWriter
-		/// </summary>
-		/// <param name="FileName">FileName to save the mixed stream</param>
-		public void StreamMixToDisk(string FileName)
-		{
-			streamToDiskFileName = FileName;
-			writer = new WaveFileWriter(FileName, this.WaveFormat);
-		}
-
-		/// <summary>
-		/// Using the final set of data passed through in the overriden read method to also be passed to the WaveFileWriter
-		/// </summary>
-		/// <param name="buffer">Data to be written</param>
-		/// <param name="offset">The Offset, should be 0 as we are taking the mixed data to write and want it all</param>
-		/// <param name="count">The total count of all the mixed data in the buffer</param>
-		private void WriteMixStreamOut(byte[] buffer, int offset, int count)
-		{
-			// Write the data to the file
-			writer.Write(buffer, offset, count);
-		}
-
 		/// <summary>
 		/// Reads bytes from this wave stream
 		/// </summary>
@@ -215,28 +151,29 @@ namespace NAudio.Wave
 			// sum the channels in
 			byte[] readBuffer = new byte[count];
 
-			foreach (WaveStream inputStream in inputStreams)
+			lock (inputStreams)
 			{
-				if (inputStream.HasData(count))
+				foreach (WaveStream inputStream in inputStreams)
 				{
-					int readFromThisStream = inputStream.Read(readBuffer, 0, count);
-					//System.Diagnostics.Debug.Assert(readFromThisStream == count, "A mixer input stream did not provide the requested amount of data");
-					bytesRead = Math.Max(bytesRead, readFromThisStream);
-					if (readFromThisStream > 0)
-						Sum32BitAudio(buffer, offset, readBuffer, readFromThisStream);
-				}
-				else
-				{
-					bytesRead = Math.Max(bytesRead, count);
-					inputStream.Position += count;
+					if (inputStream.HasData(count))
+					{
+						int readFromThisStream = inputStream.Read(readBuffer, 0, count);
+						//System.Diagnostics.Debug.Assert(readFromThisStream == count, "A mixer input stream did not provide the requested amount of data");
+						bytesRead = Math.Max(bytesRead, readFromThisStream);
+						if (readFromThisStream > 0)
+							Sum32BitAudio(buffer, offset, readBuffer, readFromThisStream);
+					}
+					else
+					{
+						bytesRead = Math.Max(bytesRead, count);
+						inputStream.Position += count;
+					}
 				}
 			}
+
 			position += count;
 			// If streamToDisk has been enabled the mixed audio will be streamed directly to a wave file, so we need to send the data to the wave file writer
-			if (streamToDisk)
-			{
-				WriteMixStreamOut(buffer, 0, count);
-			}
+
 			return count;
 		}
 

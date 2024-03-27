@@ -473,6 +473,8 @@ namespace MidiTools
                     { }
                 }
 
+                Array.Clear(Plugins);
+
                 return true;
             }
             catch { return false; }

@@ -610,7 +610,7 @@ namespace MidiLiveSystem
         {
             foreach (var b in Boxes.Where(bb => bb.BoxGuid != intialboxguid))
             {
-                if (b.HasVSTAttached && b.GetVST == vst)
+                if (b.HasVSTAttached && b.GetVST.Slot == vst.Slot)
                 {
                     return true;
                 }

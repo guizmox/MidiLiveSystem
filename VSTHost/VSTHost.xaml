@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:VSTHost"      
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
-        Title="MIDI Live System VST Host" Height="100" Width="800" WindowStartupLocation="CenterScreen" WindowStyle="ToolWindow" Background="DarkGray" Closed="Window_Closed">
+        Title="MIDI Live System VST Host" Height="150" Width="800" WindowStartupLocation="CenterScreen" WindowStyle="ToolWindow" Background="DarkGray" Closed="Window_Closed">
 
 
     <Window.Resources>
@@ -26,32 +26,35 @@
             <ColumnDefinition Width="17*"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions >
-            <RowDefinition Height="100*"/>
+            <RowDefinition Height="60*"/>
+            <RowDefinition Height="40*"/>
         </Grid.RowDefinitions>
 
+        <Label Grid.Row="1" Margin="5,5,5,5" Grid.ColumnSpan="2" Foreground="Red" Content="All of the Routing Boxes share the same 16 VST slots. Multi-channel is not supported."/>
+            
         <StackPanel Grid.Row="0" Margin="10,10,10,10" Grid.ColumnSpan="2">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="15*"/>
+                    <ColumnDefinition Width="25*"/>
                     <ColumnDefinition Width="20*"/>
                     <ColumnDefinition Width="3*"/>
                     <ColumnDefinition Width="8*"/>
                     <ColumnDefinition Width="5*"/>
-                    <ColumnDefinition Width="35*"/>
+                    <ColumnDefinition Width="25*"/>
                     <ColumnDefinition Width="5*"/>
                     <ColumnDefinition Width="5*"/>
                 </Grid.ColumnDefinitions>
 
-                <Label Content="Audio Output"  Grid.Column="0"/>
+                <Label Content="Audio Driver + Sample Rate"  Grid.Column="0"/>
                 <ComboBox Name="cbAudioOut" Grid.Column="1" SelectedValuePath="Tag"/>
                 <ComboBox Name="cbSampleRate" Grid.Column="3" SelectedIndex="0" SelectedValuePath="Tag">
                     <ComboBoxItem Tag="48000" Content="48000"/>
                     <ComboBoxItem Tag="44100" Content="44100"/>
                 </ComboBox>
 
-                <Button x:Name="tbOpenVST" Grid.Column="5" Content="Open VST Plugin (MIDI Synth Only)" Click="tbOpenVST_Click"/>
+                <Button x:Name="tbOpenVST" Grid.Column="5" Content="Open VST Instrument" Click="tbOpenVST_Click"/>
             </Grid>
-            <StackPanel x:Name="stVST" Grid.Row="1" Grid.Column="0" Margin="10,10,10,10"/>
+           
         </StackPanel>
     </Grid>
 </Window>
