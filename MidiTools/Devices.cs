@@ -109,6 +109,7 @@ namespace MidiTools
         private readonly int MIDI_InOrOut; //IN = 1, OUT = 2
 
         private VSTHostInfo VSTHost;
+        private bool IsOutVST = false;
 
         private MidiInputDeviceEvents MIDI_InputEvents;
         private MidiOutputDeviceEvents MIDI_OutputEvents;
@@ -153,6 +154,7 @@ namespace MidiTools
         {
             MIDI_InOrOut = 2;
             VSTHost = vst;
+            IsOutVST = true;
             Name = Tools.VST_HOST;
             OpenDevice();
         }
@@ -204,7 +206,7 @@ namespace MidiTools
             }
             else //OUT
             {
-                if (VSTHost != null)
+                if (IsOutVST)
                 {
                     try
                     {
@@ -242,12 +244,13 @@ namespace MidiTools
 
         internal bool CloseDevice()
         {
-            if (VSTHost != null)
+            if (IsOutVST)
             {
                 VST_OutputEvents.OnMidiEvent -= MIDI_OutputEvents_OnMidiEvent;
                 VST_OutputEvents.Close();
                 VST_OutputEvents = null;
                 VSTHost = null;
+                IsOutVST = false;
                 return true;
             }
             else
@@ -315,7 +318,7 @@ namespace MidiTools
         {
             if (midiEvent.Device.Equals(Tools.VST_HOST))
             {
-                if (VSTHost != null && VST_OutputEvents != null)
+                if (IsOutVST && VST_OutputEvents != null)
                 {
                     VST_OutputEvents.SendEvent(midiEvent);
                 }
