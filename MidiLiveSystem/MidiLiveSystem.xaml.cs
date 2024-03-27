@@ -532,6 +532,15 @@ namespace MidiLiveSystem
                         }
                         break;
 
+                    case "SWITCH_VST_HOST":
+                        var preset = await Routing.SwitchVSTDevice(box.RoutingGuid, (int)sValue);
+                        if (preset == null)
+                        {
+                            MessageBox.Show("No plugin found at index : " + sValue.ToString());
+                        }
+                        await box.SwitchVSTPlugin(preset);
+                        break;
+
                     case "PLUG_VST_TO_DEVICE":
                         await Routing.AddVSTDeviceToAsio(box.RoutingGuid, (VSTPlugin)sValue);
                         break;

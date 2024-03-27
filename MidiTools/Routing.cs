@@ -1,4 +1,5 @@
-﻿using RtMidi.Core;
+﻿using Jacobi.Vst.Plugin.Framework.Plugin;
+using RtMidi.Core;
 using RtMidi.Core.Enums;
 using RtMidi.Core.Messages;
 using System;
@@ -2553,7 +2554,8 @@ namespace MidiTools
         {
             await Tasks.AddTask(() =>
             {
-                var matrix = MidiMatrix.FirstOrDefault(r => r.RoutingGuid == routingGuid); // && r.DeviceOut != null && r.DeviceOut.Name.Equals(Tools.VST_HOST));
+                // && r.DeviceOut != null && r.DeviceOut.Name.Equals(Tools.VST_HOST) ?
+                var matrix = MidiMatrix.FirstOrDefault(r => r.RoutingGuid == routingGuid);
                 if (matrix != null)
                 {
                     var used = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(Tools.VST_HOST));
@@ -2563,6 +2565,26 @@ namespace MidiTools
                     }
                 }
             });
+        }
+
+        public async Task<VSTPlugin> SwitchVSTDevice(Guid routingGuid, int iChannel)
+        {
+            VSTPlugin plugin = null;
+
+            await Tasks.AddTask(() =>
+            {
+                var matrix = MidiMatrix.FirstOrDefault(r => r.RoutingGuid == routingGuid && r.DeviceOut != null && r.DeviceOut.Name.Equals(Tools.VST_HOST));
+                if (matrix != null)
+                {
+                    var used = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(Tools.VST_HOST));
+                    if (used != null)
+                    {
+                       plugin = used.GetVSTDeviceAtIndex(iChannel - 1);
+                    }
+                }
+            });
+
+            return plugin;
         }
 
         public async Task UpdateUsedDevices(List<string> devices)
@@ -2891,6 +2913,7 @@ namespace MidiTools
             });
             return CCdata;
         }
+
 
         #endregion
     }

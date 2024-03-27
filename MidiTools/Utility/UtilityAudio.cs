@@ -34,6 +34,7 @@ namespace VSTHost
         public int PluginID = 0;
         public int AudioInputs = 0;
         public int AudioOutputs = 0;
+        public int Slot = 1;
     }
 
     internal class VSTStreamEventArgs : EventArgs
@@ -347,9 +348,18 @@ namespace VSTHost
         internal VSTMidi VSTSynth;
         private VSTStream vstStream;
         private Guid BoxGuid;
+        public bool Loaded = false;
+        public int Slot = 0;
+
+        public VSTPlugin(Guid boxguid, int slot)
+        {
+            Slot = slot;
+            BoxGuid = boxguid;
+        }
 
         public VSTPlugin(Guid boxguid)
         {
+            Slot = 1;
             BoxGuid = boxguid;
         }
 
@@ -385,6 +395,7 @@ namespace VSTHost
                     VSTHostInfo.PluginID = VSTSynth.pluginContext.PluginInfo.PluginID;
                     VSTHostInfo.AudioInputs = VSTSynth.pluginContext.PluginInfo.AudioInputCount;
                     VSTHostInfo.AudioOutputs = VSTSynth.pluginContext.PluginInfo.AudioOutputCount;
+                    VSTHostInfo.Slot = Slot;
 
                     vstStream = new VSTStream(VSTSynth);
                     vstStream.ProcessCalled += VSTSynth.Stream_ProcessCalled;
@@ -392,6 +403,8 @@ namespace VSTHost
                     vstStream.SetWaveFormat(VSTHostInfo.SampleRate, 2);
 
                     UtilityAudio.AudioMixer.AddInputStream(vstStream);
+
+                    Loaded = true;
 
                     try
                     {
@@ -477,9 +490,11 @@ namespace VSTHost
                     vstStream.Dispose();
                     vstStream = null;
                 }
+                Loaded = false;
             }
             catch
-            { 
+            {
+                Loaded = false;
                 return false; 
             }
 
@@ -523,14 +538,34 @@ namespace VSTHost
             }
         }
 
-        public void OpenEditor(IntPtr windowHandle)
+        public bool OpenEditor(IntPtr EditorHandle)
         {
-            VSTSynth.pluginContext.PluginCommandStub.Commands.EditorOpen(windowHandle);
+            if (VSTSynth != null && VSTSynth.pluginContext != null)
+            {
+                CloseEditor();
+                return VSTSynth.pluginContext.PluginCommandStub.Commands.EditorOpen(EditorHandle);
+            }
+            else { return false; }
+        }
+
+        public void CloseEditor()
+        {
+            if (VSTSynth != null && VSTSynth.pluginContext != null)
+            {
+                VSTSynth.pluginContext.PluginCommandStub.Commands.EditorIdle();
+                VSTSynth.pluginContext.PluginCommandStub.Commands.EditorClose();
+            }
         }
 
         public void GetWindowSize(out Rectangle rect)
         {
             VSTSynth.pluginContext.PluginCommandStub.Commands.EditorGetRect(out rect);
+        }
+
+        public void SetSlot(int iSlot)
+        {
+            Slot = iSlot;
+            if (VSTHostInfo != null) { VSTHostInfo.Slot = iSlot; }
         }
     }
 

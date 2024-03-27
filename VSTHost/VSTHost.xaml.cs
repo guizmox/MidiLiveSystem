@@ -35,6 +35,11 @@ namespace VSTHost
             UtilityAudio.AudioEvent += UtilityAudio_AudioEvent;
 
             InitPage();
+
+            if (plugin.Loaded)
+            {
+                OpenPlugin();
+            }
         }
 
         private async void UtilityAudio_AudioEvent(string sMessage, string sDevice, int iSampleRate)
@@ -62,6 +67,9 @@ namespace VSTHost
                 VSTParametersCheck.Stop();
                 VSTParametersCheck.Enabled = false;
             }
+            
+            Plugin.CloseEditor();
+
             OnVSTHostEvent?.Invoke(BoxPreset, 0);
         }
 
@@ -150,14 +158,7 @@ namespace VSTHost
                             MessageBox.Show(sInfo);
                         }
 
-                        IntPtr windowHandle = new WindowInteropHelper(this).Handle;
-
-                        Plugin.OpenEditor(windowHandle);
-                        System.Drawing.Rectangle rect = new System.Drawing.Rectangle();
-                        Plugin.GetWindowSize(out rect);
-                        Width = rect.Width + 20;
-                        Height = rect.Height + 50;
-                        ResizeMode = ResizeMode.NoResize;
+                        OpenPlugin();
 
                         if (VSTParametersCheck == null)
                         {
@@ -185,6 +186,20 @@ namespace VSTHost
             }
         }
 
+        private void OpenPlugin()
+        {
+            var result = Plugin.OpenEditor(new WindowInteropHelper(this).EnsureHandle());
+            if (result)
+            {
+                System.Drawing.Rectangle rect = new System.Drawing.Rectangle();
+                Plugin.GetWindowSize(out rect);
+                Width = rect.Width + 20;
+                Height = rect.Height + 50;
+                ResizeMode = ResizeMode.NoResize;
+            }
+            else { MessageBox.Show("Unable to open plugin editor. Not initialized."); }
+        }
+
         private async void VSTParametersCheck_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
         {
             await UIEventPool.AddTask(() =>
@@ -207,6 +222,5 @@ namespace VSTHost
                 }
             });
         }
-
     }
 }

@@ -82,7 +82,6 @@ namespace MidiLiveSystem
         {
             BoxGuid = boxGuid;
             RoutingGuid = routingGuid;
-            TempVST = new VSTPlugin(boxGuid);           
             LoadMemory(presets);
 
             GridPosition = gridPosition;
@@ -92,6 +91,8 @@ namespace MidiLiveSystem
             InitializeComponent();
 
             InitPage(inputDevices, outputDevices);
+
+            TempVST = new VSTPlugin(boxGuid, Convert.ToInt32(cbChannelMidiOut.SelectedValue));
 
             MidiRouting.OutputMidiMessage += MidiRouting_OutputMidiMessage;
         }
@@ -118,13 +119,13 @@ namespace MidiLiveSystem
         {
             if (iAction == 0) //fermer la fenêtre
             {
-                TempMemory[CurrentPreset].VSTData = TempVST.VSTHostInfo; //pas certain
+                TempMemory[iPreset].VSTData = TempVST.VSTHostInfo; //pas certain
                 VSTWindow.OnVSTHostEvent -= VSTWindow_OnVSTHostEvent;
                 VSTWindow = null;
             }
             else if (iAction == 1) //chargement initial du VST
             {
-                TempMemory[CurrentPreset].VSTData = TempVST.VSTHostInfo; //pas certain
+                TempMemory[iPreset].VSTData = TempVST.VSTHostInfo; //pas certain
                 OnUIEvent?.Invoke(BoxGuid, "PLUG_VST_TO_DEVICE", TempVST); //pour initialiser l'audio
                 await VSTWindow.LoadPlugin();             
             }
@@ -395,12 +396,28 @@ namespace MidiLiveSystem
                     tbChoosePreset.Visibility = Visibility.Hidden;
                     tbOpenVST.Visibility = Visibility.Visible;
                     tbProgram.Text = "VST HOST";
+
+                    for (int i = 0; i <= 16; i++)
+                    {
+                        if (i == 0)
+                        { ((ComboBoxItem)cbChannelMidiOut.Items[i]).Content = "NA"; }
+                        else
+                        { ((ComboBoxItem)cbChannelMidiOut.Items[i]).Content = string.Concat("Slot ", i); }
+                    }
                 }
                 else
                 {
                     tbChoosePreset.Visibility = Visibility.Visible;
                     tbOpenVST.Visibility = Visibility.Hidden;
                     tbProgram.Text = "PROGRAM";
+
+                    for (int i = 0; i <= 16; i++)
+                    {
+                        if (i == 0)
+                        { ((ComboBoxItem)cbChannelMidiOut.Items[i]).Content = "NA"; }
+                        else
+                        { ((ComboBoxItem)cbChannelMidiOut.Items[i]).Content = string.Concat("Ch. ", i); }
+                    }
                 }
                 OnUIEvent?.Invoke(BoxGuid, "CHECK_OUT_CHANNEL", item.Tag.ToString() + "#|#" + cbChannelMidiOut.SelectedValue);
             }
@@ -413,6 +430,11 @@ namespace MidiLiveSystem
                 ComboBoxItem devOut = (ComboBoxItem)cbMidiOut.SelectedItem;
 
                 OnUIEvent?.Invoke(BoxGuid, "CHECK_OUT_CHANNEL", devOut.Tag.ToString() + "#|#" + cbChannelMidiOut.SelectedValue);
+
+                if (cbMidiOut.SelectedValue.Equals(Tools.VST_HOST))
+                {
+                    OnUIEvent?.Invoke(BoxGuid, "SWITCH_VST_HOST", cbChannelMidiOut.SelectedValue);
+                }
             }
         }
 
@@ -1260,7 +1282,7 @@ namespace MidiLiveSystem
             });
         }
 
-        internal void CloseVSTWindow()
+        internal async void CloseVSTWindow()
         {
             if (VSTWindow != null)
             {
@@ -1268,7 +1290,7 @@ namespace MidiLiveSystem
                 VSTWindow.Close();
                 VSTWindow = null;
             }
-            else { return; }
+            await OpenVSTHost(false);
         }
 
         internal async Task CloseVSTHost()
@@ -1293,7 +1315,8 @@ namespace MidiLiveSystem
                     {
                         TempVST.VSTHostInfo = TempMemory[CurrentPreset].VSTData;
                     }
-                    
+
+                    TempVST.SetSlot(Convert.ToInt32(cbChannelMidiOut.SelectedValue));
                     VSTWindow = new VSTHost.MainWindow(RoutingGuid, BoxName, CurrentPreset, TempVST);
                     VSTWindow.OnVSTHostEvent += VSTWindow_OnVSTHostEvent;
                     VSTWindow.Show();
@@ -1305,6 +1328,33 @@ namespace MidiLiveSystem
                     }
                 }
             });
+        }
+        
+        internal async Task SwitchVSTPlugin(VSTPlugin preset)
+        {
+            if (preset == null)
+            {
+                if (VSTWindow != null)
+                {
+                    VSTWindow.Close();
+                }
+            }
+            else
+            {
+                //TODO : que devient le précédent ?
+                TempVST = preset;
+                TempMemory[CurrentPreset].VSTData = TempVST.VSTHostInfo;
+
+                if (VSTWindow != null)
+                {
+                    VSTWindow.Close();
+                }
+                VSTWindow = new VSTHost.MainWindow(RoutingGuid, BoxName, CurrentPreset, TempVST);
+                VSTWindow.OnVSTHostEvent += VSTWindow_OnVSTHostEvent;
+                VSTWindow.Show();
+
+                await VSTWindow.LoadPlugin();
+            }
         }
 
         internal void SetRoutingGuid(Guid routingguid)

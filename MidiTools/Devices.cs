@@ -423,6 +423,15 @@ namespace MidiTools
 
             }
         }
+
+        internal VSTPlugin GetVSTDeviceAtIndex(int iChannel)
+        {
+            if (VST_OutputEvents != null)
+            {
+                return VST_OutputEvents.GetPluginAtIndex(iChannel);
+            }
+            else { return null; }
+        }
     }
 
     internal class VSTOutputDeviceEvents
@@ -568,6 +577,11 @@ namespace MidiTools
                 bool bDisposed = Plugins[iChannel].DisposeVST();
                 if (bDisposed) { Plugins[iChannel] = null; }
             }
+        }
+
+        internal VSTPlugin GetPluginAtIndex(int iChannel)
+        {
+            return Plugins[iChannel];
         }
     }
 
