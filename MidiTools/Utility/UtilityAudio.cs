@@ -126,7 +126,7 @@ namespace VSTHost
             pluginContext.PluginCommandStub.Commands.SetBlockSize(blockSize);
             pluginContext.PluginCommandStub.Commands.SetSampleRate(WaveFormat.SampleRate);
             pluginContext.PluginCommandStub.Commands.SetProcessPrecision(VstProcessPrecision.Process64);
-
+            pluginContext.PluginCommandStub.Commands.MainsChanged(true);
 
             output = new float[WaveFormat.Channels * blockSize];
         }
@@ -408,7 +408,11 @@ namespace VSTHost
                 {
                     VSTSynth.PluginContext = VstPluginContext.Create(VSTHostInfo.VSTPath, hcs);
                     VSTSynth.PluginContext.PluginCommandStub.Commands.Open();
-                   
+                    VSTSynth.PluginContext.PluginCommandStub.Commands.SetBlockSize(1024);
+                    //VSTSynth.PluginContext.AcceptPluginInfoData(true);
+                    //VSTSynth.PluginContext.PluginCommandStub.Commands.MainsChanged(true);
+                    VSTSynth.PluginContext.PluginCommandStub.Commands.SetBypass(false);
+                    //VSTSynth.PluginContext.PluginCommandStub.Commands.
                     //VSTHostInfo.ParameterCount = VSTSynth.PluginContext.PluginInfo.ParameterCount;
 
 
@@ -479,28 +483,28 @@ namespace VSTHost
             return sInfo;
         }
 
-        private async void HostCommand_PluginCalled(object sender, PluginCalledEventArgs e)
+        private void HostCommand_PluginCalled(object sender, PluginCalledEventArgs e)
         {
-            while (VSTSynth.PluginContext == null)
-            {
-                await Task.Delay(100);
-            }
-            //SetParameterAutomated(90, 0,5)
-            if (e.Message.StartsWith("SetParameterAutomated"))
-            {
-                Match match = Regex.Match(e.Message, @"(SetParameterAutomated\()(\d+),(.[^\)]+)(\))");
-                if (match.Success)
-                {
-                    int index = int.Parse(match.Groups[2].Value.Trim());
-                    float value = float.Parse(match.Groups[3].Value.Trim());
-                    VSTSynth.PluginContext.PluginCommandStub.Commands.SetParameter(index, value);
-                }
-            }
-            else if (e.Message.StartsWith("GetVersion"))
-            {
-                //VSTSynth.PluginContext.Set("GetVersion", (int)2400);
-                //int iV = VSTSynth.PluginContext.PluginCommandStub.Commands.begin();
-            }
+            //while (VSTSynth.PluginContext == null)
+            //{
+            //    await Task.Delay(100);
+            //}
+            ////SetParameterAutomated(90, 0,5)
+            //if (e.Message.StartsWith("SetParameterAutomated"))
+            //{
+            //    Match match = Regex.Match(e.Message, @"(SetParameterAutomated\()(\d+),(.[^\)]+)(\))");
+            //    if (match.Success)
+            //    {
+            //        int index = int.Parse(match.Groups[2].Value.Trim());
+            //        float value = float.Parse(match.Groups[3].Value.Trim());
+            //        VSTSynth.PluginContext.PluginCommandStub.Commands.SetParameter(index, value);
+            //    }
+            //}
+            //else if (e.Message.StartsWith("GetVersion"))
+            //{
+            //    //VSTSynth.PluginContext.Set("GetVersion", (int)2400);
+            //    //int iV = VSTSynth.PluginContext.PluginCommandStub.Commands.begin();
+            //}
         }
 
         //private void HostCmdStub_PluginCalled(object sender, PluginCalledEventArgs e)
