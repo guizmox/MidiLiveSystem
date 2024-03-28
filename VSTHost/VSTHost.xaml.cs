@@ -137,6 +137,8 @@ namespace VSTHost
 
         public async Task LoadPlugin()
         {
+            Cursor = Cursor.Wait;
+
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
 

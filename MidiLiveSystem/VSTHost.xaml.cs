@@ -1,5 +1,6 @@
 ﻿using Microsoft.Win32;
 using MidiTools;
+using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using System;
 using System.Diagnostics;
@@ -7,6 +8,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Interop;
 
 namespace VSTHost
@@ -35,6 +37,7 @@ namespace VSTHost
             Title = string.Concat(Title, " - ", boxname);
             Plugin = plugin;
             UtilityAudio.AudioEvent += UtilityAudio_AudioEvent;
+            plugin.VSTEvent += Plugin_VSTEvent;
 
             InitPage();
 
@@ -70,6 +73,22 @@ namespace VSTHost
             }
         }
 
+        private async void Plugin_VSTEvent(string sMessage)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                int iLast = Title.LastIndexOf("[");
+                if (iLast > 0)
+                {
+                    Title = string.Concat(Title[0..iLast].Trim(), " [", sMessage, "]");
+                }
+                else
+                {
+                    Title = string.Concat(Title.Trim(), " [", sMessage, "]");
+                }
+            });
+        }
+
         private async void UtilityAudio_AudioEvent(string sMessage, string sDevice, int iSampleRate)
         {
             await Dispatcher.InvokeAsync(() =>
@@ -88,6 +107,7 @@ namespace VSTHost
 
         private void Window_Closed(object sender, EventArgs e)
         {
+            Plugin.VSTEvent -= Plugin_VSTEvent;
             UtilityAudio.AudioEvent -= UtilityAudio_AudioEvent;
 
             if (VSTParametersCheck != null)
@@ -203,6 +223,8 @@ namespace VSTHost
 
         private void OpenPlugin()
         {
+            Mouse.OverrideCursor = Cursors.Wait;
+
             var result = Plugin.OpenEditor(new WindowInteropHelper(this).EnsureHandle());
             if (result)
             {
@@ -211,18 +233,18 @@ namespace VSTHost
                 Width = rect.Width + 20;
                 Height = rect.Height + 50;
                 ResizeMode = ResizeMode.NoResize;
+                this.Title = Plugin.VSTHostInfo.VSTName;
             }
             else { MessageBox.Show("Unable to open plugin editor. Not initialized."); }
+
+            Mouse.OverrideCursor = null;
         }
 
-        private async void VSTParametersCheck_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
+        private void VSTParametersCheck_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
         {
-            await UIEventPool.AddTask(() =>
-            {
-                Plugin.GetParameters();
-            });
+            Plugin.GetParameters();
 
-            await Dispatcher.InvokeAsync(() =>
+            Dispatcher.Invoke(() =>
             {
                 string sInfo = Plugin.GetInfo();
 

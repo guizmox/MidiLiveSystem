@@ -360,6 +360,9 @@ namespace VSTHost
 
     public class VSTPlugin
     {
+        public delegate void VSTEventHandler(string sMessage);
+        public event VSTEventHandler VSTEvent;
+
         public VSTHostInfo VSTHostInfo;
         internal VSTMidi VSTSynth;
         private VSTStream vstStream;
@@ -399,13 +402,14 @@ namespace VSTHost
                 VSTSynth = new VSTMidi();
 
                 var hcs = new HostCommandStub();
-                hcs.PluginCalled += HostCommand_PluginCalled;
                 //hcs.PluginCalled += new EventHandler<PluginCalledEventArgs>(HostCmdStub_PluginCalled);
                 //var timeInfo = hcs.Commands.GetTimeInfo(VstTimeInfoFlags.ClockValid);
                 //timeInfo.
 
                 try
                 {
+                    VSTEvent?.Invoke("Loading VST instrument " + Path.GetFileName(VSTHostInfo.VSTPath));
+
                     VSTSynth.PluginContext = VstPluginContext.Create(VSTHostInfo.VSTPath, hcs);
                     VSTSynth.PluginContext.PluginCommandStub.Commands.Open();
                     VSTSynth.PluginContext.PluginCommandStub.Commands.SetBlockSize(1024);
@@ -415,6 +419,7 @@ namespace VSTHost
                     //VSTSynth.PluginContext.PluginCommandStub.Commands.
                     //VSTHostInfo.ParameterCount = VSTSynth.PluginContext.PluginInfo.ParameterCount;
 
+                    VSTEvent?.Invoke("Loading VST information " + VSTHostInfo.VSTName);
 
                     VSTHostInfo.PluginID = VSTSynth.PluginContext.PluginInfo.PluginID;
                     //VSTHostInfo.AudioInputs = VSTSynth.PluginContext.PluginInfo.AudioInputCount;
@@ -457,6 +462,8 @@ namespace VSTHost
                         }
                     }
 
+                    VSTEvent?.Invoke("Loading VST parameters (" + VSTHostInfo.Parameters + ")");
+
                     if (VSTHostInfo.Parameters.Count > 0)
                     {
                         try
@@ -481,30 +488,6 @@ namespace VSTHost
             else { return "Unable to remove last VST"; }
 
             return sInfo;
-        }
-
-        private void HostCommand_PluginCalled(object sender, PluginCalledEventArgs e)
-        {
-            //while (VSTSynth.PluginContext == null)
-            //{
-            //    await Task.Delay(100);
-            //}
-            ////SetParameterAutomated(90, 0,5)
-            //if (e.Message.StartsWith("SetParameterAutomated"))
-            //{
-            //    Match match = Regex.Match(e.Message, @"(SetParameterAutomated\()(\d+),(.[^\)]+)(\))");
-            //    if (match.Success)
-            //    {
-            //        int index = int.Parse(match.Groups[2].Value.Trim());
-            //        float value = float.Parse(match.Groups[3].Value.Trim());
-            //        VSTSynth.PluginContext.PluginCommandStub.Commands.SetParameter(index, value);
-            //    }
-            //}
-            //else if (e.Message.StartsWith("GetVersion"))
-            //{
-            //    //VSTSynth.PluginContext.Set("GetVersion", (int)2400);
-            //    //int iV = VSTSynth.PluginContext.PluginCommandStub.Commands.begin();
-            //}
         }
 
         //private void HostCmdStub_PluginCalled(object sender, PluginCalledEventArgs e)
@@ -602,8 +585,11 @@ namespace VSTHost
         {
             if (VSTSynth != null && VSTSynth.PluginContext != null)
             {
+                VSTEvent?.Invoke("Opening VST editor");
+
                 CloseEditor();
                 return VSTSynth.PluginContext.PluginCommandStub.Commands.EditorOpen(EditorHandle);
+
             }
             else { return false; }
         }
@@ -612,6 +598,8 @@ namespace VSTHost
         {
             if (VSTSynth != null && VSTSynth.PluginContext != null)
             {
+                VSTEvent?.Invoke("Closing VST editor");
+
                 VSTSynth.PluginContext.PluginCommandStub.Commands.EditorIdle();
                 VSTSynth.PluginContext.PluginCommandStub.Commands.EditorClose();
             }
