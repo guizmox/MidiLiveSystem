@@ -16,14 +16,14 @@ namespace MidiLiveSystem
 {
     public class SQLiteDatabaseManager
     {
-        private string file = "MidiLiveSystem.db";
+        public static string Database = "MidiLiveSystem.db";
         private string connectionString = $"Data Source=";
 
         public SQLiteDatabaseManager()
         {
-            connectionString = string.Concat(connectionString, file);
+            connectionString = string.Concat(connectionString, Database);
 
-            if (!File.Exists(file))
+            if (!File.Exists(Database))
             {
                 SQLitePCL.Batteries.Init();
                 using (var connection = new SqliteConnection(connectionString))

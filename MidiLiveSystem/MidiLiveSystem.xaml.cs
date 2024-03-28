@@ -65,7 +65,7 @@ namespace MidiLiveSystem
         private List<Frame> GridFrames = new List<Frame>();
         public static BoxPreset CopiedPreset = new BoxPreset();
         public ProjectConfiguration Project = new ProjectConfiguration();
-        public SQLiteDatabaseManager Database = new SQLiteDatabaseManager();
+        public SQLiteDatabaseManager Database;
         public MidiSequence RecordedSequence;
 
         public MainWindow()
@@ -78,11 +78,17 @@ namespace MidiLiveSystem
             UIRefreshRate.Interval = 1000;
             UIRefreshRate.Start();
 
+            if (!File.Exists(SQLiteDatabaseManager.Database))
+            {
+                MessageBox.Show("This is the first start. " + Environment.NewLine + "Add your first Routing Box. If you need some help, there's a menu on the top-left of each Routing Box that opens a menu in which you can get help regarding the features." + Environment.NewLine + Environment.NewLine + "Enjoy !");
+            }
+
+            Database = new SQLiteDatabaseManager();
+            
             MidiRouting.InputStaticMidiMessage += MidiRouting_InputMidiMessage;
 
             //chargement des template instruments
             CubaseInstrumentData.Instruments = Database.LoadInstruments();
-
 
             RecallWindow = new RecallButtons(Boxes, Project);
             RecallWindow.Closed += RecallWindow_Closed;

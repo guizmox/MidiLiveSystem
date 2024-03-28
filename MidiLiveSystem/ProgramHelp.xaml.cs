@@ -24,7 +24,7 @@ namespace MidiLiveSystem
 
                 BitmapImage bitmapImage = new BitmapImage();
                 bitmapImage.BeginInit();
-                bitmapImage.UriSource = new Uri("/MidiLiveSystem;component/assets/" + PageNumber + ".png", UriKind.Relative);
+                bitmapImage.UriSource = new Uri("assets/" + PageNumber + ".png", UriKind.Relative);
                 bitmapImage.EndInit();
 
                 imgHelp.Source = bitmapImage;
@@ -39,7 +39,7 @@ namespace MidiLiveSystem
 
                 BitmapImage bitmapImage = new BitmapImage();
                 bitmapImage.BeginInit();
-                bitmapImage.UriSource = new Uri("/MidiLiveSystem;component/assets/" + PageNumber + ".png", UriKind.Relative);
+                bitmapImage.UriSource = new Uri("assets/" + PageNumber + ".png", UriKind.Relative);
                 bitmapImage.EndInit();
 
                 imgHelp.Source = bitmapImage;
