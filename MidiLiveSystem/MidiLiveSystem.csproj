@@ -17,15 +17,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="assets\1.png">
+    <Resource Include="assets\1.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="assets\2.png">
+    </Resource>
+    <Resource Include="assets\2.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="assets\3.png">
+    </Resource>
+    <Resource Include="assets\3.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
+    </Resource>
     <Content Include="assets\midi_port_icon_135398.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -34,13 +34,12 @@
   <ItemGroup>
     <PackageReference Include="MaterialDesignColors" Version="3.0.0" />
     <PackageReference Include="MaterialDesignThemes" Version="5.0.0" />
-    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="3.1.32" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="6.0.28" />
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.8" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MidiTools\MidiTools.csproj" />
-    <ProjectReference Include="..\VSTHost\VSTHost.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 
 // Copied from the microDRUM project
@@ -40,6 +41,19 @@ namespace VSTHost
         public int PluginID = 0;
         public int AudioOutputs = 0;
         public int Slot = 1;
+        public int MidiInputs = 1;
+
+        public string GetInfo()
+        {
+            StringBuilder sbPlugin = new StringBuilder();
+            sbPlugin.AppendLine("Plugin Name : " + VSTName);
+            sbPlugin.AppendLine("Path : " + VSTPath);
+            sbPlugin.AppendLine("Current Program : " + Program.ToString());
+            sbPlugin.AppendLine("Parameters : " + Parameters.Count);
+            sbPlugin.AppendLine("Audio OUT : " + AudioOutputs);
+            sbPlugin.AppendLine("Midi IN : " + MidiInputs);
+            return sbPlugin.ToString();
+        }
     }
 
     internal class VSTStreamEventArgs : EventArgs
@@ -257,8 +271,10 @@ namespace VSTHost
 
         public void MIDI_NoteOff(byte Note, byte Velocity)
         {
-            byte Cmd = 0x80;
-            MIDI(Cmd, Note, Velocity);
+            //byte Cmd = 0x80;
+            //MIDI(Cmd, Note, Velocity);
+            byte Cmd = 0x90;
+            MIDI(Cmd, Note, 0);
         }
 
         public void MIDI_ProgramChange(byte programNumber)
@@ -388,6 +404,7 @@ namespace VSTHost
                     VSTHostInfo.PluginID = VSTSynth.PluginContext.PluginInfo.PluginID;
                     //VSTHostInfo.AudioInputs = VSTSynth.PluginContext.PluginInfo.AudioInputCount;
                     VSTHostInfo.AudioOutputs = VSTSynth.PluginContext.PluginInfo.AudioOutputCount;
+                    VSTHostInfo.MidiInputs = VSTSynth.PluginContext.PluginCommandStub.Commands.GetNumberOfMidiInputChannels();
                     VSTHostInfo.Slot = Slot;
 
                     vstStream = new VSTStream(VSTSynth);

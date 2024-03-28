@@ -1393,6 +1393,8 @@ namespace MidiLiveSystem
                                     VSTWindow = null;
                                 }
                             }
+                            await LoadPreset(CurrentPreset);
+                            OnUIEvent?.Invoke(BoxGuid, "SWITCH_VST_HOST", cbChannelMidiOut.SelectedValue); //pour initialiser TempVST au preset 1
                         }
                         else
                         {
