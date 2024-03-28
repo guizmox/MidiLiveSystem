@@ -6,6 +6,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -921,6 +922,7 @@ namespace MidiTools
         private int _eventsProcessedOUTLast = 0;
 
         private int _lowestNotePlayed = -1;
+        private VSTHostInfo AudioInfo;
 
         public MidiRouting()
         {
@@ -1012,7 +1014,10 @@ namespace MidiTools
                 {
                     if (!DevicesRoutingOUT.Contains(devout.Name) && DateTime.Now.Subtract(devout.LastMessage).TotalSeconds > 60)
                     {
-                        ToRemoveOUT.Add(devout.Name);
+                        if (!devout.Name.StartsWith(Tools.VST_HOST)) //on ne supprime pas les slots VST, potentiellement utilisés à plusieurs endroits
+                        {
+                            ToRemoveOUT.Add(devout.Name);
+                        }
                     }
 
                 }
@@ -2373,11 +2378,11 @@ namespace MidiTools
                 }
             }
 
-            if (sDeviceOut.Equals(Tools.VST_HOST))
+            if (sDeviceOut.StartsWith(Tools.VST_HOST))
             {
                 if (vst.VSTHostInfo != null)
                 {
-                    var device = new MidiDevice(vst.VSTHostInfo);
+                    var device = new MidiDevice(vst, sDeviceOut);
                     UsedDevicesOUT.Add(device);
                 }
             }
@@ -2502,7 +2507,7 @@ namespace MidiTools
                     bool active = routing.Options.Active;
                     routing.Options.Active = false;
 
-                    if (sDeviceOut.Equals(Tools.VST_HOST))
+                    if (sDeviceOut.StartsWith(Tools.VST_HOST))
                     {
                         if (vst.VSTHostInfo != null)
                         {
@@ -2530,56 +2535,6 @@ namespace MidiTools
                     await ChangeProgram(routing, preset, bDeviceOutChanged ? true : false);
                 }
             }
-        }
-
-        public async Task AddVSTDeviceToAsio(Guid routingGuid, VSTPlugin plugin)
-        {
-            await Tasks.AddTask(() =>
-            {
-                MatrixItem matrix = null;
-                while (matrix == null)
-                {
-                    matrix = MidiMatrix.FirstOrDefault(r => r.RoutingGuid == routingGuid && r.ChannelOut > 0); // && r.DeviceOut != null && r.DeviceOut.Name.Equals(Tools.VST_HOST));
-                }
-
-                var used = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(Tools.VST_HOST));
-                if (used != null)
-                {
-                    used.PlugVSTDevice(plugin, plugin.VSTHostInfo.Slot - 1);
-                }
-            });
-        }
-
-        public async Task RemoveVSTDeviceFromAsio(Guid routingGuid, int iSlot)
-        {
-            await Tasks.AddTask(() =>
-            {
-                var used = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(Tools.VST_HOST));
-                if (used != null)
-                {
-                    used.UnplugVSTDevice(iSlot - 1);
-                }
-            });
-        }
-
-        public async Task<VSTPlugin> SwitchVSTDevice(Guid routingGuid, int iChannel)
-        {
-            VSTPlugin plugin = null;
-
-            await Tasks.AddTask(() =>
-            {
-                var matrix = MidiMatrix.FirstOrDefault(r => r.RoutingGuid == routingGuid && r.DeviceOut != null && r.DeviceOut.Name.Equals(Tools.VST_HOST));
-                if (matrix != null)
-                {
-                    var used = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(Tools.VST_HOST));
-                    if (used != null)
-                    {
-                        plugin = used.GetVSTDeviceAtIndex(iChannel - 1);
-                    }
-                }
-            });
-
-            return plugin;
         }
 
         public async Task UpdateUsedDevices(List<string> devices)
@@ -2616,18 +2571,22 @@ namespace MidiTools
             if (dev == null)
             {
                 var outdev = OutputDevices.FirstOrDefault(d => d.Name.Equals(sDeviceOut));
-                MidiDevice newdev;
-                if (vst != null)
+                MidiDevice newdev = null;
+                if (vst != null && UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut)) == null)
                 {
-                    newdev = new MidiDevice(vst.VSTHostInfo);
+                    newdev = new MidiDevice(vst, sDeviceOut);
                 }
-                else
+                else if (outdev != null)
                 {
                     newdev = new MidiDevice(outdev, CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(outdev.Name)));
                 }
 
-                newdev.UsedForRouting = true;
-                UsedDevicesOUT.Add(newdev);
+                if (newdev != null)
+                {
+                    newdev.UsedForRouting = true;
+                    UsedDevicesOUT.Add(newdev);
+                }
+
                 return newdev;
             }
             else { dev.UsedForRouting = true; return dev; }
@@ -2761,6 +2720,9 @@ namespace MidiTools
             UsedDevicesOUT.Clear();
 
             MidiMatrix.Clear();
+
+            DeallocateAudio();
+
         }
 
         public async Task SendCC(Guid routingGuid, int iCC, int iValue)
@@ -2891,7 +2853,6 @@ namespace MidiTools
                 routing.SetRoutingGuid(newGuid);
             }
         }
-
         public async Task<List<int>> GetCCData(Guid routingGuid, int[] sCC)
         {
             List<int> CCdata = new List<int>();
@@ -2908,6 +2869,108 @@ namespace MidiTools
             });
             return CCdata;
         }
+
+        public async Task<bool> InitializeAudio(VSTPlugin initialInfo)
+        {
+            bool bOK = false;
+            AudioInfo = initialInfo.VSTHostInfo;
+
+            await Tasks.AddTask(() =>
+            {
+                try
+                {
+                    bool bOK = UtilityAudio.OpenAudio(initialInfo.VSTHostInfo.AsioDevice, initialInfo.VSTHostInfo.SampleRate);
+
+                    if (bOK)
+                    {
+                        UtilityAudio.StartAudio();
+                        UtilityAudio.AudioInitialized = true;
+                        AddLog(initialInfo.VSTHostInfo.AsioDevice, false, Channel.Channel1, "[OPEN]", "", "", "");
+                        bOK = true;
+                    }
+                    else { bOK = false; }
+
+                }
+                catch (Exception ex)
+                {
+                    initialInfo.VSTHostInfo.Error = "Unable to open audio device : " + ex.Message;
+                    bOK = false;
+                }
+            });
+
+            return bOK;
+        }
+
+        public bool DeallocateAudio()
+        {
+            bool bOK = false;
+
+            if (UtilityAudio.AudioInitialized)
+            {
+          
+                try
+                {
+                    UtilityAudio.StopAudio();
+                    UtilityAudio.Dispose();
+                    UtilityAudio.AudioInitialized = false;
+
+                    try
+                    {
+                        AddLog(AudioInfo.AsioDevice, false, Channel.Channel1, "[CLOSE]", "", "", "");
+                    }
+                    catch
+                    { bOK = false; }
+
+                    bOK = true; ;
+                }
+                catch { bOK = false; }
+            }
+            return bOK;
+        }
+
+        public async Task<VSTPlugin> CheckVSTSlot(string sDeviceAndSlot)
+        {
+            VSTPlugin vst = null;
+
+            await Tasks.AddTask(() =>
+            {
+                var device = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceAndSlot));
+                if (device != null)
+                {
+                    vst = device.Plugin;
+                }
+            });
+
+            return vst;
+        }
+
+        public async Task<bool> RemoveVST(string sDeviceAndSlot)
+        {
+            bool bOK = false;
+
+            await Tasks.AddTask(() =>
+            {
+                var device = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceAndSlot));
+                if (device != null)
+                {
+                    device.CloseDevice();
+                    UsedDevicesOUT.Remove(device);
+                    bOK = true;
+
+                    foreach (var r in MidiMatrix)
+                    {
+                        if (r.DeviceOut != null && r.DeviceOut.Name.Equals(sDeviceAndSlot))
+                        {
+                            r.DeviceOut.CloseDevice();
+                            r.DeviceOut = null;
+                        }
+                    }
+                }
+            });
+
+            return bOK;
+        }
+
 
 
         #endregion

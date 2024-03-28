@@ -8,6 +8,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -62,20 +63,21 @@ namespace MidiLiveSystem
         public bool Detached { get; internal set; } = false;
         public bool HasVSTAttached { get { return TempMemory[CurrentPreset].VSTData != null ? true : false; } }
 
-        public VSTPlugin GetVST { get { return TempVST; } }
+        public VSTPlugin GetVST { get { return TempVST[CurrentPreset]; } }
 
         public int GridPosition = 0;
         public int CurrentPreset = 1;
 
         public Guid BoxGuid { get; private set; } = Guid.NewGuid();
         public string BoxName { get; private set; } = "Routing Box";
+
         private ProjectConfiguration Project;
 
         public delegate void RoutingBoxEventHandler(Guid gBox, string sControl, object sValue);
         public event RoutingBoxEventHandler OnUIEvent;
 
         BoxPreset[] TempMemory = new BoxPreset[8];
-        VSTPlugin TempVST;
+        VSTPlugin[] TempVST = new VSTPlugin[8];
 
         PresetBrowser InstrumentPresets = null;
 
@@ -93,8 +95,6 @@ namespace MidiLiveSystem
 
             InitPage(inputDevices, outputDevices);
 
-            TempVST = new VSTPlugin(Convert.ToInt32(cbChannelMidiOut.SelectedValue));
-
             MidiRouting.OutputMidiMessage += MidiRouting_OutputMidiMessage;
         }
 
@@ -103,7 +103,7 @@ namespace MidiLiveSystem
             GridPosition = gridPosition;
             BoxName = "Routing Box " + (GridPosition + 1).ToString();
 
-            TempVST = new VSTPlugin();
+            TempVST = new VSTPlugin[8] { new VSTPlugin(), new VSTPlugin(), new VSTPlugin(), new VSTPlugin(), new VSTPlugin(), new VSTPlugin(), new VSTPlugin(), new VSTPlugin() };
 
             TempMemory = new BoxPreset[8] { new BoxPreset(RoutingGuid, BoxGuid, "Preset 1", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 2", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 3", BoxName),
                                             new BoxPreset(RoutingGuid, BoxGuid, "Preset 4", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 5", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 6", BoxName),
@@ -121,20 +121,20 @@ namespace MidiLiveSystem
         {
             if (iAction == 0) //fermer la fenêtre
             {
-                TempMemory[iPreset].VSTData = TempVST.VSTHostInfo; //pas certain
+                TempMemory[iPreset].VSTData = TempVST[CurrentPreset].VSTHostInfo; //pas certain
                 VSTWindow.OnVSTHostEvent -= VSTWindow_OnVSTHostEvent;
                 VSTWindow = null;
             }
             else if (iAction == 1) //chargement initial du VST
             {
-                TempMemory[iPreset].VSTData = TempVST.VSTHostInfo; //pas certain
-                OnUIEvent?.Invoke(BoxGuid, "PLUG_VST_TO_DEVICE", TempVST); //pour initialiser l'audio
+                TempMemory[iPreset].VSTData = TempVST[CurrentPreset].VSTHostInfo; //pas certain
+                OnUIEvent?.Invoke(BoxGuid, "INITIALIZE_AUDIO", TempVST[CurrentPreset]); //pour initialiser l'audio
                 await VSTWindow.LoadPlugin();
             }
             else if (iAction == 2) //chargement suivant
             {
-                TempMemory[iPreset].VSTData = TempVST.VSTHostInfo;
-                OnUIEvent?.Invoke(BoxGuid, "PLUG_VST_TO_DEVICE", TempVST); 
+                TempMemory[iPreset].VSTData = TempVST[CurrentPreset].VSTHostInfo;
+                //OnUIEvent?.Invoke(BoxGuid, "PLUG_VST_TO_DEVICE", TempVST); 
                 await VSTWindow.LoadPlugin();
             }
         }
@@ -403,6 +403,18 @@ namespace MidiLiveSystem
 
         }
 
+        private void cbVSTSlot_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (cbMidiOut.SelectedItem != null && cbVSTSlot.SelectedIndex >= 0) //((ComboBoxItem)e.AddedItems[0]).IsFocused && 
+            {
+                if (cbMidiOut.SelectedValue.Equals(Tools.VST_HOST))
+                {
+                    int iSlot = Convert.ToInt32(cbVSTSlot.SelectedValue);
+                    OnUIEvent?.Invoke(BoxGuid, "CHECK_VST_HOST", string.Concat(cbMidiOut.SelectedValue.ToString(), "-{", iSlot, "}"));
+                }
+            }
+        }
+
         private async void cbMidiOut_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var item = e.AddedItems.Count > 0 ? (ComboBoxItem)e.AddedItems[0] : null;
@@ -416,35 +428,12 @@ namespace MidiLiveSystem
 
                 if (item.Tag.Equals(Tools.VST_HOST))
                 {
-                    tbChoosePreset.Visibility = Visibility.Hidden;
-                    lbPreset.Visibility = Visibility.Hidden;
-                    tbOpenVST.Visibility = Visibility.Visible;
-                    tbRemoveVST.Visibility = Visibility.Visible;
-                    tbProgram.Text = "VST HOST";
-
-                    for (int i = 0; i <= 16; i++)
-                    {
-                        if (i == 0)
-                        { ((ComboBoxItem)cbChannelMidiOut.Items[i]).Content = "NA"; }
-                        else
-                        { ((ComboBoxItem)cbChannelMidiOut.Items[i]).Content = string.Concat("Slot ", i); }
-                    }
+                    await SwitchVSTPanel(true);
+                    OnUIEvent?.Invoke(BoxGuid, "CHECK_VST_HOST", string.Concat(item.Tag.ToString(), "-{", cbVSTSlot.SelectedValue.ToString(), "}"));
                 }
                 else
                 {
-                    tbChoosePreset.Visibility = Visibility.Visible;
-                    lbPreset.Visibility = Visibility.Visible;
-                    tbOpenVST.Visibility = Visibility.Hidden;
-                    tbRemoveVST.Visibility = Visibility.Hidden;
-                    tbProgram.Text = "PROGRAM";
-
-                    for (int i = 0; i <= 16; i++)
-                    {
-                        if (i == 0)
-                        { ((ComboBoxItem)cbChannelMidiOut.Items[i]).Content = "NA"; }
-                        else
-                        { ((ComboBoxItem)cbChannelMidiOut.Items[i]).Content = string.Concat("Ch. ", i); }
-                    }
+                    await SwitchVSTPanel(false);
                 }
                 OnUIEvent?.Invoke(BoxGuid, "CHECK_OUT_CHANNEL", item.Tag.ToString() + "#|#" + cbChannelMidiOut.SelectedValue);
             }
@@ -457,11 +446,6 @@ namespace MidiLiveSystem
                 ComboBoxItem devOut = (ComboBoxItem)cbMidiOut.SelectedItem;
 
                 OnUIEvent?.Invoke(BoxGuid, "CHECK_OUT_CHANNEL", devOut.Tag.ToString() + "#|#" + cbChannelMidiOut.SelectedValue);
-
-                if (cbMidiOut.SelectedValue.Equals(Tools.VST_HOST))
-                {
-                    OnUIEvent?.Invoke(BoxGuid, "SWITCH_VST_HOST", cbChannelMidiOut.SelectedValue);
-                }
             }
         }
 
@@ -593,7 +577,7 @@ namespace MidiLiveSystem
 
         private async void tbOpenVST_Click(object sender, RoutedEventArgs e)
         {
-            await OpenVSTHost(false);
+            await OpenVSTHost();
         }
 
         private async void tbRemoveVST_Click(object sender, RoutedEventArgs e)
@@ -657,10 +641,43 @@ namespace MidiLiveSystem
                 OnUIEvent?.Invoke(BoxGuid, "PRESET_CHANGE", TempMemory[CurrentPreset]);
                 await LoadPreset(CurrentPreset);
             }
-            if (TempMemory[CurrentPreset].DeviceOut.Equals(Tools.VST_HOST))
+
+            if (TempMemory[CurrentPreset].DeviceOut.StartsWith(Tools.VST_HOST))
             {
-                OnUIEvent?.Invoke(BoxGuid, "SWITCH_VST_HOST", cbChannelMidiOut.SelectedValue);
+                await SwitchVSTPanel(true);
+                //OnUIEvent?.Invoke(BoxGuid, "CHECK_VST_HOST", string.Concat(cbMidiOut.SelectedValue.ToString(), "-{", cbVSTSlot.SelectedValue.ToString(), "}"));
             }
+            else
+            {
+                await SwitchVSTPanel(false);
+            }
+        }
+
+        private async Task SwitchVSTPanel(bool bShowVSTControls)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                if (bShowVSTControls)
+                {
+                    cbVSTSlot.Visibility = Visibility.Visible;
+                    tbChoosePreset.Visibility = Visibility.Hidden;
+                    lbPreset.Visibility = Visibility.Hidden;
+                    tbOpenVST.Visibility = Visibility.Visible;
+                    tbRemoveVST.Visibility = Visibility.Visible;
+                    tbProgram.Text = "VST HOST";
+                    tbProgram.Visibility = Visibility.Hidden;
+                }
+                else
+                {
+                    cbVSTSlot.Visibility = Visibility.Hidden;
+                    tbChoosePreset.Visibility = Visibility.Visible;
+                    lbPreset.Visibility = Visibility.Visible;
+                    tbOpenVST.Visibility = Visibility.Hidden;
+                    tbRemoveVST.Visibility = Visibility.Hidden;
+                    tbProgram.Text = "PROGRAM";
+                    tbProgram.Visibility = Visibility.Visible;
+                }
+            });
         }
 
         public async void LoadMemory(BoxPreset[] mem)
@@ -668,10 +685,17 @@ namespace MidiLiveSystem
             if (mem != null && mem.Length > 0)
             {
                 TempMemory = mem;
+
                 if (TempMemory != null && TempMemory.Length > 0)
                 {
                     await FillUI(TempMemory[0], true);
                 }
+            }
+
+            TempVST = new VSTPlugin[8] { new VSTPlugin(), new VSTPlugin(), new VSTPlugin(), new VSTPlugin(), new VSTPlugin(), new VSTPlugin(), new VSTPlugin(), new VSTPlugin() };
+            for (int i = 0; i < 8; i++)
+            {
+                TempVST[i].VSTHostInfo = mem[i].VSTData;
             }
         }
 
@@ -861,14 +885,21 @@ namespace MidiLiveSystem
                     routingname = tbRoutingName.Text.Trim();
                     sDeviceIn = cbMidiIn.SelectedItem == null ? "" : ((ComboBoxItem)cbMidiIn.SelectedItem).Tag.ToString();
                     sDeviceOut = cbMidiOut.SelectedItem == null ? "" : ((ComboBoxItem)cbMidiOut.SelectedItem).Tag.ToString();
+
+                    if (cbMidiOut.SelectedItem != null && ((ComboBoxItem)cbMidiOut.SelectedItem).Tag.ToString().Equals(Tools.VST_HOST))
+                    {
+                        sDeviceOut = string.Concat(sDeviceOut, "-{", cbVSTSlot.SelectedValue.ToString(), "}");
+                    }
+
                     iChannelIn = cbChannelMidiIn.SelectedItem == null ? 1 : Convert.ToInt32(((ComboBoxItem)cbChannelMidiIn.SelectedItem).Tag.ToString());
                     iChannelOut = cbChannelMidiOut.SelectedItem == null ? 1 : Convert.ToInt32(((ComboBoxItem)cbChannelMidiOut.SelectedItem).Tag.ToString());
                 });
 
                 var options = await GetOptions();
                 var preset = await GetPreset();
-
-                var bp = new BoxPreset(RoutingGuid, BoxGuid, routingname, presetname, options, preset, sDeviceIn, sDeviceOut, TempVST == null ? null : TempVST.VSTHostInfo, iChannelIn, iChannelOut);
+                VSTHostInfo vst = TempVST[CurrentPreset].VSTHostInfo;
+                
+                var bp = new BoxPreset(RoutingGuid, BoxGuid, routingname, presetname, options, preset, sDeviceIn, sDeviceOut, vst, iChannelIn, iChannelOut);
 
                 boxPreset = bp;
 
@@ -882,7 +913,7 @@ namespace MidiLiveSystem
         {
             await Dispatcher.InvokeAsync(() =>
             {
-                tbOpenVST.Content = bp.VSTData == null ? "Open VST Host" : bp.VSTData.VSTName;
+                tbOpenVST.Content = bp.VSTData == null ? "Add VST instr." : bp.VSTData.VSTName;
 
                 tbMute.Background = bp.MidiOptions.Active ? Brushes.DarkGray : Brushes.IndianRed;
 
@@ -901,9 +932,14 @@ namespace MidiLiveSystem
                 //if (bIsFirst)
                 //{
                 cbMidiIn.SelectedValue = bp.DeviceIn;
-                cbMidiOut.SelectedValue = bp.DeviceOut;
+                cbMidiOut.SelectedValue = bp.DeviceOut.Split("-{")[0];
                 cbChannelMidiIn.SelectedValue = bp.ChannelIn;
                 cbChannelMidiOut.SelectedValue = bp.ChannelOut;
+
+                if (bp.VSTData != null)
+                {
+                    cbVSTSlot.SelectedValue = bp.VSTData.Slot;
+                }
                 //}
 
                 lbPreset.Text = bp.MidiPreset.PresetName;
@@ -1337,12 +1373,15 @@ namespace MidiLiveSystem
 
         internal async void CloseVSTWindow()
         {
-            if (VSTWindow != null)
+            await Dispatcher.InvokeAsync(() =>
             {
-                VSTWindow.OnVSTHostEvent -= VSTWindow_OnVSTHostEvent;
-                VSTWindow.Close();
-                VSTWindow = null;
-            }
+                if (VSTWindow != null)
+                {
+                    VSTWindow.OnVSTHostEvent -= VSTWindow_OnVSTHostEvent;
+                    VSTWindow.Close();
+                    VSTWindow = null;
+                }
+            });
             //await OpenVSTHost(false);
         }
 
@@ -1354,14 +1393,14 @@ namespace MidiLiveSystem
                 {
                     VSTWindow.Close();
                 }
-                if (!bDontRemovePlugin)
+                if (!bDontRemovePlugin && cbMidiOut.SelectedValue != null)
                 {
-                    OnUIEvent?.Invoke(BoxGuid, "REMOVE_VST_FROM_DEVICE", TempVST.Slot);
+                    OnUIEvent?.Invoke(BoxGuid, "REMOVE_VST", string.Concat(cbMidiOut.SelectedValue.ToString(), "-{", cbVSTSlot.SelectedValue.ToString(), "}"));
                 }
             });
         }
 
-        internal async Task OpenVSTHost(bool bLoadProject)
+        internal async Task OpenVSTHost()
         {
             await Dispatcher.InvokeAsync(async () =>
             {
@@ -1373,37 +1412,11 @@ namespace MidiLiveSystem
                 {
                     if (VSTWindow == null)
                     {
-                        if (bLoadProject)
-                        {
-                            bool bAudioInitialized = false;
-                            for (int iP = 0; iP < TempMemory.Length; iP++) //chargement de tous les VST
-                            {
-                                if (TempMemory[iP].VSTData != null)
-                                {
-                                    TempVST = new VSTPlugin(TempMemory[iP].VSTData.Slot);
-                                    //TempVST.SetSlot(preset.VSTData.Slot);
-                                    TempVST.VSTHostInfo = TempMemory[iP].VSTData;
-                                    VSTWindow = new VSTHost.MainWindow(RoutingGuid, BoxName, iP, TempVST);
-                                    VSTWindow.OnVSTHostEvent += VSTWindow_OnVSTHostEvent;
-                                    if (!bAudioInitialized) { OnUIEvent?.Invoke(BoxGuid, "PLUG_VST_TO_DEVICE", TempVST); } //pour initialiser l'audio
-                                    bAudioInitialized = true;
-                                    await VSTWindow.LoadPlugin();
-                                    OnUIEvent?.Invoke(BoxGuid, "PLUG_VST_TO_DEVICE", TempVST); //pour initialiser le plugin
-                                    VSTWindow.Close();
-                                    VSTWindow = null;
-                                }
-                            }
-                            await LoadPreset(CurrentPreset);
-                            OnUIEvent?.Invoke(BoxGuid, "SWITCH_VST_HOST", cbChannelMidiOut.SelectedValue); //pour initialiser TempVST au preset 1
-                        }
-                        else
-                        {
-                            TempVST.SetSlot(Convert.ToInt32(cbChannelMidiOut.SelectedValue));
-                            //TempVST.VSTHostInfo = preset.VSTData;
-                            VSTWindow = new VSTHost.MainWindow(RoutingGuid, BoxName, CurrentPreset, TempVST);
-                            VSTWindow.OnVSTHostEvent += VSTWindow_OnVSTHostEvent;
-                            VSTWindow.Show();
-                        }
+                        TempVST[CurrentPreset].SetSlot(Convert.ToInt32(cbVSTSlot.SelectedValue));
+                        //TempVST.VSTHostInfo = preset.VSTData;
+                        VSTWindow = new VSTHost.MainWindow(RoutingGuid, BoxName, CurrentPreset, TempVST[CurrentPreset]);
+                        VSTWindow.OnVSTHostEvent += VSTWindow_OnVSTHostEvent;
+                        VSTWindow.Show();
                     }
                 }
             });
@@ -1417,14 +1430,14 @@ namespace MidiLiveSystem
                 {
                     VSTWindow.Close();
                 }
-                TempVST = new VSTPlugin(Convert.ToInt32(cbChannelMidiOut.SelectedValue));
+                TempVST[CurrentPreset] = new VSTPlugin(Convert.ToInt32(cbVSTSlot.SelectedValue));
                 TempMemory[CurrentPreset].VSTData = null;
             }
             else
             {
                 //TODO : que devient le précédent ?
-                TempVST = preset;
-                TempMemory[CurrentPreset].VSTData = TempVST.VSTHostInfo;
+                TempVST[CurrentPreset] = preset;
+                TempMemory[CurrentPreset].VSTData = TempVST[CurrentPreset].VSTHostInfo;
 
                 bool bWasClosed = false;
 
@@ -1437,7 +1450,7 @@ namespace MidiLiveSystem
                     VSTWindow.Close();
                 }
 
-                VSTWindow = new VSTHost.MainWindow(RoutingGuid, BoxName, CurrentPreset, TempVST);
+                VSTWindow = new VSTHost.MainWindow(RoutingGuid, BoxName, CurrentPreset, TempVST[CurrentPreset]);
                 VSTWindow.OnVSTHostEvent += VSTWindow_OnVSTHostEvent;
 
                 if (!bWasClosed)
@@ -1468,8 +1481,62 @@ namespace MidiLiveSystem
         {
             await Dispatcher.InvokeAsync(() =>
             {
-                TempVST = new VSTPlugin(Convert.ToInt32(cbChannelMidiOut.SelectedValue));
+                TempVST[CurrentPreset] = new VSTPlugin(Convert.ToInt32(cbVSTSlot.SelectedValue));
                 TempMemory[iPreset].VSTData = null;
+            });
+        }
+
+        internal async Task SetVST(VSTPlugin vst, int iSlot)
+        {
+            await Dispatcher.InvokeAsync(async () =>
+            {
+                if (VSTWindow != null)
+                {
+                    VSTWindow.Close();
+                    VSTWindow = null;
+                }
+
+                if (vst != null)
+                {
+                    TempVST[CurrentPreset] = vst;
+                }
+                else
+                {
+                    if (TempVST[CurrentPreset].VSTHostInfo != null)
+                    {
+                        VSTWindow = new VSTHost.MainWindow(RoutingGuid, BoxName, CurrentPreset, TempVST[CurrentPreset]);
+                        await VSTWindow.LoadPlugin();
+                        VSTWindow.Close();
+                        VSTWindow = null;
+                    }
+                    else
+                    {
+                        TempMemory[CurrentPreset].VSTData = null;
+                        TempVST[CurrentPreset] = new VSTPlugin();
+                        TempVST[CurrentPreset].SetSlot(iSlot);
+                        //MessageBox.Show("No VST instrument on that slot. You can add one with 'Open VST Host'");
+                    }
+                }
+            });
+        }
+
+        internal async Task CheckAndRemoveVST(string sValue)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                if (VSTWindow != null)
+                { VSTWindow.Close(); VSTWindow = null; }
+
+                for (int i = 0; i < TempMemory.Length; i++)
+                {
+                    if (TempMemory[i].DeviceOut.Equals(sValue))
+                    {
+                        TempMemory[i].DeviceOut = "";
+                        //TempMemory[i].ChannelOut = 1;
+                        TempMemory[i].VSTData = null;
+                        TempVST[i] = new VSTPlugin();
+                    }
+                }
             });
         }
     }

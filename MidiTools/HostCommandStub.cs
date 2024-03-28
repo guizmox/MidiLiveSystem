@@ -1,6 +1,7 @@
 ﻿using Jacobi.Vst.Core;
 using Jacobi.Vst.Core.Host;
 using System;
+using System.Drawing;
 
 namespace Jacobi.Vst.Samples.Host;
 
@@ -221,7 +222,7 @@ internal sealed class HostCommandStub : IVstHostCommandStub
         public int GetVersion()
         {
             _cmdStub.RaisePluginCalled("GetVersion()");
-            return 1000;
+            return 2400;
         }
 
         /// <inheritdoc />

@@ -29,19 +29,19 @@
             <RowDefinition Height="40*"/>
         </Grid.RowDefinitions>
 
-        <Label Grid.Row="1" Margin="5,5,5,5" Foreground="Red" Content="All of the Routing Boxes share the same 16 VST slots. Multi-channel is not supported."/>
+        <Label Grid.Row="1" Margin="5,5,5,5" Foreground="Red" Content="All of the Routing Boxes share the same 16 VST slots."/>
             
         <StackPanel Grid.Row="0" Margin="10,10,10,10" Grid.ColumnSpan="2">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="25*"/>
                     <ColumnDefinition Width="20*"/>
-                    <ColumnDefinition Width="3*"/>
+                    <ColumnDefinition Width="2*"/>
                     <ColumnDefinition Width="8*"/>
                     <ColumnDefinition Width="5*"/>
+                    <ColumnDefinition Width="11*"/>
+                    <ColumnDefinition Width="2*"/>
                     <ColumnDefinition Width="25*"/>
-                    <ColumnDefinition Width="5*"/>
-                    <ColumnDefinition Width="5*"/>
                 </Grid.ColumnDefinitions>
 
                 <Label Content="Audio Driver + Sample Rate"  Grid.Column="0"/>
@@ -51,7 +51,7 @@
                     <ComboBoxItem Tag="44100" Content="44100"/>
                 </ComboBox>
 
-                <Button x:Name="tbOpenVST" Grid.Column="5" Content="Open VST Instrument" Click="tbOpenVST_Click"/>
+                <Button x:Name="tbOpenVST" Grid.Column="7" Content="Open VST Instrument" Click="tbOpenVST_Click"/>
             </Grid>
            
         </StackPanel>

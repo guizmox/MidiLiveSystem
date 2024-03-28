@@ -84,7 +84,7 @@ namespace MidiLiveSystem
             }
 
             Database = new SQLiteDatabaseManager();
-            
+
             MidiRouting.InputStaticMidiMessage += MidiRouting_InputMidiMessage;
 
             //chargement des template instruments
@@ -419,6 +419,8 @@ namespace MidiLiveSystem
 
         private async void RoutingBox_UIEvent(Guid gBox, string sControl, object sValue)
         {
+            UIRefreshRate.Enabled = false;
+
             var box = Boxes.FirstOrDefault(b => b.BoxGuid == gBox);
             if (box != null)
             {
@@ -447,7 +449,7 @@ namespace MidiLiveSystem
                         if (confirmation == MessageBoxResult.Yes)
                         {
                             bool bDontRemovePlugin = CheckVSTUsage(box.BoxGuid, box.GetVST);
-                            
+
                             await box.CloseVSTHost(bDontRemovePlugin);
                             await Routing.DeleteRouting(box.RoutingGuid);
                             Boxes.Remove(box);
@@ -483,8 +485,8 @@ namespace MidiLiveSystem
                     case "OPEN_CC_MIX":
                         if (box.RoutingGuid != Guid.Empty)
                         {
-                            if (ControlChangeMixer != null) 
-                            { 
+                            if (ControlChangeMixer != null)
+                            {
                                 ControlChangeMixer.Close();
                                 ControlChangeMixer.OnUIEvent -= RoutingBox_UIEvent;
                                 ControlChangeMixer.Closed -= ControlChangeMixer_Closed;
@@ -541,22 +543,22 @@ namespace MidiLiveSystem
                         }
                         break;
 
-                    case "SWITCH_VST_HOST":
-                        var preset = await Routing.SwitchVSTDevice(box.RoutingGuid, (int)sValue);
-                        if (preset == null)
+                    case "INITIALIZE_AUDIO":
+                        await Routing.InitializeAudio((VSTPlugin)sValue);
+                        break;
+
+                    case "CHECK_VST_HOST":
+                        VSTPlugin vst = await Routing.CheckVSTSlot((string)sValue);
+                        await box.SetVST(vst, Convert.ToInt32(box.cbVSTSlot.SelectedValue.ToString()));
+                        break;
+
+                    case "REMOVE_VST":
+                        bool bRemoved = await Routing.RemoveVST((string)sValue);
+                        foreach (var b in Boxes)
                         {
-                            MessageBox.Show("No plugin found at index : " + sValue.ToString());
+                            await b.CheckAndRemoveVST((string)sValue);
                         }
-                        await box.SwitchVSTPlugin(preset);
-                        break;
-
-                    case "PLUG_VST_TO_DEVICE":
-                        await Routing.AddVSTDeviceToAsio(box.RoutingGuid, (VSTPlugin)sValue);
-                        break;
-
-                    case "REMOVE_VST_FROM_DEVICE":
-                        await Routing.RemoveVSTDeviceFromAsio(box.RoutingGuid, (int)sValue);
-                        await box.ClearVST((int)sValue);
+                        await box.SetVST(null, Convert.ToInt32(box.cbVSTSlot.SelectedValue.ToString()));
                         break;
 
                     case "PLAY_NOTE":
@@ -612,6 +614,8 @@ namespace MidiLiveSystem
                         break;
                 }
             }
+
+            UIRefreshRate.Enabled = true;
         }
 
         private bool CheckVSTUsage(Guid intialboxguid, VSTPlugin vst)
@@ -781,6 +785,8 @@ namespace MidiLiveSystem
 
         private async void btnOpenProject_Click(object sender, RoutedEventArgs e)
         {
+            UIRefreshRate.Enabled = false;
+
             try
             {
                 if (RecallWindow.IsVisible) //pour forcer le rafraichissement suite au rechargement de la config
@@ -804,12 +810,13 @@ namespace MidiLiveSystem
                     var project = prj.Project;
                     if (project != null)
                     {
-                        UIRefreshRate.Enabled = false;
 
                         Routing.DeleteAllRouting();
 
                         Project = project.Item2;
                         NewMessage?.Invoke("Project Loaded");
+
+                        await SearchBoxesForAudioInitialization(project.Item3); //initialisation de l'audio si besoin (usage de VST)
 
                         Boxes = project.Item3.GetBoxes(Project, Routing);
                         NewMessage?.Invoke("Routing Boxes Loaded");
@@ -838,11 +845,6 @@ namespace MidiLiveSystem
                                 CurrentHorizontalGrid = Project.HorizontalGrid;
                             }
 
-                            foreach (var box in Boxes.Where(b => b.HasVSTAttached))
-                            {
-                                await box.OpenVSTHost(true);
-                            }
-
                             await AddAllRoutingBoxes();
 
                             NewMessage?.Invoke("Routing Boxes Added");
@@ -863,8 +865,6 @@ namespace MidiLiveSystem
                             }
                         }
 
-                        UIRefreshRate.Enabled = true;
-
                         Routing.ReactivateTimers();
                     }
                     else
@@ -880,6 +880,45 @@ namespace MidiLiveSystem
             catch (Exception ex)
             {
                 MessageBox.Show("Unable to Load Project : " + ex.Message);
+            }
+
+            UIRefreshRate.Enabled = true;
+        }
+
+        private async Task SearchBoxesForAudioInitialization(RoutingBoxes rtb)
+        {
+            for (int iB = 0; iB < rtb.AllPresets.Length; iB++)
+            {
+                if (rtb.AllPresets[iB].DeviceOut.StartsWith(Tools.VST_HOST)) //initialization de l'audio si ce n'est pas fait
+                {
+                    VSTHostInfo info = rtb.AllPresets[iB].VSTData; //c'est juste pour récupérer n'importe quelle info de plugin pour obtenir le driver audio et le sample rate
+                    if (info != null)
+                    {
+                        bool b = await Routing.InitializeAudio(new VSTPlugin { VSTHostInfo = info });
+
+                        Stopwatch stopwatch = new Stopwatch();
+                        stopwatch.Start();
+
+                        while (!UtilityAudio.AudioInitialized && stopwatch.ElapsedMilliseconds < 10000)
+                        {
+                            await Task.Delay(100);
+                        }
+
+                        stopwatch.Stop();
+
+                        if (stopwatch.ElapsedMilliseconds >= 10000)
+                        {
+                            UtilityAudio.StopAudio();
+                            UtilityAudio.Dispose();
+                            MessageBox.Show("Unable to initialize Audio !");
+                            return;
+                        }
+                        else
+                        {
+                            return;
+                        }
+                    }
+                }
             }
         }
 
@@ -1169,6 +1208,7 @@ namespace MidiLiveSystem
         private async Task UpdateDevicesUsage()
         {
             List<string> UsedDevices = new List<string>();
+
             for (int iB = 0; iB < Boxes.Count; iB++) //mise à jour des pérophériques MIDI utilisés
             {
                 var devices = await Boxes[iB].GetAllDevices();
@@ -1215,8 +1255,8 @@ namespace MidiLiveSystem
             vst = box.GetVST;
 
             if (box.RoutingGuid == Guid.Empty || bFromSave)
-            {          
-                if (bFromSave) 
+            {
+                if (bFromSave)
                 {
                     var autogeneratedguid = await Routing.AddRouting(sDevIn, sDevOut, vst, iChIn, iChOut, options, preset, sDevIn.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn - 1 ? SeqData.Sequencer[iChIn - 1] : null);
                     Routing.SetRoutingGuid(autogeneratedguid, box.RoutingGuid);
@@ -1224,7 +1264,7 @@ namespace MidiLiveSystem
                 else
                 {
                     var routingguid = await Routing.AddRouting(sDevIn, sDevOut, vst, iChIn, iChOut, options, preset, sDevIn.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn - 1 ? SeqData.Sequencer[iChIn - 1] : null);
-                    box.SetRoutingGuid(routingguid); 
+                    box.SetRoutingGuid(routingguid);
                 }
             }
             else

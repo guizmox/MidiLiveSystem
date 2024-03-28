@@ -1,8 +1,11 @@
 ﻿using Jacobi.Vst.Core;
 using Jacobi.Vst.Host.Interop;
+using Jacobi.Vst.Plugin.Framework;
 using Jacobi.Vst.Samples.Host;
 using MidiTools;
+using NAudio.Midi;
 using NAudio.Wave;
+using RtMidi.Core.Enums;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -10,7 +13,10 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 
 // Copied from the microDRUM project
 // https://github.com/microDRUM
@@ -165,21 +171,14 @@ namespace VSTHost
 
             try
             {
-                //pluginContext.PluginCommandStub.MainsChanged(true);
+                //pluginContext.PluginCommandStub.Commands.MainsChanged(true);
                 pluginContext.PluginCommandStub.Commands.StartProcess();
+                
+                ProcessVSTMidiEvents(VSTSynth.MidiStack);
+
                 pluginContext.PluginCommandStub.Commands.ProcessReplacing(inputBuffers, outputBuffers);
-
-                lock (VSTSynth.MidiStack)
-                {
-                    if (VSTSynth.MidiStack.Count > 0)
-                    {
-                        pluginContext.PluginCommandStub.Commands.ProcessEvents(VSTSynth.MidiStack.ToArray());
-                        VSTSynth.MidiStack.Clear();
-                    }
-                }
-
                 pluginContext.PluginCommandStub.Commands.StopProcess();
-                //pluginContext.PluginCommandStub.MainsChanged(false);
+                //pluginContext.PluginCommandStub.Commands.MainsChanged(false);
             }
             catch
             {
@@ -202,6 +201,20 @@ namespace VSTHost
             }
             RaiseProcessCalled(maxL, maxR);
             return output;
+        }
+
+        private bool ProcessVSTMidiEvents(List<VstEvent> midiStack)
+        {
+            lock (VSTSynth.MidiStack)
+            {
+                if (VSTSynth.MidiStack.Count > 0)
+                {
+                    pluginContext.PluginCommandStub.Commands.ProcessEvents(VSTSynth.MidiStack.ToArray());
+                    VSTSynth.MidiStack.Clear();
+                    return true;
+                }
+            }
+            return false;
         }
 
         internal int Read(float[] buffer, int offset, int sampleCount)
@@ -256,101 +269,93 @@ namespace VSTHost
     {
         internal VstPluginContext PluginContext = null;
         internal List<VstEvent> MidiStack = new List<VstEvent>();
-        internal event EventHandler<VSTStreamEventArgs> StreamCall = null;
+        //internal event EventHandler<VSTStreamEventArgs> StreamCall = null;
 
         internal VSTMidi()
         {
-
         }
 
-        public void MIDI_NoteOn(byte Note, byte Velocity)
+        public void MIDI_NoteOn(int Note, int Velocity, int iChannel)
         {
-            byte Cmd = 0x90;
-            MIDI(Cmd, Note, Velocity);
+            MemoryStream message = new MemoryStream();
+            BinaryWriter bw = new BinaryWriter(message);
+            bw.Write(MidiMessage.StartNote(Note, Velocity, iChannel).RawData);
+            VstMidiEvent vstMEvent = new VstMidiEvent(0, 0, 0, message.ToArray(), 0, 0, true);
+            lock (MidiStack) { MidiStack.Add(vstMEvent); }
         }
 
-        public void MIDI_NoteOff(byte Note, byte Velocity)
+        public void MIDI_NoteOff(int Note, int Velocity, int iChannel)
         {
-            //byte Cmd = 0x80;
-            //MIDI(Cmd, Note, Velocity);
-            byte Cmd = 0x90;
-            MIDI(Cmd, Note, 0);
+            MemoryStream message = new MemoryStream();
+            BinaryWriter bw = new BinaryWriter(message);
+            bw.Write(MidiMessage.StopNote(Note, Velocity, iChannel).RawData);
+            VstMidiEvent vstMEvent = new VstMidiEvent(0, 0, 0, message.ToArray(), 0, 0, true);
+            lock (MidiStack) { MidiStack.Add(vstMEvent); }
         }
 
-        public void MIDI_ProgramChange(byte programNumber)
+        public void MIDI_ProgramChange(int programNumber, int iChannel)
         {
-            byte Cmd = 0xC0; // Code de commande MIDI pour le changement de programme
-            MIDI(Cmd, programNumber, 0); // La vélocité est généralement 0 pour un changement de programme
+            MemoryStream message = new MemoryStream();
+            BinaryWriter bw = new BinaryWriter(message);
+            bw.Write(MidiMessage.ChangePatch(programNumber, iChannel).RawData);
+            VstMidiEvent vstMEvent = new VstMidiEvent(0, 0, 0, message.ToArray(), 0, 0, true);
+            lock (MidiStack) { MidiStack.Add(vstMEvent); }
+
+            //byte Cmd = 0xC0; // Code de commande MIDI pour le changement de programme
+            //MIDI(Cmd, programNumber, 0); // La vélocité est généralement 0 pour un changement de programme
         }
 
-        public void MIDI_PitchBend(int pitchValue)
+        public void MIDI_PitchBend(int pitchValue, int iChannel)
         {
-            // Assurez-vous que la valeur du pitch bend est dans la plage valide (-8192 à 8191 inclus)
-            if (pitchValue < -8192 || pitchValue > 8191)
-            {
-                throw new ArgumentOutOfRangeException("pitchValue", "La valeur du pitch bend doit être comprise entre -8192 et 8191.");
-            }
-
-            // Calculer les valeurs MSB et LSB à partir de la valeur du pitch bend
-            byte lsb = (byte)(pitchValue & 0x7F);
-            byte msb = (byte)((pitchValue >> 7) & 0x7F);
-
-            byte cmd = 0xE0; // Code de commande MIDI pour le pitch bend
-            MIDI(cmd, lsb, msb);
+            MemoryStream message = new MemoryStream();
+            BinaryWriter bw = new BinaryWriter(message);
+            ushort pitchBendValue = (ushort)pitchValue;
+            bw.Write((byte)(0xE0 | iChannel - 1)); // Status byte pour Pitch Bend (0xE0 est le status byte pour le message Pitch Bend)
+            bw.Write((byte)(pitchBendValue & 0x7F)); // LSB (Least Significant Byte) du pitch bend value
+            bw.Write((byte)((pitchBendValue >> 7) & 0x7F)); // MSB (Most Significant Byte) du pitch bend value
+            VstMidiEvent vstMEvent = new VstMidiEvent(0, 0, 0, message.ToArray(), 0, 0, true);
+            lock (MidiStack) { MidiStack.Add(vstMEvent); }
         }
 
-        public void MIDI_Aftertouch(byte pressureValue)
+        public void MIDI_Aftertouch(byte pressureValue, int iChannel)
         {
-            // Assurez-vous que la valeur de la pression est dans la plage valide (0 à 127 inclus)
-            if (pressureValue < 0 || pressureValue > 127)
-            {
-                throw new ArgumentOutOfRangeException("pressureValue", "La valeur de la pression doit être comprise entre 0 et 127.");
-            }
-
-            byte cmd = 0xD0; // Code de commande MIDI pour l'aftertouch (pression du canal)
-            MIDI(cmd, pressureValue, 0); // Le deuxième paramètre est la valeur de pression, le troisième est souvent ignoré dans le cas de l'aftertouch
+            MemoryStream message = new MemoryStream();
+            BinaryWriter bw = new BinaryWriter(message);
+            byte aftertouchValue = pressureValue;
+            bw.Write((byte)(0xA0 | iChannel - 1)); 
+            bw.Write((byte)(aftertouchValue & 0x7F)); 
+            VstMidiEvent vstMEvent = new VstMidiEvent(0, 0, 0, message.ToArray(), 0, 0, true);
+            lock (MidiStack) { MidiStack.Add(vstMEvent); }
         }
 
-        public void MIDI_PolyphonicAftertouch(byte note, byte pressureValue)
+        public void MIDI_PolyphonicAftertouch(byte note, byte pressureValue, int iChannel)
         {
-            // Assurez-vous que la note et la valeur de la pression sont dans les plages valides (0 à 127 inclus)
-            if (note < 0 || note > 127 || pressureValue < 0 || pressureValue > 127)
-            {
-                throw new ArgumentOutOfRangeException("note", "La note doit être comprise entre 0 et 127, et la valeur de la pression doit être comprise entre 0 et 127.");
-            }
-
-            byte cmd = 0xA0; // Code de commande MIDI pour le polyphonic aftertouch
-            MIDI(cmd, note, pressureValue);
+            MemoryStream message = new MemoryStream();
+            BinaryWriter bw = new BinaryWriter(message);
+            byte noteNumber = note;
+            byte aftertouchValue = pressureValue;
+            bw.Write((byte)(0xA0 | iChannel - 1)); // Status byte pour Polyphonic Aftertouch (0xA0 est le status byte pour le message Polyphonic Aftertouch)
+            bw.Write(noteNumber); // Numéro de la note
+            bw.Write(aftertouchValue); // Valeur de l'Aftertouch (Aftertouch Pressure)
+            VstMidiEvent vstMEvent = new VstMidiEvent(0, 0, 0, message.ToArray(), 0, 0, true);
+            lock (MidiStack) { MidiStack.Add(vstMEvent); }
         }
 
-        public void MIDI_CC(byte Number, byte Value)
+        public void MIDI_CC(int Number, int Value, int iChannel)
         {
-            byte Cmd = 0xB0;
-            MIDI(Cmd, Number, Value);
+            MemoryStream message = new MemoryStream();
+            BinaryWriter bw = new BinaryWriter(message);
+            bw.Write(MidiMessage.ChangeControl(Number, Value, iChannel).RawData);
+            VstMidiEvent vstMEvent = new VstMidiEvent(0, 0, 0, message.ToArray(), 0, 0, true);
+            lock (MidiStack) { MidiStack.Add(vstMEvent); }
+            //byte Cmd = 0xB0;
+            //MIDI(Cmd, Number, Value);
         }
 
-        private void MIDI(byte Cmd, byte Val1, byte Val2)
-        {
-            var midiData = new byte[4];
-            midiData[0] = Cmd;
-            midiData[1] = Val1;
-            midiData[2] = Val2;
-            midiData[3] = 0;    // Reserved, unused
-
-            var vse = new VstMidiEvent(/*DeltaFrames*/ 0,
-                                       /*NoteLength*/ 0,
-                                       /*NoteOffset*/  0,
-                                       midiData,
-                                       /*Detune*/        0,
-                                       /*NoteOffVelocity*/ 0, true);
-
-            lock (MidiStack) { MidiStack.Add(vse); }
-        }
-
-        internal void Stream_ProcessCalled(object sender, VSTStreamEventArgs e)
-        {
-            if (StreamCall != null) StreamCall(sender, e);
-        }
+        //internal void Stream_ProcessCalled(object sender, VSTStreamEventArgs e)
+        //{
+        //    if (StreamCall != null) StreamCall(sender, e);
+        //}
     }
 
     public class VSTPlugin
@@ -394,21 +399,28 @@ namespace VSTHost
                 VSTSynth = new VSTMidi();
 
                 var hcs = new HostCommandStub();
+                hcs.PluginCalled += HostCommand_PluginCalled;
+                //hcs.PluginCalled += new EventHandler<PluginCalledEventArgs>(HostCmdStub_PluginCalled);
+                //var timeInfo = hcs.Commands.GetTimeInfo(VstTimeInfoFlags.ClockValid);
+                //timeInfo.
 
                 try
                 {
                     VSTSynth.PluginContext = VstPluginContext.Create(VSTHostInfo.VSTPath, hcs);
                     VSTSynth.PluginContext.PluginCommandStub.Commands.Open();
+                   
                     //VSTHostInfo.ParameterCount = VSTSynth.PluginContext.PluginInfo.ParameterCount;
-                    
+
+
                     VSTHostInfo.PluginID = VSTSynth.PluginContext.PluginInfo.PluginID;
                     //VSTHostInfo.AudioInputs = VSTSynth.PluginContext.PluginInfo.AudioInputCount;
                     VSTHostInfo.AudioOutputs = VSTSynth.PluginContext.PluginInfo.AudioOutputCount;
                     VSTHostInfo.MidiInputs = VSTSynth.PluginContext.PluginCommandStub.Commands.GetNumberOfMidiInputChannels();
+                    if (VSTHostInfo.MidiInputs == 0) { VSTHostInfo.MidiInputs = 1; } //mono channel
                     VSTHostInfo.Slot = Slot;
 
                     vstStream = new VSTStream(VSTSynth);
-                    vstStream.ProcessCalled += VSTSynth.Stream_ProcessCalled;
+                    //vstStream.ProcessCalled += VSTSynth.Stream_ProcessCalled;
                     vstStream.pluginContext = VSTSynth.PluginContext;
                     vstStream.SetWaveFormat(VSTHostInfo.SampleRate, 2);
 
@@ -466,6 +478,38 @@ namespace VSTHost
 
             return sInfo;
         }
+
+        private async void HostCommand_PluginCalled(object sender, PluginCalledEventArgs e)
+        {
+            while (VSTSynth.PluginContext == null)
+            {
+                await Task.Delay(100);
+            }
+            //SetParameterAutomated(90, 0,5)
+            if (e.Message.StartsWith("SetParameterAutomated"))
+            {
+                Match match = Regex.Match(e.Message, @"(SetParameterAutomated\()(\d+),(.[^\)]+)(\))");
+                if (match.Success)
+                {
+                    int index = int.Parse(match.Groups[2].Value.Trim());
+                    float value = float.Parse(match.Groups[3].Value.Trim());
+                    VSTSynth.PluginContext.PluginCommandStub.Commands.SetParameter(index, value);
+                }
+            }
+            else if (e.Message.StartsWith("GetVersion"))
+            {
+                //VSTSynth.PluginContext.Set("GetVersion", (int)2400);
+                //int iV = VSTSynth.PluginContext.PluginCommandStub.Commands.begin();
+            }
+        }
+
+        //private void HostCmdStub_PluginCalled(object sender, PluginCalledEventArgs e)
+        //{
+        //    if (e.Message.StartsWith("GetTimeInfo"))
+        //    {
+
+        //    }
+        //}
 
         public static string GetVSTDirectory()
         {
