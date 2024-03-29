@@ -462,7 +462,7 @@ namespace VSTHost
                         }
                     }
 
-                    VSTEvent?.Invoke("Loading VST parameters (" + VSTHostInfo.Parameters + ")");
+                    VSTEvent?.Invoke("Loading VST parameters (" + VSTHostInfo.Parameters.Count + ")");
 
                     if (VSTHostInfo.Parameters.Count > 0)
                     {
@@ -479,6 +479,7 @@ namespace VSTHost
                             sInfo = "VST Parameters can't be set : " + ex.Message;
                         }
                     }
+                    VSTEvent?.Invoke("VST Loaded");
                 }
                 catch (Exception ex)
                 {
@@ -585,9 +586,10 @@ namespace VSTHost
         {
             if (VSTSynth != null && VSTSynth.PluginContext != null)
             {
+                CloseEditor();
+
                 VSTEvent?.Invoke("Opening VST editor");
 
-                CloseEditor();
                 return VSTSynth.PluginContext.PluginCommandStub.Commands.EditorOpen(EditorHandle);
 
             }

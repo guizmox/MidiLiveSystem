@@ -222,6 +222,7 @@
                         <TextBlock Name="tbProgram" Grid.Column="0" Grid.Row="3" Text="PROGRAM"/>
 
                         <ComboBox Name="cbVSTSlot" Foreground="LightYellow" Background="DimGray" Grid.Column="0" Grid.Row="3" SelectedIndex="0" SelectedValuePath="Tag" SelectionChanged="cbVSTSlot_SelectionChanged" Visibility="Hidden">
+                            <ComboBoxItem Background="DimGray" Foreground="LightYellow" Tag="0" Content="CHOOSE VST SLOT"/>
                             <ComboBoxItem Background="DimGray" Foreground="LightYellow" Tag="1" Content="VST SLOT 1"/>
                             <ComboBoxItem Background="DimGray" Foreground="LightYellow" Tag="2" Content="VST SLOT 2"/>
                             <ComboBoxItem Background="DimGray" Foreground="LightYellow" Tag="3" Content="VST SLOT 3"/>

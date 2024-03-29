@@ -221,23 +221,26 @@ namespace VSTHost
             }
         }
 
-        private void OpenPlugin()
+        private async void OpenPlugin()
         {
             Mouse.OverrideCursor = Cursors.Wait;
 
-            var result = Plugin.OpenEditor(new WindowInteropHelper(this).EnsureHandle());
-            if (result)
+            await Dispatcher.InvokeAsync(() =>
             {
-                System.Drawing.Rectangle rect = new System.Drawing.Rectangle();
-                Plugin.GetWindowSize(out rect);
-                Width = rect.Width + 20;
-                Height = rect.Height + 50;
-                ResizeMode = ResizeMode.NoResize;
-                this.Title = Plugin.VSTHostInfo.VSTName;
-            }
-            else { MessageBox.Show("Unable to open plugin editor. Not initialized."); }
+                var result = Plugin.OpenEditor(new WindowInteropHelper(this).EnsureHandle());
+                if (result)
+                {
+                    System.Drawing.Rectangle rect = new System.Drawing.Rectangle();
+                    Plugin.GetWindowSize(out rect);
+                    Width = rect.Width + 20;
+                    Height = rect.Height + 50;
+                    ResizeMode = ResizeMode.NoResize;
+                    this.Title = Plugin.VSTHostInfo.VSTName;
+                }
+                else { MessageBox.Show("Unable to open plugin editor. Not initialized."); }
 
-            Mouse.OverrideCursor = null;
+                Mouse.OverrideCursor = null;
+            });
         }
 
         private void VSTParametersCheck_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
