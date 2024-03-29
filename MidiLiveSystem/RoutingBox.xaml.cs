@@ -88,7 +88,7 @@ namespace MidiLiveSystem
             LoadMemory(presets);
 
             GridPosition = gridPosition;
-            BoxName = "Routing Box " + (GridPosition + 1).ToString();
+            BoxName = presets != null ? presets[0].BoxName : "Routing Box " + (GridPosition + 1).ToString();
             Project = conf;
 
             InitializeComponent();
@@ -121,20 +121,14 @@ namespace MidiLiveSystem
         {
             if (iAction == 0) //fermer la fenêtre
             {
-                TempMemory[iPreset].VSTData = TempVST[CurrentPreset].VSTHostInfo; //pas certain
+                //TempMemory[iPreset].VSTData = TempVST[CurrentPreset].VSTHostInfo; //pas certain
                 VSTWindow.OnVSTHostEvent -= VSTWindow_OnVSTHostEvent;
                 VSTWindow = null;
             }
             else if (iAction == 1) //chargement initial du VST
             {
-                TempMemory[iPreset].VSTData = TempVST[CurrentPreset].VSTHostInfo; //pas certain
+                //TempMemory[iPreset].VSTData = TempVST[CurrentPreset].VSTHostInfo; //pas certain
                 OnUIEvent?.Invoke(BoxGuid, "INITIALIZE_AUDIO", TempVST[CurrentPreset]); //pour initialiser l'audio
-                await VSTWindow.LoadPlugin();
-            }
-            else if (iAction == 2) //chargement suivant
-            {
-                TempMemory[iPreset].VSTData = TempVST[CurrentPreset].VSTHostInfo;
-                //OnUIEvent?.Invoke(BoxGuid, "PLUG_VST_TO_DEVICE", TempVST); 
                 await VSTWindow.LoadPlugin();
             }
         }
@@ -419,7 +413,7 @@ namespace MidiLiveSystem
         {
             var item = e.AddedItems.Count > 0 ? (ComboBoxItem)e.AddedItems[0] : null;
 
-            if (item != null)
+            if (item != null && item.IsFocused)
             {
                 if (e.RemovedItems.Count > 0) //pour éviter de péter le VSTHost lorsqu'on charge un projet (removeditems est dans ce cas à vide)
                 {
@@ -1462,10 +1456,7 @@ namespace MidiLiveSystem
                 {
                     VSTWindow.Show();
                 }
-
-                await VSTWindow.LoadPlugin();
-
-                if (bWasClosed) //trick pour forcer le passage à NULL de VSTWindow (par ricochet de l'évènement VSTWindow_OnVSTHostEvent)
+                else
                 {
                     VSTWindow.Close();
                 }

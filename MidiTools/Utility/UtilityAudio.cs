@@ -383,7 +383,7 @@ namespace VSTHost
         {
             if (vstStream != null && vstStream.outputBuffers != null)
             {
-                return string.Concat(VSTHostInfo.VSTName + " : OUT Buffers : ", vstStream.outputBuffers.Length, " - Stream Length : ", vstStream.Length);
+                return string.Concat(VSTHostInfo.VSTName + " : Audio Buffers : ", vstStream.outputBuffers.Length, " - Channels : ", (UtilityAudio.AudioMixer.InputCount * 2).ToString());
             }
             else
             {
@@ -523,6 +523,7 @@ namespace VSTHost
                 if (VSTSynth != null && VSTSynth.PluginContext != null)
                 {
                     VSTSynth.PluginContext.PluginCommandStub.Commands.StopProcess();
+                    VSTSynth.PluginContext.PluginCommandStub.Commands.MainsChanged(false);
                     VSTSynth.PluginContext.PluginCommandStub.Commands.Close();
                     VSTSynth = null;
                 }

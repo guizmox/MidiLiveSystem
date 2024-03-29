@@ -544,7 +544,8 @@ namespace MidiLiveSystem
                         break;
 
                     case "INITIALIZE_AUDIO":
-                        await Routing.InitializeAudio((VSTPlugin)sValue);
+                        bool bOK = await Routing.InitializeAudio((VSTPlugin)sValue);
+                        if (bOK) { await ProcessBoxData(box, false); }
                         break;
 
                     case "CHECK_VST_HOST":
@@ -600,7 +601,8 @@ namespace MidiLiveSystem
                         string sDevice = ((string)sValue).Split("#|#")[0];
                         int iChannelWanted = Convert.ToInt32(((string)sValue).Split("#|#")[1]);
 
-                        int iAvailable = Routing.GetFreeChannelForDevice(sDevice, iChannelWanted, false);
+                        //int iAvailable = Routing.GetFreeChannelForDevice(sDevice, iChannelWanted, false);
+                        int iAvailable = GetFreeChannelForDevice(box.BoxGuid, sDevice, iChannelWanted);
                         if (iAvailable > 0)
                         {
                             box.cbChannelMidiOut.SelectedValue = iAvailable;
@@ -616,6 +618,38 @@ namespace MidiLiveSystem
             }
 
             UIRefreshRate.Enabled = true;
+        }
+
+        private int GetFreeChannelForDevice(Guid boxguid, string sDevice, int iChannelWanted)
+        {
+            if (iChannelWanted == 0) { iChannelWanted = 1; }
+
+            bool[] channels = new bool[16];
+
+            foreach (var Box in Boxes.Where(b => b.BoxGuid != boxguid))
+            {
+                foreach (var preset in Box.GetRoutingBoxMemory())
+                {
+                    if (preset.DeviceOut.Equals(sDevice) && preset.ChannelOut > 0)
+                    {
+                        channels[preset.ChannelOut - 1] = true;
+                    }
+                }
+            }
+
+            if (!channels[iChannelWanted - 1])
+            {
+                return iChannelWanted;
+            }
+            else
+            {
+                for (int iC = 0; iC < channels.Length; iC++)
+                {
+                    if (!channels[iC])
+                    { return iC + 1; }
+                }
+            }
+            return -1;
         }
 
         private bool CheckVSTUsage(Guid intialboxguid, VSTPlugin vst)
@@ -667,7 +701,7 @@ namespace MidiLiveSystem
             {
                 tbNoteName.Text = "";
 
-                if (Routing.Events <= 16) //pour éviter de saturer les process avec des appels UI inutiles
+                if (Routing.Events <= 32) //pour éviter de saturer les process avec des appels UI inutiles
                 {
                     Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, "]");
                 }
@@ -677,7 +711,7 @@ namespace MidiLiveSystem
                 }
             });
 
-            if (Routing.Events <= 16) //pour éviter de saturer les process avec des appels UI inutiles
+            if (Routing.Events <= 32) //pour éviter de saturer les process avec des appels UI inutiles
             {
                 await SaveTemplate();
             }
@@ -895,28 +929,11 @@ namespace MidiLiveSystem
                     if (info != null)
                     {
                         bool b = await Routing.InitializeAudio(new VSTPlugin { VSTHostInfo = info });
-
-                        Stopwatch stopwatch = new Stopwatch();
-                        stopwatch.Start();
-
-                        while (!UtilityAudio.AudioInitialized && stopwatch.ElapsedMilliseconds < 10000)
+                        if (!b)
                         {
-                            await Task.Delay(100);
+                            MessageBox.Show("Unable to initialize Audio Device !");
                         }
-
-                        stopwatch.Stop();
-
-                        if (stopwatch.ElapsedMilliseconds >= 10000)
-                        {
-                            UtilityAudio.StopAudio();
-                            UtilityAudio.Dispose();
-                            MessageBox.Show("Unable to initialize Audio !");
-                            return;
-                        }
-                        else
-                        {
-                            await Routing.AddVSTSlotOnProjectLoad(info, rtb.AllPresets[iB].DeviceOut);
-                        }
+                        else { await Routing.AddVSTSlotOnProjectLoad(info, rtb.AllPresets[iB].DeviceOut); }
                     }
                 }
             }

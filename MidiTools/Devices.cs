@@ -30,11 +30,23 @@ namespace MidiTools
         internal MidiEvent(TypeEvent evType, List<int> values, Channel ch, string device)
         {
             //Event = ev;
-            Values = values;
+            Values = CheckNote(evType, values);
             EventDate = DateTime.Now;
             Type = evType;
             Channel = ch;
             Device = device;
+        }
+
+        private List<int> CheckNote(TypeEvent evType, List<int> values)
+        {
+            if (evType == TypeEvent.NOTE_ON || evType == TypeEvent.NOTE_OFF)
+            {
+                if (values[0] > 127)
+                { values[0] = 127; }
+                else if (values[0] < 0) 
+                { values[0] = 0; }
+            }
+            return values;
         }
 
         internal MidiEvent(TypeEvent evType, string sSysex, string device)
@@ -156,7 +168,8 @@ namespace MidiTools
             Plugin = vst;
             IsOutVST = true;
             Name = sPluginSlot;
-            OpenDevice();
+            var b = OpenDevice();
+            if (b) { vst.LoadVST(); }
         }
 
         private void MIDI_InputEvents_OnMidiEvent(MidiEvent ev)
@@ -389,6 +402,15 @@ namespace MidiTools
             else { return false; }
         }
 
+        internal int GetLiveVelocityValue(int channelOut, int iNote)
+        {
+            if (MIDI_OutputEvents != null)
+            {
+                return MIDI_OutputEvents.VELOCITYmemory[channelOut - 1, iNote];
+            }
+            else { return 0; }
+        }
+
         internal int GetLiveLowestNote()
         {
             int iNote = -1;
@@ -419,6 +441,7 @@ namespace MidiTools
 
         internal int[,] CCmemory = new int[16, 128];
         internal bool[,] NOTEmemory = new bool[16, 128];
+        internal int[,] VELOCITYmemory = new int[16, 128];
 
         private VSTHostInfo InitialInfoToStartAudio;
         private VSTPlugin Plugin;
@@ -443,11 +466,13 @@ namespace MidiTools
                         break;
                     case TypeEvent.NOTE_ON:
                         NOTEmemory[iChannel, ev.Values[0]] = true;
+                        VELOCITYmemory[iChannel, ev.Values[0]] = ev.Values[1];
                         Plugin.VSTSynth.MIDI_NoteOn(ev.Values[0], ev.Values[1], iChannel);
                         AddLog(Plugin.VSTHostInfo.VSTName, false, ev.Channel, "Note On", ev.Values[0].ToString(), "Velocity", ev.Values[1].ToString());
                         break;
                     case TypeEvent.NOTE_OFF:
                         NOTEmemory[iChannel, ev.Values[0]] = false;
+                        VELOCITYmemory[iChannel, ev.Values[0]] = ev.Values[1];
                         Plugin.VSTSynth.MIDI_NoteOff(ev.Values[0], ev.Values[1], iChannel);
                         AddLog(Plugin.VSTHostInfo.VSTName, false, ev.Channel, "Note Off", ev.Values[0].ToString(), "Velocity", ev.Values[1].ToString());
                         break;
@@ -491,6 +516,7 @@ namespace MidiTools
 
         internal int[,] CCmemory = new int[16, 128];
         internal bool[,] NOTEmemory = new bool[16, 128];
+        internal int[,] VELOCITYmemory = new int[16, 128];
 
         private IMidiOutputDevice outputDevice;
 
@@ -563,6 +589,7 @@ namespace MidiTools
                     if (outputDevice != null && outputDevice.IsOpen)
                     {
                         NOTEmemory[Tools.GetChannelInt(ev.Channel) - 1, ev.Values[0]] = true;
+                        VELOCITYmemory[Tools.GetChannelInt(ev.Channel) - 1, ev.Values[0]] = ev.Values[1];
                         NoteOnMessage msg = new NoteOnMessage(ev.Channel, ev.GetKey(), ev.Values[1]);
                         outputDevice.Send(msg);
                     }
@@ -572,6 +599,7 @@ namespace MidiTools
                     if (outputDevice != null && outputDevice.IsOpen)
                     {
                         NOTEmemory[Tools.GetChannelInt(ev.Channel) - 1, ev.Values[0]] = false;
+                        VELOCITYmemory[Tools.GetChannelInt(ev.Channel) - 1, ev.Values[0]] = ev.Values[1];
                         NoteOffMessage msg = new NoteOffMessage(ev.Channel, ev.GetKey(), ev.Values[1]);
                         outputDevice.Send(msg);
                     }

@@ -361,6 +361,8 @@
                                     <ComboBoxItem Tag="MONO_INTERMEDIATE_LOW" Content="Intermediate low note"/>
                                     <ComboBoxItem Tag="MONO_IN_BETWEEN" Content="Fill empty octave with less used note"/>
                                     <ComboBoxItem Tag="HARMONY" Content="Third harmonizer"/>
+                                    <ComboBoxItem Tag="REPEAT_NOTE_OFF_FAST" Content="Repeat Note (Short)"/>
+                                    <ComboBoxItem Tag="REPEAT_NOTE_OFF_SLOW" Content="Repeat Note (Long)"/>
                                 </ComboBox>
                             </Grid>
                         </StackPanel>

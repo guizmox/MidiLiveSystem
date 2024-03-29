@@ -28,9 +28,7 @@ namespace MidiTools
 
         public SequenceStep[] Sequence;
 
-        private Timer SequencerClock;
         private int Loop;
-        private double TimerFrequency = 0;
 
         private int LastPositionInSequence = 0;
 
@@ -100,29 +98,18 @@ namespace MidiTools
             }
         }
 
-        public async Task StartSequence()
+        public async Task InitSequence()
         {
             await Tasks.AddTask(() =>
             {
                 if (SequenceHasData())
                 {
-                    if (SequencerClock != null)
-                    {
-                        SequencerClock.Stop();
-                        SequencerClock.Enabled = false;
-                        SequencerClock = null;
-                        Loop = 0;
-                    }
-
                     MidiRouting.InputStaticMidiMessage -= MidiRouting_StaticIncomingMidiMessage;
                     MidiRouting.InputStaticMidiMessage += MidiRouting_StaticIncomingMidiMessage;
 
-                    TimerFrequency = Tools.GetMidiClockIntervalDouble(Tempo, Quantization);
                     Loop = 0;
-                    SequencerClock = new System.Timers.Timer();
-                    SequencerClock.Elapsed += TriggerStep;
-                    SequencerClock.Interval = (int)Math.Round(TimerFrequency);
-                    SequencerClock.Start();
+                    SequencerData.SequencerClock.Elapsed += TriggerStep;
+
                 }
             });
         }
@@ -143,32 +130,11 @@ namespace MidiTools
             {
                 if (SequenceHasData())
                 {
-                    if (SequencerClock != null)
+                    if (SequencerData.SequencerClock != null)
                     {
                         MidiRouting.InputStaticMidiMessage -= MidiRouting_StaticIncomingMidiMessage;
 
-                        SequencerClock.Stop();
-                        SequencerClock.Enabled = false;
-                        SequencerClock = null;
                         Loop = 0;
-                    }
-                }
-            });
-        }
-
-        public async Task ChangeTempo(int iNewValue)
-        {
-            await Tasks.AddTask(() =>
-            {
-                if (Tempo != iNewValue)
-                {
-                    Tempo = iNewValue;
-                    if (SequencerClock != null)
-                    {
-                        TimerFrequency = Tools.GetMidiClockIntervalDouble(iNewValue, Quantization);
-                        SequencerClock.Stop();
-                        SequencerClock.Interval = (int)Math.Round(TimerFrequency);
-                        SequencerClock.Start();
                     }
                 }
             });
@@ -183,7 +149,7 @@ namespace MidiTools
 
             if (Sequence[Loop] != null) //c'est une tie
             {
-                double length = ((TimerFrequency * Sequence[Loop].StepCount) * (Sequence[Loop].GatePercent / 100.0));
+                double length = ((SequencerData.TimerFrequency * Sequence[Loop].StepCount) * (Sequence[Loop].GatePercent / 100.0));
                 OnInternalSequencerStep?.Invoke(Sequence[Loop], Sequence[LastPositionInSequence], (int)length, LastPositionInSequence, Loop);
                 LastPositionInSequence = Loop;
             }

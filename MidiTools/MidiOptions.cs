@@ -15,7 +15,9 @@ namespace MidiTools
         HARMONY = 7,
         MONO_IN_BETWEEN = 8,
         PIZZICATO_FAST = 9,
-        PIZZICATO_SLOW = 10
+        PIZZICATO_SLOW = 10,
+        REPEAT_NOTE_OFF_FAST = 11,
+        REPEAT_NOTE_OFF_SLOW = 12
     }
 
     public enum Harmony

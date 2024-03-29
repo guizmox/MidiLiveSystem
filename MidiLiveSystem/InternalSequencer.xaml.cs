@@ -11,6 +11,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
 
 namespace MidiLiveSystem
 {
@@ -135,7 +136,7 @@ namespace MidiLiveSystem
 
         private async void btnPlaySequences_Click(object sender, RoutedEventArgs e)
         {
-            await StartPlay(true);   
+            await StartPlay(true);
         }
 
         private async void btnStopSequences_Click(object sender, RoutedEventArgs e)
@@ -143,27 +144,27 @@ namespace MidiLiveSystem
             await StopPlay(true);
         }
 
-        private async void Window_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
-        {
-            if (Playing)
-            {
-                for (int i = 0; i < MaxSequences; i++)
-                {
-                    await SequencerBoxes[i].Listener(false);
-                }
-            }
-        }
+        //private async void Window_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        //{
+        //    if (Playing)
+        //    {
+        //        for (int i = 0; i < MaxSequences; i++)
+        //        {
+        //            await SequencerBoxes[i].Listener(false);
+        //        }
+        //    }
+        //}
 
-        private async void Window_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
-        {
-            if (Playing)
-            {
-                for (int i = 0; i < MaxSequences; i++)
-                {
-                    await SequencerBoxes[i].Listener(true);
-                }
-            }
-        }
+        //private async void Window_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        //{
+        //    if (Playing)
+        //    {
+        //        for (int i = 0; i < MaxSequences; i++)
+        //        {
+        //            await SequencerBoxes[i].Listener(true);
+        //        }
+        //    }
+        //}
 
         public async Task StartPlay(bool bFromActualWindow)
         {
@@ -200,22 +201,26 @@ namespace MidiLiveSystem
                     {
                         MidiRouting.InputStaticMidiMessage -= Routing_IncomingMidiMessage;
 
+                        SequencerData.InitTimer(SeqData.Sequencer[0].Tempo, SeqData.Sequencer[0].Quantization);
                         for (int i = 0; i < MaxSequences; i++)
                         {
-                            await SeqData.Sequencer[i].StartSequence();
+                            await SeqData.Sequencer[i].InitSequence();
                             await SequencerBoxes[i].Listener(true);
                         }
+                        SequencerData.SequencerClock.Start();
                     }
                 }
                 else
                 {
                     MidiRouting.InputStaticMidiMessage -= Routing_IncomingMidiMessage;
 
+                    SequencerData.InitTimer(SeqData.Sequencer[0].Tempo, SeqData.Sequencer[0].Quantization);
                     for (int i = 0; i < MaxSequences; i++)
                     {
                         await SequencerBoxes[i].Listener(false);
-                        await SeqData.Sequencer[i].StartSequence();
+                        await SeqData.Sequencer[i].InitSequence();
                     }
+                    SequencerData.SequencerClock.Start();
                 }
 
                 Playing = true;
@@ -231,6 +236,8 @@ namespace MidiLiveSystem
 
                 if (bFromActualWindow)
                 {
+                    SequencerData.StopTimer();
+
                     for (int i = 0; i < MaxSequences; i++)
                     {
                         await SeqData.Sequencer[i].StopSequence();
@@ -241,6 +248,7 @@ namespace MidiLiveSystem
                 }
                 else
                 {
+                    SequencerData.StopTimer();
 
                     for (int i = 0; i < MaxSequences; i++)
                     {

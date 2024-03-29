@@ -10,6 +10,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Threading;
 
 namespace VSTHost
 {
@@ -145,14 +146,7 @@ namespace VSTHost
                     Plugin.VSTHostInfo.AsioDevice = AsioDevice;
                     Plugin.VSTHostInfo.VSTPath = sVST;
                     Plugin.VSTHostInfo.VSTHostGuid = Guid.NewGuid();
-                    OnVSTHostEvent?.Invoke(BoxPreset, 1); //pour initialiser l'ASIO. Pas d'autre usage
-                }
-                else
-                {
-                    Plugin.VSTHostInfo.SampleRate = SampleRate;
-                    Plugin.VSTHostInfo.AsioDevice = AsioDevice;
-                    Plugin.VSTHostInfo.VSTPath = sVST;
-                    OnVSTHostEvent?.Invoke(BoxPreset, 2); //pour initialiser le plugin. Pas d'autre usage
+                    OnVSTHostEvent?.Invoke(BoxPreset, 1); //pour initialiser l'ASIO + le VST
                 }
             }
         }
@@ -162,71 +156,37 @@ namespace VSTHost
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            while (!UtilityAudio.AudioInitialized && stopwatch.ElapsedMilliseconds < 10000)
+            while (!UtilityAudio.AudioInitialized)
             {
+                if (stopwatch.ElapsedMilliseconds > 15000) { break; }
+
+                await Task.Delay(100);
+            }
+            while (!Plugin.Loaded)
+            {
+                if (stopwatch.ElapsedMilliseconds > 15000) { break; }
+
                 await Task.Delay(100);
             }
 
             stopwatch.Stop();
 
-            if (stopwatch.ElapsedMilliseconds >= 10000)
+            if (stopwatch.ElapsedMilliseconds >= 15000)
             {
-                UtilityAudio.StopAudio();
-                UtilityAudio.Dispose();
-                MessageBox.Show("Unable to initialize Audio !");
-                Close();
+                MessageBox.Show("Unable to initialize Plugin !");
             }
             else
             {
-                await Dispatcher.InvokeAsync(() =>
-            {
-                try
-                {
-                    try
-                    {
-                        if (!Plugin.Loaded)
-                        {
-                            string sInfo = Plugin.LoadVST();
-                            if (sInfo.Length > 0)
-                            {
-                                MessageBox.Show(sInfo);
-                            }
-                        }
-
-                        OpenPlugin();
-
-                        if (VSTParametersCheck == null)
-                        {
-                            VSTParametersCheck = new System.Timers.Timer();
-                            VSTParametersCheck.Elapsed += VSTParametersCheck_Elapsed;
-                            VSTParametersCheck.Interval = 10000;
-                            VSTParametersCheck.Start();
-                        }
-                        else
-                        {
-                            VSTParametersCheck.Enabled = true;
-                            VSTParametersCheck.Start();
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("Unable to load VST : " + ex.Message);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Unable to load VST plugin : " + ex.Message);
-                }
-            });
+                OpenPlugin();
             }
         }
 
-        private async void OpenPlugin()
+        private void OpenPlugin()
         {
-            Mouse.OverrideCursor = Cursors.Wait;
-
-            await Dispatcher.InvokeAsync(() =>
+            Dispatcher.Invoke(() =>
             {
+                Mouse.OverrideCursor = Cursors.Wait;
+
                 var result = Plugin.OpenEditor(new WindowInteropHelper(this).EnsureHandle());
                 if (result)
                 {
@@ -236,6 +196,19 @@ namespace VSTHost
                     Height = rect.Height + 50;
                     ResizeMode = ResizeMode.NoResize;
                     this.Title = Plugin.VSTHostInfo.VSTName;
+
+                    if (VSTParametersCheck == null)
+                    {
+                        VSTParametersCheck = new System.Timers.Timer();
+                        VSTParametersCheck.Elapsed += VSTParametersCheck_Elapsed;
+                        VSTParametersCheck.Interval = 10000;
+                        VSTParametersCheck.Start();
+                    }
+                    else
+                    {
+                        VSTParametersCheck.Enabled = true;
+                        VSTParametersCheck.Start();
+                    }
                 }
                 else { MessageBox.Show("Unable to open plugin editor. Not initialized."); }
 

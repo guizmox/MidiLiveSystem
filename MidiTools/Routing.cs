@@ -5,12 +5,15 @@ using RtMidi.Core.Messages;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Sockets;
+using System.Runtime;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using System.Windows.Forms;
 using VSTHost;
 using static MidiTools.MidiDevice;
 
@@ -922,7 +925,8 @@ namespace MidiTools
         private int _eventsProcessedOUTLast = 0;
 
         private int _lowestNotePlayed = -1;
-        private VSTHostInfo AudioInfo;
+        private string AudioDevice = "";
+        private int AudioSampleRate = 48000;
 
         public MidiRouting()
         {
@@ -1233,14 +1237,15 @@ namespace MidiTools
 
                                 //problème du device comme le softstep qui peut envoyer à répétition plusieurs notes on sans le note off
                                 //alors qu'en mode note generator on veut pouvoir lancer autant qu'on veut
-                                if (!bOutEvent && routing.DeviceOut.GetLiveNOTEValue(routing.ChannelOut, iNoteAndVel[0]))
-                                {
-                                    //on n'envoie aucun nouvel évènement
-                                }
-                                else
-                                {
-                                    _eventsOUT = eventout;
-                                }
+                                //if (!bOutEvent && routing.DeviceOut.GetLiveNOTEValue(routing.ChannelOut, iNoteAndVel[0]))
+                                //{
+                                //    //on n'envoie aucun nouvel évènement
+                                //}
+                                //else
+                                //{
+                                //    _eventsOUT = eventout;
+                                //}
+                                _eventsOUT = eventout;
                             }
                         }
                         break;
@@ -1383,6 +1388,32 @@ namespace MidiTools
                                 EventsToProcess.Add(evON2);
                                 EventsToProcess.Add(evOFF2);
                                 bMono = true;
+                                break;
+                            case PlayModes.REPEAT_NOTE_OFF_FAST:
+                                if (eventOUT.Type == TypeEvent.NOTE_OFF)
+                                {
+                                    int iVelocity = routing.DeviceOut.GetLiveVelocityValue(Tools.GetChannelInt(eventOUT.Channel), eventOUT.Values[0]);
+                                    if (iVelocity - 15 > 0) { iVelocity -= 15; } //parti pris
+                                    var evONDouble = new MidiEvent(TypeEvent.NOTE_ON, new List<int> { eventOUT.Values[0], iVelocity }, eventOUT.Channel, eventOUT.Device);
+                                    var evOFFDouble = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { eventOUT.Values[0], 0 }, eventOUT.Channel, eventOUT.Device);
+                                    evOFFDouble.Delay = 200;
+                                    EventsToProcess.Add(evONDouble);
+                                    EventsToProcess.Add(evOFFDouble);
+                                    bMono = true;
+                                }
+                                break;
+                            case PlayModes.REPEAT_NOTE_OFF_SLOW:
+                                if (eventOUT.Type == TypeEvent.NOTE_OFF)
+                                {
+                                    int iVelocity = routing.DeviceOut.GetLiveVelocityValue(Tools.GetChannelInt(eventOUT.Channel), eventOUT.Values[0]);
+                                    if (iVelocity - 15 > 0) { iVelocity -= 15; } //parti pris
+                                    var evONDouble = new MidiEvent(TypeEvent.NOTE_ON, new List<int> { eventOUT.Values[0], iVelocity }, eventOUT.Channel, eventOUT.Device);
+                                    var evOFFDouble = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { eventOUT.Values[0], 0 }, eventOUT.Channel, eventOUT.Device);
+                                    evOFFDouble.Delay = 600;
+                                    EventsToProcess.Add(evONDouble);
+                                    EventsToProcess.Add(evOFFDouble);
+                                    bMono = true;
+                                }
                                 break;
                             default:
                                 routing.MemorizeNotesPlayed(eventOUT);
@@ -2719,10 +2750,9 @@ namespace MidiTools
 
             UsedDevicesOUT.Clear();
 
-            MidiMatrix.Clear();
-
             DeallocateAudio();
 
+            MidiMatrix.Clear();
         }
 
         public async Task SendCC(Guid routingGuid, int iCC, int iValue)
@@ -2870,30 +2900,53 @@ namespace MidiTools
             return CCdata;
         }
 
-        public async Task<bool> InitializeAudio(VSTPlugin initialInfo)
+        public async Task<bool> InitializeAudio(VSTPlugin plugin)
         {
             bool bOK = false;
-            AudioInfo = initialInfo.VSTHostInfo;
 
             await Tasks.AddTask(() =>
             {
                 try
                 {
-                    bool bOK = UtilityAudio.OpenAudio(initialInfo.VSTHostInfo.AsioDevice, initialInfo.VSTHostInfo.SampleRate);
-
-                    if (bOK)
+                    if (!UtilityAudio.AudioInitialized)
                     {
-                        UtilityAudio.StartAudio();
-                        UtilityAudio.AudioInitialized = true;
-                        AddLog(initialInfo.VSTHostInfo.AsioDevice, false, Channel.Channel1, "[OPEN]", "", "", "");
-                        bOK = true;
-                    }
-                    else { bOK = false; }
+                        bOK = UtilityAudio.OpenAudio(plugin.VSTHostInfo.AsioDevice, plugin.VSTHostInfo.SampleRate);
 
+                        Stopwatch stopwatch = new Stopwatch();
+                        stopwatch.Start();
+
+                        while (!bOK && stopwatch.ElapsedMilliseconds < 10000)
+                        {
+                            Thread.Sleep(100);
+                        }
+
+                        stopwatch.Stop();
+
+                        if (stopwatch.ElapsedMilliseconds >= 10000)
+                        {
+                            UtilityAudio.StopAudio();
+                            UtilityAudio.Dispose();
+                            bOK = false;
+                        }
+                        else
+                        {
+                            UtilityAudio.AudioInitialized = true;
+                            AudioDevice = plugin.VSTHostInfo.AsioDevice;
+                            AudioSampleRate = plugin.VSTHostInfo.SampleRate;
+                            AddLog(plugin.VSTHostInfo.AsioDevice, false, Channel.Channel1, "[OPEN]", "", "", "");
+                        }
+
+                        if (bOK)
+                        {
+                            UtilityAudio.StartAudio();
+                        }
+                        else { bOK = false; }
+                    }
+                    else { bOK = true; }
                 }
                 catch (Exception ex)
                 {
-                    initialInfo.VSTHostInfo.Error = "Unable to open audio device : " + ex.Message;
+                    plugin.VSTHostInfo.Error = "Unable to open audio device : " + ex.Message;
                     bOK = false;
                 }
             });
@@ -2916,7 +2969,7 @@ namespace MidiTools
 
                     try
                     {
-                        AddLog(AudioInfo.AsioDevice, false, Channel.Channel1, "[CLOSE]", "", "", "");
+                        AddLog(AudioDevice, false, Channel.Channel1, "[CLOSE]", "", "", "");
                     }
                     catch
                     { bOK = false; }

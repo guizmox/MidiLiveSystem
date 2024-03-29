@@ -169,7 +169,7 @@ namespace MidiTools
             return (int)Math.Round(millisecondsPerMIDIClock);
         }
 
-        internal static double GetMidiClockIntervalDouble(int iTempo, string sQuantization)
+        public static double GetMidiClockIntervalDouble(int iTempo, string sQuantization)
         {
             double dDiviseur = 4.0;
             int iQt = 4;
