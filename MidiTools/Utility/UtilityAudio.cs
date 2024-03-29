@@ -464,6 +464,8 @@ namespace VSTHost
                         }
                     }
 
+                    LoadVSTParameters();
+
                     VSTEvent?.Invoke("VST Loaded");
                 }
                 catch (Exception ex)
@@ -474,6 +476,34 @@ namespace VSTHost
             else { return "Unable to remove last VST"; }
 
             return sInfo;
+        }
+
+        public void LoadVSTParameters()
+        {
+            VSTEvent?.Invoke("Loading Memory Dump (" + (VSTHostInfo.Dump != null ? VSTHostInfo.Dump.Length : 0) + " byte(s))");
+
+            if (VSTHostInfo.Dump != null)
+            {
+                VSTSynth.PluginContext.PluginCommandStub.Commands.SetChunk(VSTHostInfo.Dump, true);
+            }
+
+            VSTEvent?.Invoke("Loading VST parameters (" + VSTHostInfo.Parameters.Count + ")");
+
+            if (VSTHostInfo.Parameters.Count > 0)
+            {
+                try
+                {
+                    for (int iP = 0; iP < VSTHostInfo.Parameters.Count; iP++)
+                    {
+                        VSTSynth.PluginContext.PluginCommandStub.Commands.SetParameter(VSTHostInfo.Parameters[iP].Index, VSTHostInfo.Parameters[iP].Data);
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    VSTHostInfo.Error = "VST Parameters can't be set : " + ex.Message;
+                }
+            }
         }
 
         //private void HostCmdStub_PluginCalled(object sender, PluginCalledEventArgs e)
@@ -589,31 +619,6 @@ namespace VSTHost
                 if (EditorOpen)
                 {
                     CloseEditor();
-                }
-
-                VSTEvent?.Invoke("Loading Memory Dump (" + (VSTHostInfo.Dump != null ? VSTHostInfo.Dump.Length : 0) + " byte(s))");
-
-                if (VSTHostInfo.Dump != null)
-                {
-                    VSTSynth.PluginContext.PluginCommandStub.Commands.SetChunk(VSTHostInfo.Dump, true);
-                }
-
-                VSTEvent?.Invoke("Loading VST parameters (" + VSTHostInfo.Parameters.Count + ")");
-
-                if (VSTHostInfo.Parameters.Count > 0)
-                {
-                    try
-                    {
-                        for (int iP = 0; iP < VSTHostInfo.Parameters.Count; iP++)
-                        {
-                            VSTSynth.PluginContext.PluginCommandStub.Commands.SetParameter(VSTHostInfo.Parameters[iP].Index, VSTHostInfo.Parameters[iP].Data);
-                        }
-
-                    }
-                    catch (Exception ex)
-                    {
-                        VSTHostInfo.Error = "VST Parameters can't be set : " + ex.Message;
-                    }
                 }
 
                 VSTEvent?.Invoke("Opening VST editor");

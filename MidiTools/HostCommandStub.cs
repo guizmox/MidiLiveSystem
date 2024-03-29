@@ -131,7 +131,7 @@ internal sealed class HostCommandStub : IVstHostCommandStub
         public Jacobi.Vst.Core.VstProcessLevels GetProcessLevel()
         {
             _cmdStub.RaisePluginCalled("GetProcessLevel()");
-            return Jacobi.Vst.Core.VstProcessLevels.Offline;
+            return Jacobi.Vst.Core.VstProcessLevels.Prefetch;
         }
 
         /// <inheritdoc />
