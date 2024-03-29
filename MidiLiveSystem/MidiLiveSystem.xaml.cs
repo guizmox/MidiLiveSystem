@@ -1239,6 +1239,7 @@ namespace MidiLiveSystem
             List<Task> tasks = new List<Task>();
 
             await UpdateDevicesUsage();
+            await Routing.SaveVSTParameters();
 
             for (int i = 0; i < Boxes.Count; i++)
             {

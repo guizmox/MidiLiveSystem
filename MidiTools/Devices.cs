@@ -43,7 +43,7 @@ namespace MidiTools
             {
                 if (values[0] > 127)
                 { values[0] = 127; }
-                else if (values[0] < 0) 
+                else if (values[0] < 0)
                 { values[0] = 0; }
             }
             return values;
@@ -432,6 +432,14 @@ namespace MidiTools
 
             return iNote;
         }
+
+        internal void SaveVSTParameters()
+        {
+            if (VST_OutputEvents != null)
+            {
+                VST_OutputEvents.SaveParameters();
+            }
+        }
     }
 
     internal class VSTOutputDeviceEvents
@@ -505,6 +513,14 @@ namespace MidiTools
                         break;
                 }
                 OnMidiEvent?.Invoke(ev);
+            }
+        }
+
+        internal void SaveParameters()
+        {
+            if (Plugin != null)
+            {
+                Plugin.GetParameters();
             }
         }
     }

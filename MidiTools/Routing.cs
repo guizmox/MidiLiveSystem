@@ -3040,6 +3040,18 @@ namespace MidiTools
             return bOK;
         }
 
+        public async Task SaveVSTParameters()
+        {
+            await Tasks.AddTask(() =>
+            {
+                var vsts = UsedDevicesOUT.Where(d => d.Name.StartsWith(Tools.VST_HOST));
+                foreach (var vst in vsts)
+                {
+                    vst.SaveVSTParameters();
+                }
+            });
+        }
+
 
 
         #endregion

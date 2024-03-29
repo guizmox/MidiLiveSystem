@@ -48,6 +48,7 @@ namespace VSTHost
         public int AudioOutputs = 0;
         public int Slot = 1;
         public int MidiInputs = 1;
+        public byte[] Dump;
 
         public string GetInfo()
         {
@@ -173,7 +174,7 @@ namespace VSTHost
             {
                 //pluginContext.PluginCommandStub.Commands.MainsChanged(true);
                 pluginContext.PluginCommandStub.Commands.StartProcess();
-                
+
                 ProcessVSTMidiEvents(VSTSynth.MidiStack);
 
                 pluginContext.PluginCommandStub.Commands.ProcessReplacing(inputBuffers, outputBuffers);
@@ -322,8 +323,8 @@ namespace VSTHost
             MemoryStream message = new MemoryStream();
             BinaryWriter bw = new BinaryWriter(message);
             byte aftertouchValue = pressureValue;
-            bw.Write((byte)(0xA0 | iChannel - 1)); 
-            bw.Write((byte)(aftertouchValue & 0x7F)); 
+            bw.Write((byte)(0xA0 | iChannel - 1));
+            bw.Write((byte)(aftertouchValue & 0x7F));
             VstMidiEvent vstMEvent = new VstMidiEvent(0, 0, 0, message.ToArray(), 0, 0, true);
             lock (MidiStack) { MidiStack.Add(vstMEvent); }
         }
@@ -368,6 +369,7 @@ namespace VSTHost
         private VSTStream vstStream;
         public bool Loaded = false;
         public int Slot = 0;
+        private bool EditorOpen = false;
 
         public VSTPlugin(int slot)
         {
@@ -412,7 +414,7 @@ namespace VSTHost
 
                     VSTSynth.PluginContext = VstPluginContext.Create(VSTHostInfo.VSTPath, hcs);
                     VSTSynth.PluginContext.PluginCommandStub.Commands.Open();
-                    VSTSynth.PluginContext.PluginCommandStub.Commands.SetBlockSize(1024);
+                    //VSTSynth.PluginContext.PluginCommandStub.Commands.SetBlockSize(1024);
                     //VSTSynth.PluginContext.AcceptPluginInfoData(true);
                     //VSTSynth.PluginContext.PluginCommandStub.Commands.MainsChanged(true);
                     VSTSynth.PluginContext.PluginCommandStub.Commands.SetBypass(false);
@@ -462,23 +464,6 @@ namespace VSTHost
                         }
                     }
 
-                    VSTEvent?.Invoke("Loading VST parameters (" + VSTHostInfo.Parameters.Count + ")");
-
-                    if (VSTHostInfo.Parameters.Count > 0)
-                    {
-                        try
-                        {
-                            for (int iP = 0; iP < VSTHostInfo.Parameters.Count; iP++)
-                            {
-                                VSTSynth.PluginContext.PluginCommandStub.Commands.SetParameter(VSTHostInfo.Parameters[iP].Index, VSTHostInfo.Parameters[iP].Data);
-                            }
-
-                        }
-                        catch (Exception ex)
-                        {
-                            sInfo = "VST Parameters can't be set : " + ex.Message;
-                        }
-                    }
                     VSTEvent?.Invoke("VST Loaded");
                 }
                 catch (Exception ex)
@@ -522,6 +507,7 @@ namespace VSTHost
 
                 if (VSTSynth != null && VSTSynth.PluginContext != null)
                 {
+                    GetParameters();
                     VSTSynth.PluginContext.PluginCommandStub.Commands.StopProcess();
                     VSTSynth.PluginContext.PluginCommandStub.Commands.MainsChanged(false);
                     VSTSynth.PluginContext.PluginCommandStub.Commands.Close();
@@ -538,13 +524,13 @@ namespace VSTHost
             catch
             {
                 Loaded = false;
-                return false; 
+                return false;
             }
 
             return true;
         }
 
-        public void GetParameters()
+        internal void GetParameters()
         {
             if (VSTSynth.PluginContext.PluginCommandStub != null)
             {
@@ -556,6 +542,13 @@ namespace VSTHost
 
                 VSTHostInfo.Parameters.Clear();
 
+                var dump = VSTSynth.PluginContext.PluginCommandStub.Commands.GetChunk(true);
+                if (dump != null)
+                {
+                    if (VSTHostInfo.Dump != null) { Array.Clear(VSTHostInfo.Dump); }
+                    VSTHostInfo.Dump = dump;
+                }
+
                 int iParameters = VSTSynth.PluginContext.PluginInfo.ParameterCount;
                 for (int i = 0; i < iParameters; i++)
                 {
@@ -565,7 +558,11 @@ namespace VSTHost
                         float propData = VSTSynth.PluginContext.PluginCommandStub.Commands.GetParameter(i);
                         VSTHostInfo.Parameters.Add(new VSTParameter { Index = i, Name = propName, Data = propData });
                         //var properties = VSTSynth.PluginContext.PluginCommandStub.Commands.GetParameterProperties(i);
+                        //if (properties != null)
+                        //{
 
+                        //}
+                        //VSTSynth.PluginContext.PluginCommandStub.Commands.
                         //if (properties != null)
                         //{
                         //    string propName = propName = VSTSynth.PluginContext.PluginCommandStub.Commands.GetParameterName(i);
@@ -585,16 +582,48 @@ namespace VSTHost
 
         public bool OpenEditor(IntPtr EditorHandle)
         {
+            bool bOK = false;
+
             if (VSTSynth != null && VSTSynth.PluginContext != null)
             {
-                CloseEditor();
+                if (EditorOpen)
+                {
+                    CloseEditor();
+                }
+
+                VSTEvent?.Invoke("Loading Memory Dump (" + (VSTHostInfo.Dump != null ? VSTHostInfo.Dump.Length : 0) + " byte(s))");
+
+                if (VSTHostInfo.Dump != null)
+                {
+                    VSTSynth.PluginContext.PluginCommandStub.Commands.SetChunk(VSTHostInfo.Dump, true);
+                }
+
+                VSTEvent?.Invoke("Loading VST parameters (" + VSTHostInfo.Parameters.Count + ")");
+
+                if (VSTHostInfo.Parameters.Count > 0)
+                {
+                    try
+                    {
+                        for (int iP = 0; iP < VSTHostInfo.Parameters.Count; iP++)
+                        {
+                            VSTSynth.PluginContext.PluginCommandStub.Commands.SetParameter(VSTHostInfo.Parameters[iP].Index, VSTHostInfo.Parameters[iP].Data);
+                        }
+
+                    }
+                    catch (Exception ex)
+                    {
+                        VSTHostInfo.Error = "VST Parameters can't be set : " + ex.Message;
+                    }
+                }
 
                 VSTEvent?.Invoke("Opening VST editor");
-
-                return VSTSynth.PluginContext.PluginCommandStub.Commands.EditorOpen(EditorHandle);
+                bOK = VSTSynth.PluginContext.PluginCommandStub.Commands.EditorOpen(EditorHandle);
+                EditorOpen = true;
 
             }
-            else { return false; }
+            else { bOK = false; }
+
+            return bOK;
         }
 
         public void CloseEditor()
@@ -605,6 +634,7 @@ namespace VSTHost
 
                 VSTSynth.PluginContext.PluginCommandStub.Commands.EditorIdle();
                 VSTSynth.PluginContext.PluginCommandStub.Commands.EditorClose();
+                EditorOpen = false;
             }
         }
 

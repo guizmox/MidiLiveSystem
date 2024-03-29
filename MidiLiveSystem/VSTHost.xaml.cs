@@ -5,6 +5,7 @@ using NAudio.Wave;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -151,7 +152,7 @@ namespace VSTHost
             }
         }
 
-        public async Task LoadPlugin()
+        public void LoadPlugin()
         {
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
@@ -160,13 +161,13 @@ namespace VSTHost
             {
                 if (stopwatch.ElapsedMilliseconds > 15000) { break; }
 
-                await Task.Delay(100);
+                Thread.Sleep(300);
             }
             while (!Plugin.Loaded)
             {
                 if (stopwatch.ElapsedMilliseconds > 15000) { break; }
 
-                await Task.Delay(100);
+                Thread.Sleep(300);
             }
 
             stopwatch.Stop();
@@ -183,42 +184,39 @@ namespace VSTHost
 
         private void OpenPlugin()
         {
-            Dispatcher.Invoke(() =>
+            Mouse.OverrideCursor = Cursors.Wait;
+
+            var result = Plugin.OpenEditor(new WindowInteropHelper(this).EnsureHandle());
+            if (result)
             {
-                Mouse.OverrideCursor = Cursors.Wait;
+                System.Drawing.Rectangle rect = new System.Drawing.Rectangle();
+                Plugin.GetWindowSize(out rect);
+                Width = rect.Width + 20;
+                Height = rect.Height + 50;
+                ResizeMode = ResizeMode.NoResize;
+                this.Title = Plugin.VSTHostInfo.VSTName;
 
-                var result = Plugin.OpenEditor(new WindowInteropHelper(this).EnsureHandle());
-                if (result)
+                if (VSTParametersCheck == null)
                 {
-                    System.Drawing.Rectangle rect = new System.Drawing.Rectangle();
-                    Plugin.GetWindowSize(out rect);
-                    Width = rect.Width + 20;
-                    Height = rect.Height + 50;
-                    ResizeMode = ResizeMode.NoResize;
-                    this.Title = Plugin.VSTHostInfo.VSTName;
-
-                    if (VSTParametersCheck == null)
-                    {
-                        VSTParametersCheck = new System.Timers.Timer();
-                        VSTParametersCheck.Elapsed += VSTParametersCheck_Elapsed;
-                        VSTParametersCheck.Interval = 10000;
-                        VSTParametersCheck.Start();
-                    }
-                    else
-                    {
-                        VSTParametersCheck.Enabled = true;
-                        VSTParametersCheck.Start();
-                    }
+                    VSTParametersCheck = new System.Timers.Timer();
+                    VSTParametersCheck.Elapsed += VSTParametersCheck_Elapsed;
+                    VSTParametersCheck.Interval = 10000;
+                    VSTParametersCheck.Start();
                 }
-                else { MessageBox.Show("Unable to open plugin editor. Not initialized."); }
+                else
+                {
+                    VSTParametersCheck.Enabled = true;
+                    VSTParametersCheck.Start();
+                }
+            }
+            else { MessageBox.Show("Unable to open plugin editor. Not initialized."); }
 
-                Mouse.OverrideCursor = null;
-            });
+            Mouse.OverrideCursor = null;
         }
 
         private void VSTParametersCheck_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
         {
-            Plugin.GetParameters();
+            //Plugin.GetParameters();
 
             Dispatcher.Invoke(() =>
             {

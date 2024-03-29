@@ -117,7 +117,7 @@ namespace MidiLiveSystem
             MidiRouting.OutputMidiMessage += MidiRouting_OutputMidiMessage;
         }
 
-        private async void VSTWindow_OnVSTHostEvent(int iPreset, int iAction)
+        private void VSTWindow_OnVSTHostEvent(int iPreset, int iAction)
         {
             if (iAction == 0) //fermer la fenêtre
             {
@@ -129,7 +129,7 @@ namespace MidiLiveSystem
             {
                 //TempMemory[iPreset].VSTData = TempVST[CurrentPreset].VSTHostInfo; //pas certain
                 OnUIEvent?.Invoke(BoxGuid, "INITIALIZE_AUDIO", TempVST[CurrentPreset]); //pour initialiser l'audio
-                await VSTWindow.LoadPlugin();
+                VSTWindow.LoadPlugin();
             }
         }
 
