@@ -943,8 +943,6 @@ namespace MidiLiveSystem
                 {
                     cbVSTSlot.SelectedValue = bp.VSTData.Slot;
                 }
-                //else { cbVSTSlot.SelectedIndex = 0; }
-                //}
 
                 lbPreset.Text = bp.MidiPreset.PresetName;
                 lbPreset.Tag = bp.MidiPreset.Tag;
@@ -1495,7 +1493,7 @@ namespace MidiLiveSystem
 
         internal async Task SetVST(VSTPlugin vst, int iSlot)
         {
-            await Dispatcher.InvokeAsync(async () =>
+            await Dispatcher.InvokeAsync(() =>
             {
                 if (VSTWindow != null)
                 {

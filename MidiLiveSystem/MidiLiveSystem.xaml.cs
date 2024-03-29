@@ -915,7 +915,7 @@ namespace MidiLiveSystem
                         }
                         else
                         {
-                            return;
+                            await Routing.AddVSTSlotOnProjectLoad(info, rtb.AllPresets[iB].DeviceOut);
                         }
                     }
                 }
@@ -1305,7 +1305,7 @@ namespace MidiLiveSystem
                     }
                     else { iGridPosition++; }
 
-                    var box = new RoutingBox(project, MidiTools.MidiRouting.InputDevices, MidiTools.MidiRouting.OutputDevices, iGridPosition, g, presetsample.BoxName, presetsample.RoutingGuid, AllPresets.Where(p => p.BoxGuid == g).ToArray());
+                    var box = new RoutingBox(project, MidiRouting.InputDevices, MidiRouting.OutputDevices, iGridPosition, g, presetsample.BoxName, presetsample.RoutingGuid, AllPresets.Where(p => p.BoxGuid == g).ToArray());
                     boxes.Add(box);
                 }
             }
