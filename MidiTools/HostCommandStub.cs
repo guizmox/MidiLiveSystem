@@ -131,7 +131,7 @@ internal sealed class HostCommandStub : IVstHostCommandStub
         public Jacobi.Vst.Core.VstProcessLevels GetProcessLevel()
         {
             _cmdStub.RaisePluginCalled("GetProcessLevel()");
-            return Jacobi.Vst.Core.VstProcessLevels.Prefetch;
+            return Jacobi.Vst.Core.VstProcessLevels.Realtime;
         }
 
         /// <inheritdoc />
@@ -152,7 +152,9 @@ internal sealed class HostCommandStub : IVstHostCommandStub
         public Jacobi.Vst.Core.VstTimeInfo GetTimeInfo(Jacobi.Vst.Core.VstTimeInfoFlags filterFlags)
         {
             _cmdStub.RaisePluginCalled("GetTimeInfo(" + filterFlags + ")");
-            return null;
+            //Jacobi.Vst.Core.VstTimeInfoFlags.TransportPlaying | Jacobi.Vst.Core.VstTimeInfoFlags.PpqPositionValid | Jacobi.Vst.Core.VstTimeInfoFlags.TempoValid | Jacobi.Vst.Core.VstTimeInfoFlags.BarStartPositionValid | Jacobi.Vst.Core.VstTimeInfoFlags.CyclePositionValid | Jacobi.Vst.Core.VstTimeInfoFlags.TimeSignatureValid
+
+            return new VstTimeInfo() { BarStartPosition = 0, Flags = VstTimeInfoFlags.TempoValid, CycleStartPosition = 0, SampleRate = 48000, Tempo = 120 };
         }
 
         /// <inheritdoc />

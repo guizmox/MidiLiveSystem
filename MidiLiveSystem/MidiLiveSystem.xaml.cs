@@ -802,6 +802,8 @@ namespace MidiLiveSystem
             if (Boxes.Count > 0)
             {
                 await SaveTemplate();
+                await Routing.SaveVSTParameters();
+
                 if (RecallWindow != null) { RecallWindow.SaveRecallsToProject(); }
 
                 try
@@ -933,7 +935,6 @@ namespace MidiLiveSystem
                         {
                             MessageBox.Show("Unable to initialize Audio Device !");
                         }
-                        else { await Routing.AddVSTSlotOnProjectLoad(info, rtb.AllPresets[iB].DeviceOut); }
                     }
                 }
             }
@@ -1239,7 +1240,6 @@ namespace MidiLiveSystem
             List<Task> tasks = new List<Task>();
 
             await UpdateDevicesUsage();
-            await Routing.SaveVSTParameters();
 
             for (int i = 0; i < Boxes.Count; i++)
             {

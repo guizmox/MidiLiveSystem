@@ -322,9 +322,8 @@ namespace VSTHost
         {
             MemoryStream message = new MemoryStream();
             BinaryWriter bw = new BinaryWriter(message);
-            byte aftertouchValue = pressureValue;
-            bw.Write((byte)(0xA0 | iChannel - 1));
-            bw.Write((byte)(aftertouchValue & 0x7F));
+            bw.Write((byte)(0xD0 | (iChannel - 1)));
+            bw.Write((byte)(pressureValue & 0x7F));
             VstMidiEvent vstMEvent = new VstMidiEvent(0, 0, 0, message.ToArray(), 0, 0, true);
             lock (MidiStack) { MidiStack.Add(vstMEvent); }
         }
@@ -383,9 +382,9 @@ namespace VSTHost
 
         public string GetInfo()
         {
-            if (vstStream != null && vstStream.outputBuffers != null)
+            if (VSTSynth != null && vstStream != null && vstStream.outputBuffers != null)
             {
-                return string.Concat(VSTHostInfo.VSTName + " : Audio Buffers : ", vstStream.outputBuffers.Length, " - Channels : ", (UtilityAudio.AudioMixer.InputCount * 2).ToString());
+                return string.Concat(VSTHostInfo.VSTName + " : Audio Buffers : ", vstStream.outputBuffers.Length, " - Channels : ", (UtilityAudio.AudioMixer.InputCount * 2).ToString(), " - Latency : ", VSTSynth.PluginContext.HostCommandStub.Commands.GetOutputLatency());
             }
             else
             {
@@ -434,7 +433,7 @@ namespace VSTHost
                     //vstStream.ProcessCalled += VSTSynth.Stream_ProcessCalled;
                     vstStream.pluginContext = VSTSynth.PluginContext;
                     vstStream.SetWaveFormat(VSTHostInfo.SampleRate, 2);
-
+                    
                     UtilityAudio.AudioMixer.AddInputStream(vstStream);
 
                     Loaded = true;
@@ -484,7 +483,7 @@ namespace VSTHost
 
             if (VSTHostInfo.Dump != null)
             {
-                VSTSynth.PluginContext.PluginCommandStub.Commands.SetChunk(VSTHostInfo.Dump, true);
+                int iDump = VSTSynth.PluginContext.PluginCommandStub.Commands.SetChunk(VSTHostInfo.Dump, true);
             }
 
             VSTEvent?.Invoke("Loading VST parameters (" + VSTHostInfo.Parameters.Count + ")");

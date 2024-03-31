@@ -158,20 +158,20 @@ namespace VSTHost
 
             while (!UtilityAudio.AudioInitialized)
             {
-                if (stopwatch.ElapsedMilliseconds > 15000) { break; }
+                if (stopwatch.ElapsedMilliseconds > 30000) { break; }
 
                 await Task.Delay(100);
             }
             while (!Plugin.Loaded)
             {
-                if (stopwatch.ElapsedMilliseconds > 15000) { break; }
+                if (stopwatch.ElapsedMilliseconds > 30000) { break; }
 
                 await Task.Delay(100);
             }
 
             stopwatch.Stop();
 
-            if (stopwatch.ElapsedMilliseconds >= 15000)
+            if (stopwatch.ElapsedMilliseconds >= 30000)
             {
                 MessageBox.Show("Unable to initialize Plugin !");
             }

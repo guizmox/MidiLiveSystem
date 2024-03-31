@@ -2997,22 +2997,6 @@ namespace MidiTools
             return vst;
         }
 
-        public async Task AddVSTSlotOnProjectLoad(VSTHostInfo vstinfo, string sDeviceAndSlot)
-        {
-            await Tasks.AddTask(() =>
-            {
-                var device = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceAndSlot));
-                if (device == null)
-                {
-                    var plugin = new VSTPlugin(vstinfo.Slot) { VSTHostInfo = vstinfo };
-                    var newdev = new MidiDevice(plugin, sDeviceAndSlot);
-                    newdev.OpenDevice();
-                    UsedDevicesOUT.Add(newdev);
-                    plugin.LoadVST();
-                }
-            });
-        }
-
         public async Task<bool> RemoveVST(string sDeviceAndSlot)
         {
             bool bOK = false;
@@ -3045,9 +3029,13 @@ namespace MidiTools
             await Tasks.AddTask(() =>
             {
                 var vsts = UsedDevicesOUT.Where(d => d.Name.StartsWith(Tools.VST_HOST));
-                foreach (var vst in vsts)
+
+                lock (vsts)
                 {
-                    vst.SaveVSTParameters();
+                    foreach (var vst in vsts)
+                    {
+                        vst.SaveVSTParameters();
+                    }
                 }
             });
         }
