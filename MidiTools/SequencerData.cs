@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
@@ -15,10 +16,10 @@ namespace MidiTools
         public static int LowKeyTranspose = 21;
         public static int HighKeyTranspose = 48;
 
-        public static Timer SequencerClock;
-        public static double TimerFrequency = 0;
-        public static int Tempo = 120;
-        public static string Quantization = "";
+        public static MicroLibrary.MicroTimer[] SequencerClock = new MicroLibrary.MicroTimer[8];
+        public static long[] TimerFrequency = new long[8];
+        public static int[] Tempo = new int[8];
+        public static string[] Quantization = new string[8];
 
         public SequencerData()
         {
@@ -55,44 +56,53 @@ namespace MidiTools
             return new int[] { LowKeyTranspose, HighKeyTranspose };
         }
 
-        public static void InitTimer(int tempo, string quantization)
+        public static void InitTimer(Sequencer sequence, int index)
         {
-            Tempo = tempo;
-            Quantization = quantization;
-
-            if (SequencerClock != null)
+            if (SequencerClock != null && SequencerClock[index] != null)
             {
-                SequencerClock.Stop();
-                SequencerClock.Enabled = false;
-                SequencerClock = null;
+                SequencerClock[index].Stop();
+                SequencerClock[index].Enabled = false;
+                SequencerClock[index] = null;
             }
 
-            TimerFrequency = Tools.GetMidiClockIntervalDouble(tempo, quantization);
-
-            SequencerClock = new System.Timers.Timer();
-            SequencerClock.Interval = (int)Math.Round(TimerFrequency);
+            Tempo[index] = sequence.Tempo;
+            Quantization[index] = sequence.Quantization;
+            SequencerClock[index] = new MicroLibrary.MicroTimer();
+            TimerFrequency[index] = Tools.GetMidiClockIntervalLong(sequence.Tempo, sequence.Quantization);
+            SequencerClock[index].Interval = TimerFrequency[index];
         }
 
-        public static void ChangeTempo(int iNewValue)
+        public static void ChangeTempo(int iNewValue, int iSequence)
         {
-            if (Tempo != iNewValue)
+            if (Tempo != null && Tempo[iSequence - 1] != iNewValue)
             {
-                Tempo = iNewValue;
-                if (SequencerClock != null)
+                Tempo[iSequence - 1] = iNewValue;
+                if (SequencerClock[iSequence - 1] != null)
                 {
-                    TimerFrequency = Tools.GetMidiClockIntervalDouble(iNewValue, Quantization);
-                    SequencerClock.Stop();
-                    SequencerClock.Interval = (int)Math.Round(TimerFrequency);
-                    SequencerClock.Start();
+                    TimerFrequency[iSequence - 1] = Tools.GetMidiClockIntervalLong(iNewValue, Quantization[iSequence - 1]);
+                    SequencerClock[iSequence - 1].Stop();
+                    SequencerClock[iSequence - 1].Interval = TimerFrequency[iSequence - 1];
+                    SequencerClock[iSequence - 1].Start();
                 }
             }
         }
 
-        public static void StopTimer()
+        public static void StopTimers()
         {
-            SequencerClock.Stop();
-            SequencerClock.Enabled = false;
-            SequencerClock = null;
+            foreach (var clock in SequencerClock.Where(c => c != null))
+            {
+                clock.Stop();
+                clock.Enabled = false;
+            }
+            SequencerClock = new MicroLibrary.MicroTimer[8];
+        }
+
+        public static void StartTimers()
+        {
+            foreach (var clock in SequencerClock.Where(c => c != null))
+            {
+                clock.Start();
+            }
         }
     }
 }

@@ -26,16 +26,21 @@
             <LineBreak/>
             Note : The software is mainly meant to be used with hardware devices but with a virtual MIDI cable, you can open standalone virtual instruments (Kontakt, ...) and set its MIDI port to the virtual cable 
         </TextBlock>
-        <TextBlock Grid.Column="1" Grid.Row="0" Margin="5,5,5,5">
-            Ressources : 
-            <LineBreak/>
-            <LineBreak/>
+        <TextBlock Grid.Column="1" Grid.Row="0" FontSize="10" Margin="5,5,5,5">
             Contact : 
             <Hyperlink NavigateUri="mailto:guizmox@hotmail.com" RequestNavigate="Hyperlink_RequestNavigate">Mail</Hyperlink>
             <LineBreak/>
-            RtMidi Core Project : 
+            Ressources : 
+            <LineBreak/>
+            Powered by RtMidi Core Project : 
             <Hyperlink NavigateUri="https://github.com/micdah/RtMidi.Core" RequestNavigate="Hyperlink_RequestNavigate">GitHub</Hyperlink>
             <LineBreak/>
+            Powered by Jacobi VST.NET
+            <Hyperlink NavigateUri="https://github.com/obiwanjacobi/vst.net" RequestNavigate="Hyperlink_RequestNavigate">GitHub</Hyperlink>
+            <LineBreak/>
+            Powered by Naudio
+            <Hyperlink NavigateUri=" https://github.com/naudio/NAudio" RequestNavigate="Hyperlink_RequestNavigate">GitHub</Hyperlink>
+            <LineBreak/>  
             Download Virtual MIDI Cable : 
             <Hyperlink NavigateUri="https://www.tobias-erichsen.de/software/loopmidi.html" RequestNavigate="Hyperlink_RequestNavigate">Loop Midi</Hyperlink>
             or <Hyperlink NavigateUri="https://www.nerds.de/en/loopbe1.html" RequestNavigate="Hyperlink_RequestNavigate">LoopBe</Hyperlink>

@@ -131,7 +131,8 @@ namespace MidiLiveSystem
         {
             double tempo = await slTempo.Dispatcher.InvokeAsync(() => slTempo.Value);
             await lbTempo.Dispatcher.InvokeAsync(() => lbTempo.Content = string.Concat("Tempo (", tempo.ToString(), ")"));
-            SequencerData.ChangeTempo((int)tempo);
+            InternalSequence.Tempo = (int)tempo;
+            SequencerData.ChangeTempo((int)tempo, SequencerIndex);
         }
 
         private async void ckTranspose_Click(object sender, RoutedEventArgs e)
@@ -201,7 +202,7 @@ namespace MidiLiveSystem
         {
             await UIEventPool.AddTask(() =>
             {
-                InternalSequence.InitSequence(iMax);
+                InternalSequence.ReinitializeSequence(iMax);
 
                 ActualStep = 0;
                 StepsRecorded.Clear();
@@ -411,7 +412,7 @@ namespace MidiLiveSystem
             InternalSequence.Steps = iSteps;
             InternalSequence.SetSequence(stepsRecorded);
             InternalSequence.Transpose = bTranspose;
-            SequencerData.ChangeTempo((int)dTempo);
+            SequencerData.ChangeTempo((int)dTempo, SequencerIndex);
 
             await FillUI();
         }

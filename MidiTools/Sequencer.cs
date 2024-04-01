@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Primitives;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -34,7 +35,7 @@ namespace MidiTools
 
         public Sequencer()
         {
-           
+
         }
 
         public Sequencer(int iChannel, string sQuantization, int iSteps, int iTempo, List<SequenceStep> data, bool bTranspose)
@@ -86,7 +87,7 @@ namespace MidiTools
                     else
                     {
                         Sequence[i] = null;
-                    }           
+                    }
                 }
             }
             else
@@ -98,23 +99,19 @@ namespace MidiTools
             }
         }
 
-        public async Task InitSequence()
+        public void InitSequence()
         {
-            await Tasks.AddTask(() =>
+            if (SequenceHasData())
             {
-                if (SequenceHasData())
-                {
-                    MidiRouting.InputStaticMidiMessage -= MidiRouting_StaticIncomingMidiMessage;
-                    MidiRouting.InputStaticMidiMessage += MidiRouting_StaticIncomingMidiMessage;
+                MidiRouting.InputStaticMidiMessage -= MidiRouting_StaticIncomingMidiMessage;
+                MidiRouting.InputStaticMidiMessage += MidiRouting_StaticIncomingMidiMessage;
 
-                    Loop = 0;
-                    SequencerData.SequencerClock.Elapsed += TriggerStep;
-
-                }
-            });
+                Loop = 0;
+                SequencerData.SequencerClock[Channel - 1].MicroTimerElapsed += TriggerStep;
+            }
         }
 
-        private bool SequenceHasData()
+        public bool SequenceHasData()
         {
             for (int i = 0; i < Sequence.Length; i++)
             {
@@ -124,23 +121,20 @@ namespace MidiTools
             return true;
         }
 
-        public async Task StopSequence()
+        public void StopSequence()
         {
-            await Tasks.AddTask(() =>
+            if (SequenceHasData())
             {
-                if (SequenceHasData())
+                if (SequencerData.SequencerClock[Channel - 1] != null)
                 {
-                    if (SequencerData.SequencerClock != null)
-                    {
-                        MidiRouting.InputStaticMidiMessage -= MidiRouting_StaticIncomingMidiMessage;
-
-                        Loop = 0;
-                    }
+                    MidiRouting.InputStaticMidiMessage -= MidiRouting_StaticIncomingMidiMessage;
+                    SequencerData.SequencerClock[Channel - 1].MicroTimerElapsed -= TriggerStep;
+                    Loop = 0;
                 }
-            });
+            }
         }
 
-        private void TriggerStep(object sender, ElapsedEventArgs e)
+        private void TriggerStep(object sender, MicroLibrary.MicroTimerEventArgs timerEventArgs)
         {
             if (Loop > Steps - 1)
             {
@@ -149,7 +143,8 @@ namespace MidiTools
 
             if (Sequence[Loop] != null) //c'est une tie
             {
-                double length = ((SequencerData.TimerFrequency * Sequence[Loop].StepCount) * (Sequence[Loop].GatePercent / 100.0));
+                double freq = SequencerData.TimerFrequency[Channel - 1] / 1000;
+                double length = ((freq * Sequence[Loop].StepCount) * (Sequence[Loop].GatePercent / 100.0));
                 OnInternalSequencerStep?.Invoke(Sequence[Loop], Sequence[LastPositionInSequence], (int)length, LastPositionInSequence, Loop);
                 LastPositionInSequence = Loop;
             }
@@ -157,7 +152,7 @@ namespace MidiTools
             Loop += 1;
         }
 
-        public void InitSequence(int iSeqLen)
+        public void ReinitializeSequence(int iSeqLen)
         {
             Transpose = false;
             Channel = 0;

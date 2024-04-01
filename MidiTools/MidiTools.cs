@@ -153,7 +153,7 @@ namespace MidiTools
             return list;
         }
 
-        internal static int GetMidiClockInterval(int iTempo)
+        internal static long GetMidiClockInterval(int iTempo)
         {
 
             // Nombre de MIDI Clocks par quart de note
@@ -164,12 +164,12 @@ namespace MidiTools
             double microsecondsPerMIDIClock = microsecondsPerQuarterNote / midiClocksPerQuarterNote;
 
             // Conversion du délai en millisecondes
-            double millisecondsPerMIDIClock = microsecondsPerMIDIClock / 1000;
+            //double millisecondsPerMIDIClock = microsecondsPerMIDIClock / 1000;
 
-            return (int)Math.Round(millisecondsPerMIDIClock);
+            return (long)microsecondsPerMIDIClock;
         }
 
-        public static double GetMidiClockIntervalDouble(int iTempo, string sQuantization)
+        public static long GetMidiClockIntervalLong(int iTempo, string sQuantization)
         {
             double dDiviseur = 4.0;
             int iQt = 4;
@@ -179,13 +179,13 @@ namespace MidiTools
                 dDiviseur = 3.0;
                 iQt = Convert.ToInt32(sQuantization[0..^1]);
             }
-            else 
+            else
             {
-                iQt = Convert.ToInt32(sQuantization); 
+                iQt = Convert.ToInt32(sQuantization);
             }
 
             // Durée d'une noire en millisecondes
-            double dureeNoireMs = 60000.0 / iTempo;
+            double dureeNoireMs = 60000000.0 / iTempo;
 
             // Nombre de noires par mesure (quantification)
             int noiresParMesure = iQt;
@@ -197,7 +197,7 @@ namespace MidiTools
             // Calcul de l'intervalle du timer en millisecondes
             double intervalleTimerMs = dureeMesureMs; // On prend un quart de la mesure
 
-            return (int)intervalleTimerMs;
+            return (long)intervalleTimerMs;
         }
 
         internal static int FindIndexIn2dArray(int iChannel, bool[,] notesSentForPanic, bool bHighest)

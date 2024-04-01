@@ -1,4 +1,5 @@
 ﻿using Jacobi.Vst.Plugin.Framework.Plugin;
+using MicroLibrary;
 using RtMidi.Core;
 using RtMidi.Core.Enums;
 using RtMidi.Core.Messages;
@@ -98,41 +99,38 @@ namespace MidiTools
             DeviceInSequencer.OnInternalSequencerStep += Sequencer_OnInternalSequencerStep;
         }
 
-        private async void Sequencer_OnInternalSequencerStep(SequenceStep notes, SequenceStep lastnotes, double lengthInMs, int lastPositionInSequence, int positionInSequence)
+        private void Sequencer_OnInternalSequencerStep(SequenceStep notes, SequenceStep lastnotes, double lengthInMs, int lastPositionInSequence, int positionInSequence)
         {
-            await Tasks.AddTask(() =>
+            if (!cancellationToken.IsCancellationRequested)
             {
-                if (!cancellationToken.IsCancellationRequested)
+                if (!DeviceInSequencer.Muted && DeviceOut != null && Options.Active)
                 {
-                    if (!DeviceInSequencer.Muted && DeviceOut != null && Options.Active)
+                    List<MidiEvent> eventsON = new List<MidiEvent>();
+                    List<MidiEvent> eventsOFF = new List<MidiEvent>();
+
+                    foreach (var note in notes.NotesAndVelocity)
                     {
-                        List<MidiEvent> eventsON = new List<MidiEvent>();
-                        List<MidiEvent> eventsOFF = new List<MidiEvent>();
+                        int iNote = note[0] - DeviceInSequencer.TransposeOffset;
+                        int iVelocity = note[1];
 
-                        foreach (var note in notes.NotesAndVelocity)
-                        {
-                            int iNote = note[0] - DeviceInSequencer.TransposeOffset;
-                            int iVelocity = note[1];
-
-                            MidiEvent mvON = new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelocity }, Tools.GetChannel(ChannelOut), DeviceOut.Name);
-                            eventsON.Add(mvON);
-                        }
-
-                        foreach (var note in notes.NotesAndVelocity)
-                        {
-                            int iNote = note[0] - DeviceInSequencer.TransposeOffset;
-                            int iVelocity = note[1];
-                            int iLength = (int)Math.Round(lengthInMs);
-
-                            MidiEvent mvOFF = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, iVelocity }, Tools.GetChannel(ChannelOut), DeviceOut.Name);
-                            mvOFF.Delay = iLength;
-                            eventsOFF.Add(mvOFF);
-                        }
-
-                        OnSequencerPlayNote?.Invoke(eventsON, eventsOFF, this);
+                        MidiEvent mvON = new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelocity }, Tools.GetChannel(ChannelOut), DeviceOut.Name);
+                        eventsON.Add(mvON);
                     }
+
+                    foreach (var note in notes.NotesAndVelocity)
+                    {
+                        int iNote = note[0] - DeviceInSequencer.TransposeOffset;
+                        int iVelocity = note[1];
+                        int iLength = (int)Math.Round(lengthInMs);
+
+                        MidiEvent mvOFF = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, iVelocity }, Tools.GetChannel(ChannelOut), DeviceOut.Name);
+                        mvOFF.Delay = iLength;
+                        eventsOFF.Add(mvOFF);
+                    }
+
+                    OnSequencerPlayNote?.Invoke(eventsON, eventsOFF, this);
                 }
-            });
+            }
         }
 
         internal async Task CreateNote(NoteGenerator note, int iLowestNotePlayed)
@@ -915,7 +913,7 @@ namespace MidiTools
 
         private readonly System.Timers.Timer EventsCounter;
         private readonly System.Timers.Timer CloseDevicesTimer;
-        private readonly System.Timers.Timer MidiClock;
+        private readonly MicroTimer MidiClock;
 
         //internal List<LiveCC> LiveData = new List<LiveCC>();
 
@@ -937,8 +935,8 @@ namespace MidiTools
             EventsCounter.Interval = CLOCK_INTERVAL;
             EventsCounter.Start();
 
-            MidiClock = new System.Timers.Timer();
-            MidiClock.Elapsed += MidiClock_OnEvent;
+            MidiClock = new MicroTimer();
+            MidiClock.MicroTimerElapsed += MidiClock_OnEvent;
             MidiClock.Interval = Tools.GetMidiClockInterval(ClockBPM); //valeur par défaut
 
             CloseDevicesTimer = new System.Timers.Timer();
@@ -976,7 +974,7 @@ namespace MidiTools
             await Task.WhenAll(tasks);
         }
 
-        private async void MidiClock_OnEvent(object sender, ElapsedEventArgs e)
+        private async void MidiClock_OnEvent(object sender, MicroTimerEventArgs e)
         {
             var tasks = UsedDevicesOUT.Select(device =>
             {
@@ -2960,7 +2958,7 @@ namespace MidiTools
 
             if (UtilityAudio.AudioInitialized)
             {
-          
+
                 try
                 {
                     UtilityAudio.StopAudio();

@@ -201,26 +201,26 @@ namespace MidiLiveSystem
                     {
                         MidiRouting.InputStaticMidiMessage -= Routing_IncomingMidiMessage;
 
-                        SequencerData.InitTimer(SeqData.Sequencer[0].Tempo, SeqData.Sequencer[0].Quantization);
                         for (int i = 0; i < MaxSequences; i++)
                         {
-                            await SeqData.Sequencer[i].InitSequence();
+                            if (SeqData.Sequencer[i].SequenceHasData()) { SequencerData.InitTimer(SeqData.Sequencer[i], i); }
+                            SeqData.Sequencer[i].InitSequence();        
                             await SequencerBoxes[i].Listener(true);
                         }
-                        SequencerData.SequencerClock.Start();
+                        SequencerData.StartTimers();
                     }
                 }
                 else
                 {
                     MidiRouting.InputStaticMidiMessage -= Routing_IncomingMidiMessage;
 
-                    SequencerData.InitTimer(SeqData.Sequencer[0].Tempo, SeqData.Sequencer[0].Quantization);
                     for (int i = 0; i < MaxSequences; i++)
                     {
                         await SequencerBoxes[i].Listener(false);
-                        await SeqData.Sequencer[i].InitSequence();
+                        if (SeqData.Sequencer[i].SequenceHasData()) { SequencerData.InitTimer(SeqData.Sequencer[i], i); }
+                        SeqData.Sequencer[i].InitSequence();
                     }
-                    SequencerData.SequencerClock.Start();
+                    SequencerData.StartTimers();
                 }
 
                 Playing = true;
@@ -236,26 +236,26 @@ namespace MidiLiveSystem
 
                 if (bFromActualWindow)
                 {
-                    SequencerData.StopTimer();
+                    SequencerData.StopTimers();
 
                     for (int i = 0; i < MaxSequences; i++)
                     {
-                        await SeqData.Sequencer[i].StopSequence();
+                        SeqData.Sequencer[i].StopSequence();
                         await SequencerBoxes[i].Listener(false);
                     }
-
+                   
                     MidiRouting.InputStaticMidiMessage += Routing_IncomingMidiMessage;
                 }
                 else
                 {
-                    SequencerData.StopTimer();
+                    SequencerData.StopTimers();
 
                     for (int i = 0; i < MaxSequences; i++)
                     {
                         await SequencerBoxes[i].Listener(false);
-                        await SeqData.Sequencer[i].StopSequence();
+                        SeqData.Sequencer[i].StopSequence();
                     }
-
+                   
                 }
 
                 await Routing.Panic();

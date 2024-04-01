@@ -36,11 +36,11 @@
         <StackPanel Grid.Row="1">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="8*"/>
-                    <ColumnDefinition Width="12*"/>
                     <ColumnDefinition Width="10*"/>
-                    <ColumnDefinition Width="17*"/>
-                    <ColumnDefinition Width="23*"/>
+                    <ColumnDefinition Width="10*"/>
+                    <ColumnDefinition Width="10*"/>
+                    <ColumnDefinition Width="25*"/>
+                    <ColumnDefinition Width="15*"/>
                     <ColumnDefinition Width="30*"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Margin="5,5,5,5" Grid.Column="0" >

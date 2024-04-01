@@ -1,4 +1,5 @@
-﻿using RtMidi.Core;
+﻿using MicroLibrary;
+using RtMidi.Core;
 using RtMidi.Core.Devices;
 using RtMidi.Core.Enums;
 using RtMidi.Core.Messages;
@@ -135,7 +136,7 @@ namespace MidiTools
         internal delegate void MidiEventHandler(bool bIn, MidiEvent ev);
         internal event MidiEventHandler OnMidiEvent;
 
-        internal delegate void MidiClockEventHandler(object sender, ElapsedEventArgs e);
+        internal delegate void MidiClockEventHandler(object sender, MicroTimerEventArgs e);
         internal event MidiClockEventHandler OnMidiClockEvent;
 
         internal delegate void MidiEventSequenceHandlerIN(MidiEvent ev);
