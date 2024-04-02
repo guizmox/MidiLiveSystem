@@ -2354,6 +2354,9 @@ namespace MidiTools
                     for (int iCh = 1; iCh <= 16; iCh++)
                     {
                         int iChCopy = iCh;
+
+                        device.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 64, 0 }, Tools.GetChannel(iChCopy), device.Name));
+
                         for (int iKey = 0; iKey < 128; iKey++)
                         {
                             int iKeyCopy = iKey;
@@ -2377,6 +2380,8 @@ namespace MidiTools
 
                 tasks.Add(routing.Tasks.AddTask(() =>
                 {
+                    routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 64, 0 }, Tools.GetChannel(channelOut), routing.DeviceOut.Name));
+
                     List<int> pendingnotes = routing.ClearPendingNotes();
 
                     foreach (var i in pendingnotes)
@@ -2560,7 +2565,7 @@ namespace MidiTools
                         {
                             routing.DeviceOut = AddNewOutDevice(sDeviceOut, vst);
                         }
-                        else { return; }
+                        //else { return; }
                     }
                     else if (sDeviceOut.Length > 0)
                     {

@@ -463,7 +463,7 @@ namespace MidiTools
 
         internal void SendEvent(MidiEvent ev)
         {
-            int iChannel = Tools.GetChannelInt(ev.Channel);
+            int iChannel = Tools.GetChannelInt(ev.Channel) - 1;
 
             if (Plugin != null && Plugin.VSTSynth != null)
             {
@@ -476,24 +476,24 @@ namespace MidiTools
                     case TypeEvent.NOTE_ON:
                         NOTEmemory[iChannel, ev.Values[0]] = true;
                         VELOCITYmemory[iChannel, ev.Values[0]] = ev.Values[1];
-                        Plugin.VSTSynth.MIDI_NoteOn(ev.Values[0], ev.Values[1], iChannel);
+                        Plugin.VSTSynth.MIDI_NoteOn(ev.Values[0], ev.Values[1], iChannel + 1);
                         AddLog(Plugin.VSTHostInfo.VSTName, false, ev.Channel, "Note On", ev.Values[0].ToString(), "Velocity", ev.Values[1].ToString());
                         break;
                     case TypeEvent.NOTE_OFF:
                         NOTEmemory[iChannel, ev.Values[0]] = false;
                         VELOCITYmemory[iChannel, ev.Values[0]] = ev.Values[1];
-                        Plugin.VSTSynth.MIDI_NoteOff(ev.Values[0], ev.Values[1], iChannel);
+                        Plugin.VSTSynth.MIDI_NoteOff(ev.Values[0], ev.Values[1], iChannel + 1);
                         AddLog(Plugin.VSTHostInfo.VSTName, false, ev.Channel, "Note Off", ev.Values[0].ToString(), "Velocity", ev.Values[1].ToString());
                         break;
                     case TypeEvent.NRPN:
                         AddLog(Plugin.VSTHostInfo.VSTName, false, ev.Channel, "Nrpn", ev.Values[0].ToString(), "Value", ev.Values[1].ToString());
                         break;
                     case TypeEvent.PB:
-                        Plugin.VSTSynth.MIDI_PitchBend(ev.Values[0], iChannel);
+                        Plugin.VSTSynth.MIDI_PitchBend(ev.Values[0], iChannel + 1);
                         AddLog(Plugin.VSTHostInfo.VSTName, false, ev.Channel, "Pitch Bend", ev.Values[0].ToString(), "", "");
                         break;
                     case TypeEvent.PC:
-                        Plugin.VSTSynth.MIDI_ProgramChange(ev.Values[0], iChannel);
+                        Plugin.VSTSynth.MIDI_ProgramChange(ev.Values[0], iChannel + 1);
                         AddLog(Plugin.VSTHostInfo.VSTName, false, ev.Channel, "Program Change", ev.Values[0].ToString(), "", "");
                         break;
                     case TypeEvent.SYSEX:
@@ -501,15 +501,15 @@ namespace MidiTools
                         break;
                     case TypeEvent.CC:
                         CCmemory[iChannel, ev.Values[0]] = ev.Values[1];
-                        Plugin.VSTSynth.MIDI_CC(ev.Values[0], ev.Values[1], iChannel);
+                        Plugin.VSTSynth.MIDI_CC(ev.Values[0], ev.Values[1], iChannel + 1);
                         AddLog(Plugin.VSTHostInfo.VSTName, false, ev.Channel, "Control Change", ev.Values[0].ToString(), "Value", ev.Values[1].ToString());
                         break;
                     case TypeEvent.CH_PRES:
-                        Plugin.VSTSynth.MIDI_Aftertouch(Convert.ToByte(ev.Values[0]), iChannel);
+                        Plugin.VSTSynth.MIDI_Aftertouch(Convert.ToByte(ev.Values[0]), iChannel + 1);
                         AddLog(Plugin.VSTHostInfo.VSTName, false, ev.Channel, "Channel Pressure", ev.Values[0].ToString(), "", "");
                         break;
                     case TypeEvent.POLY_PRES:
-                        Plugin.VSTSynth.MIDI_PolyphonicAftertouch(Convert.ToByte(ev.Values[0]), Convert.ToByte(ev.Values[1]), iChannel);
+                        Plugin.VSTSynth.MIDI_PolyphonicAftertouch(Convert.ToByte(ev.Values[0]), Convert.ToByte(ev.Values[1]), iChannel + 1);
                         AddLog(Plugin.VSTHostInfo.VSTName, false, ev.Channel, "Poly. Channel Key", ev.Values[0].ToString(), "Pressure", ev.Values[1].ToString());
                         break;
                 }

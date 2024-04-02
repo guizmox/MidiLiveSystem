@@ -311,7 +311,7 @@ namespace VSTHost
             MemoryStream message = new MemoryStream();
             BinaryWriter bw = new BinaryWriter(message);
             ushort pitchBendValue = (ushort)pitchValue;
-            bw.Write((byte)(0xE0 | iChannel - 1)); // Status byte pour Pitch Bend (0xE0 est le status byte pour le message Pitch Bend)
+            bw.Write((byte)(0xE0 | iChannel)); // Status byte pour Pitch Bend (0xE0 est le status byte pour le message Pitch Bend)
             bw.Write((byte)(pitchBendValue & 0x7F)); // LSB (Least Significant Byte) du pitch bend value
             bw.Write((byte)((pitchBendValue >> 7) & 0x7F)); // MSB (Most Significant Byte) du pitch bend value
             VstMidiEvent vstMEvent = new VstMidiEvent(0, 0, 0, message.ToArray(), 0, 0, true);
@@ -322,7 +322,7 @@ namespace VSTHost
         {
             MemoryStream message = new MemoryStream();
             BinaryWriter bw = new BinaryWriter(message);
-            bw.Write((byte)(0xD0 | (iChannel - 1)));
+            bw.Write((byte)(0xD0 | (iChannel)));
             bw.Write((byte)(pressureValue & 0x7F));
             VstMidiEvent vstMEvent = new VstMidiEvent(0, 0, 0, message.ToArray(), 0, 0, true);
             lock (MidiStack) { MidiStack.Add(vstMEvent); }
@@ -334,7 +334,7 @@ namespace VSTHost
             BinaryWriter bw = new BinaryWriter(message);
             byte noteNumber = note;
             byte aftertouchValue = pressureValue;
-            bw.Write((byte)(0xA0 | iChannel - 1)); // Status byte pour Polyphonic Aftertouch (0xA0 est le status byte pour le message Polyphonic Aftertouch)
+            bw.Write((byte)(0xA0 | iChannel)); // Status byte pour Polyphonic Aftertouch (0xA0 est le status byte pour le message Polyphonic Aftertouch)
             bw.Write(noteNumber); // Numéro de la note
             bw.Write(aftertouchValue); // Valeur de l'Aftertouch (Aftertouch Pressure)
             VstMidiEvent vstMEvent = new VstMidiEvent(0, 0, 0, message.ToArray(), 0, 0, true);
