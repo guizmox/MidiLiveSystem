@@ -187,14 +187,17 @@ namespace VSTHost
             {
                 Mouse.OverrideCursor = Cursors.Wait;
 
+
+                System.Drawing.Rectangle rect = new System.Drawing.Rectangle();
+                Plugin.GetWindowSize(out rect);
+                Width = rect.Width + 20;
+                Height = rect.Height + 50;
+                ResizeMode = ResizeMode.NoResize;
+
                 var result = Plugin.OpenEditor(new WindowInteropHelper(this).EnsureHandle());
+
                 if (result)
                 {
-                    System.Drawing.Rectangle rect = new System.Drawing.Rectangle();
-                    Plugin.GetWindowSize(out rect);
-                    Width = rect.Width + 20;
-                    Height = rect.Height + 50;
-                    ResizeMode = ResizeMode.NoResize;
                     this.Title = Plugin.VSTHostInfo.VSTName;
 
                     if (VSTParametersCheck == null)

@@ -83,7 +83,15 @@ namespace MidiLiveSystem
                 MessageBox.Show("This is the first start. " + Environment.NewLine + "Add your first Routing Box. If you need some help, there's a menu on the top-left of each Routing Box that opens a menu in which you can get help regarding the features." + Environment.NewLine + Environment.NewLine + "Enjoy !");
             }
 
-            Database = new SQLiteDatabaseManager();
+            try
+            {
+                Database = new SQLiteDatabaseManager();
+            }
+            catch (Exception ex) 
+            {
+                MessageBox.Show(ex.Message);
+                Close();
+            }
 
             MidiRouting.InputStaticMidiMessage += MidiRouting_InputMidiMessage;
 

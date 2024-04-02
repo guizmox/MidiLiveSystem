@@ -16,7 +16,7 @@ namespace MidiLiveSystem
 {
     public class SQLiteDatabaseManager
     {
-        public static string Database = "MidiLiveSystem.db";
+        public static string Database = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "MidiLiveSystem", "MidiLiveSystem.db");
         private string connectionString = $"Data Source=";
 
         public SQLiteDatabaseManager()
@@ -25,6 +25,15 @@ namespace MidiLiveSystem
 
             if (!File.Exists(Database))
             {
+                var path = Path.GetDirectoryName(Database);
+                if (!Directory.Exists(path))
+                {
+                    try
+                    {
+                        Directory.CreateDirectory(path);
+                    }
+                    catch { throw new Exception("Unable to create Database path : " + path); }
+                }
                 SQLitePCL.Batteries.Init();
                 using (var connection = new SqliteConnection(connectionString))
                 {
