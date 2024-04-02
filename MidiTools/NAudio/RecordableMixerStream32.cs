@@ -76,7 +76,14 @@ namespace NAudio.Wave
                 {
                     // recalculate the length
                     this.length = 0;
-                    foreach (WaveStream inputStream in inputStreams)
+
+                    int streams = 0;
+                    lock (inputStreams)
+                    {
+                        streams = inputStreams.Count;
+                    }
+
+                    for (int i = 0; i < streams; i++)
                     {
                         this.length = Math.Max(this.length, waveStream.Length);
                     }
@@ -151,11 +158,15 @@ namespace NAudio.Wave
             // sum the channels in
             byte[] readBuffer = new byte[count];
 
-            foreach (WaveStream inputStream in inputStreams)
+            int inputs = 0;
+            lock (inputStreams)
+            { inputs = inputStreams.Count; }
+
+            for (int i = 0; i < inputs; i++)
             {
-                if (inputStream.HasData(count))
+                if (inputStreams[i].HasData(count))
                 {
-                    int readFromThisStream = inputStream.Read(readBuffer, 0, count);
+                    int readFromThisStream = inputStreams[i].Read(readBuffer, 0, count);
                     //System.Diagnostics.Debug.Assert(readFromThisStream == count, "A mixer input stream did not provide the requested amount of data");
                     bytesRead = Math.Max(bytesRead, readFromThisStream);
                     if (readFromThisStream > 0)
@@ -164,7 +175,7 @@ namespace NAudio.Wave
                 else
                 {
                     bytesRead = Math.Max(bytesRead, count);
-                    inputStream.Position += count;
+                    inputStreams[i].Position += count;
                 }
             }
 
@@ -262,13 +273,16 @@ namespace NAudio.Wave
         {
             if (disposing)
             {
-                if (inputStreams != null)
+                lock (inputStreams)
                 {
-                    foreach (WaveStream inputStream in inputStreams)
+                    if (inputStreams != null)
                     {
-                        inputStream.Dispose();
+                        foreach (WaveStream inputStream in inputStreams)
+                        {
+                            inputStream.Dispose();
+                        }
+                        inputStreams = null;
                     }
-                    inputStreams = null;
                 }
             }
             else

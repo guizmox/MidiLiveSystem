@@ -103,7 +103,7 @@ namespace MidiTools
         {
             if (!cancellationToken.IsCancellationRequested)
             {
-                if (!DeviceInSequencer.Muted && DeviceOut != null && Options.Active)
+                if (!DeviceInSequencer.Muted && DeviceOut != null && ChannelOut > 0 && Options.Active)
                 {
                     List<MidiEvent> eventsON = new List<MidiEvent>();
                     List<MidiEvent> eventsOFF = new List<MidiEvent>();
@@ -139,7 +139,7 @@ namespace MidiTools
             {
                 if (!cancellationToken.IsCancellationRequested)
                 {
-                    if (Options.Active)
+                    if (Options.Active && ChannelOut > 0)
                     {
                         int iNote = note.Note;
                         if (Options.PlayNote_LowestNote)
@@ -1074,6 +1074,8 @@ namespace MidiTools
 
                 await routingOUT.Tasks.AddTask(() =>
                 {
+                    OutputMidiMessage?.Invoke(true, routingOUT.RoutingGuid);
+
                     for (int i = 0; i < EventsToProcess.Count; i++)
                     {
                         if (EventsToProcess[i].Type == TypeEvent.CC) { OutputCCValues?.Invoke(routingOUT.RoutingGuid, EventsToProcess[i].Values); }
@@ -1094,8 +1096,9 @@ namespace MidiTools
                             routingOUT.UnblockCC(EventsToProcess[i].Values[0]);
                         }
                     }
+
+                    OutputMidiMessage?.Invoke(false, routingOUT.RoutingGuid);
                 });
-                OutputMidiMessage?.Invoke(false, routingOUT.RoutingGuid);
             }
             catch (Exception)
             {
@@ -1123,6 +1126,8 @@ namespace MidiTools
 
                     try
                     {
+                        OutputMidiMessage?.Invoke(true, routing.RoutingGuid);
+
                         for (int i = 0; i < EventsToProcess.Count; i++)
                         {
                             if (EventsToProcess[i].Type == TypeEvent.CC) { OutputCCValues?.Invoke(routing.RoutingGuid, EventsToProcess[i].Values); }
@@ -1143,6 +1148,7 @@ namespace MidiTools
                                 routing.UnblockCC(EventsToProcess[i].Values[0]);
                             }
                         }
+
                         OutputMidiMessage?.Invoke(false, routing.RoutingGuid);
                     }
                     catch (Exception)
@@ -1336,140 +1342,133 @@ namespace MidiTools
 
                 case TypeEvent.NOTE_ON:
                 case TypeEvent.NOTE_OFF: //delayer
-                    if (!bOutEvent) // ne doit fonctionner qu'avec les input du routing et pas avec les évènements forcés
+                                         //if (!bOutEvent) // ne doit fonctionner qu'avec les input du routing et pas avec les évènements forcés
+                                         //{
+                    bool bMono = false;
+
+                    switch (routing.Options.PlayMode)
                     {
-                        bool bMono = false;
-
-                        switch (routing.Options.PlayMode)
-                        {
-                            case PlayModes.AFTERTOUCH:
-                                EventsToProcess.Add(new MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { 7, routing.CurrentATValue }, eventOUT.Channel, eventOUT.Device));
-                                routing.MemorizeNotesPlayed(eventOUT);
-                                break;
-                            case PlayModes.MONO_HIGH:
-                                EventsToProcess.AddRange(routing.SetPlayMono(1, eventOUT));
-                                bMono = EventsToProcess.Count > 0 ? true : false;
-                                break;
-                            case PlayModes.MONO_LOW:
-                                EventsToProcess.AddRange(routing.SetPlayMono(2, eventOUT));
-                                bMono = EventsToProcess.Count > 0 ? true : false;
-                                break;
-                            case PlayModes.MONO_INTERMEDIATE_HIGH:
-                                EventsToProcess.AddRange(routing.SetPlayMono(3, eventOUT));
-                                bMono = EventsToProcess.Count > 0 ? true : false;
-                                break;
-                            case PlayModes.MONO_INTERMEDIATE_LOW:
-                                EventsToProcess.AddRange(routing.SetPlayMono(4, eventOUT));
-                                bMono = EventsToProcess.Count > 0 ? true : false;
-                                break;
-                            case PlayModes.MONO_IN_BETWEEN:
-                                EventsToProcess.AddRange(routing.SetPlayMono(5, eventOUT));
-                                bMono = true;
-                                break;
-                            case PlayModes.HARMONY:
-                                var newev = routing.SetHarmony(eventOUT);
-                                EventsToProcess.AddRange(newev);
-                                bMono = true;
-                                break;
-                            case PlayModes.PIZZICATO_FAST:
-                                var evON = new MidiEvent(TypeEvent.NOTE_ON, new List<int> { eventOUT.Values[0], eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device);
-                                var evOFF = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { eventOUT.Values[0], 0 }, eventOUT.Channel, eventOUT.Device);
-                                evOFF.Delay = 200;
-                                EventsToProcess.Add(evON);
-                                EventsToProcess.Add(evOFF);
-                                bMono = true;
-                                break;
-                            case PlayModes.PIZZICATO_SLOW:
-                                var evON2 = new MidiEvent(TypeEvent.NOTE_ON, new List<int> { eventOUT.Values[0], eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device);
-                                var evOFF2 = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { eventOUT.Values[0], 0 }, eventOUT.Channel, eventOUT.Device);
-                                evOFF2.Delay = 600;
-                                EventsToProcess.Add(evON2);
-                                EventsToProcess.Add(evOFF2);
-                                bMono = true;
-                                break;
-                            case PlayModes.REPEAT_NOTE_OFF_FAST:
-                                if (eventOUT.Type == TypeEvent.NOTE_OFF)
-                                {
-                                    int iVelocity = routing.DeviceOut.GetLiveVelocityValue(Tools.GetChannelInt(eventOUT.Channel), eventOUT.Values[0]);
-                                    if (iVelocity - 15 > 0) { iVelocity -= 15; } //parti pris
-                                    var evONDouble = new MidiEvent(TypeEvent.NOTE_ON, new List<int> { eventOUT.Values[0], iVelocity }, eventOUT.Channel, eventOUT.Device);
-                                    var evOFFDouble = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { eventOUT.Values[0], 0 }, eventOUT.Channel, eventOUT.Device);
-                                    evOFFDouble.Delay = 200;
-                                    EventsToProcess.Add(evONDouble);
-                                    EventsToProcess.Add(evOFFDouble);
-                                    bMono = true;
-                                }
-                                break;
-                            case PlayModes.REPEAT_NOTE_OFF_SLOW:
-                                if (eventOUT.Type == TypeEvent.NOTE_OFF)
-                                {
-                                    int iVelocity = routing.DeviceOut.GetLiveVelocityValue(Tools.GetChannelInt(eventOUT.Channel), eventOUT.Values[0]);
-                                    if (iVelocity - 15 > 0) { iVelocity -= 15; } //parti pris
-                                    var evONDouble = new MidiEvent(TypeEvent.NOTE_ON, new List<int> { eventOUT.Values[0], iVelocity }, eventOUT.Channel, eventOUT.Device);
-                                    var evOFFDouble = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { eventOUT.Values[0], 0 }, eventOUT.Channel, eventOUT.Device);
-                                    evOFFDouble.Delay = 600;
-                                    EventsToProcess.Add(evONDouble);
-                                    EventsToProcess.Add(evOFFDouble);
-                                    bMono = true;
-                                }
-                                break;
-                            default:
-                                routing.MemorizeNotesPlayed(eventOUT);
-                                break;
-                        }
-
-                        if (GiveLife) //donne de la vie au projet en ajoutant un peu de pitch bend et de delay
-                        {
-                            Random random = new Random();
-
-                            if (eventOUT.Type == TypeEvent.NOTE_ON)
+                        case PlayModes.AFTERTOUCH:
+                            EventsToProcess.Add(new MidiEvent(MidiDevice.TypeEvent.CC, new List<int> { 7, routing.CurrentATValue }, eventOUT.Channel, eventOUT.Device));
+                            routing.MemorizeNotesPlayed(eventOUT);
+                            break;
+                        case PlayModes.MONO_HIGH:
+                            EventsToProcess.AddRange(routing.SetPlayMono(1, eventOUT));
+                            bMono = EventsToProcess.Count > 0 ? true : false;
+                            break;
+                        case PlayModes.MONO_LOW:
+                            EventsToProcess.AddRange(routing.SetPlayMono(2, eventOUT));
+                            bMono = EventsToProcess.Count > 0 ? true : false;
+                            break;
+                        case PlayModes.MONO_INTERMEDIATE_HIGH:
+                            EventsToProcess.AddRange(routing.SetPlayMono(3, eventOUT));
+                            bMono = EventsToProcess.Count > 0 ? true : false;
+                            break;
+                        case PlayModes.MONO_INTERMEDIATE_LOW:
+                            EventsToProcess.AddRange(routing.SetPlayMono(4, eventOUT));
+                            bMono = EventsToProcess.Count > 0 ? true : false;
+                            break;
+                        case PlayModes.MONO_IN_BETWEEN:
+                            EventsToProcess.AddRange(routing.SetPlayMono(5, eventOUT));
+                            bMono = true;
+                            break;
+                        case PlayModes.HARMONY:
+                            var newev = routing.SetHarmony(eventOUT);
+                            EventsToProcess.AddRange(newev);
+                            bMono = true;
+                            break;
+                        case PlayModes.PIZZICATO_FAST:
+                            var evON = new MidiEvent(TypeEvent.NOTE_ON, new List<int> { eventOUT.Values[0], eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device);
+                            var evOFF = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { eventOUT.Values[0], 0 }, eventOUT.Channel, eventOUT.Device);
+                            evOFF.Delay = 200;
+                            EventsToProcess.Add(evON);
+                            EventsToProcess.Add(evOFF);
+                            bMono = true;
+                            break;
+                        case PlayModes.PIZZICATO_SLOW:
+                            var evON2 = new MidiEvent(TypeEvent.NOTE_ON, new List<int> { eventOUT.Values[0], eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device);
+                            var evOFF2 = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { eventOUT.Values[0], 0 }, eventOUT.Channel, eventOUT.Device);
+                            evOFF2.Delay = 600;
+                            EventsToProcess.Add(evON2);
+                            EventsToProcess.Add(evOFF2);
+                            bMono = true;
+                            break;
+                        case PlayModes.REPEAT_NOTE_OFF_FAST:
+                            if (eventOUT.Type == TypeEvent.NOTE_OFF)
                             {
-                                int randomWaitON = random.Next(1, 40);
-                                int randomPB = random.Next(8192 - 400, 8192 + 400);
-
-                                int iNewVol = RandomizeCCValue(7, 8, routing);
-                                int iNewMod = RandomizeCCValue(1, 8, routing);
-                                //int iNewPan = 0; // routing.RandomizeCCValue(10, copiedevent.Channel, copiedevent.Device, 5);
-
-                                MidiEvent pbRandom = new MidiEvent(TypeEvent.PB, new List<int> { randomPB }, eventOUT.Channel, eventOUT.Device);
-
-                                if (iNewVol > 0)
-                                {
-                                    EventsToProcess.Add(new MidiEvent(TypeEvent.CC, new List<int> { 7, iNewVol }, eventOUT.Channel, eventOUT.Device));
-                                }
-                                if (iNewMod > 0)
-                                {
-                                    EventsToProcess.Add(new MidiEvent(TypeEvent.CC, new List<int> { 1, iNewMod }, eventOUT.Channel, eventOUT.Device));
-                                }
-                                //if (iNewPan > 0)
-                                //{
-                                //    routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 10, iNewPan }, copiedevent.Channel, copiedevent.Device));
-                                //}
-
-                                EventsToProcess.Add(pbRandom);
-
-                                if (!bMono)
-                                {
-                                    eventOUT.Delay = randomWaitON + routing.Options.DelayNotesLength > 0 ? routing.Options.DelayNotesLength : 0;
-                                    EventsToProcess.Add(eventOUT);
-                                }
+                                int iVelocity = routing.DeviceOut.GetLiveVelocityValue(Tools.GetChannelInt(eventOUT.Channel), eventOUT.Values[0]);
+                                if (iVelocity - 15 > 0) { iVelocity -= 15; } //parti pris
+                                var evONDouble = new MidiEvent(TypeEvent.NOTE_ON, new List<int> { eventOUT.Values[0], iVelocity }, eventOUT.Channel, eventOUT.Device);
+                                var evOFFDouble = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { eventOUT.Values[0], 0 }, eventOUT.Channel, eventOUT.Device);
+                                evOFFDouble.Delay = 200;
+                                EventsToProcess.Add(eventOUT);
+                                EventsToProcess.Add(evONDouble);
+                                EventsToProcess.Add(evOFFDouble);
+                                bMono = true;
                             }
-                            else
+                            break;
+                        case PlayModes.REPEAT_NOTE_OFF_SLOW:
+                            if (eventOUT.Type == TypeEvent.NOTE_OFF)
                             {
-                                if (!bMono)
-                                {
-                                    int randomWaitOFF = random.Next(41, 60); //trick pour éviter que les note off se déclenchent avant les note on
-
-                                    eventOUT.Delay = randomWaitOFF + routing.Options.DelayNotesLength > 0 ? routing.Options.DelayNotesLength : 0;
-                                    routing.DeviceOut.SendMidiEvent(eventOUT);
-                                }
+                                int iVelocity = routing.DeviceOut.GetLiveVelocityValue(Tools.GetChannelInt(eventOUT.Channel), eventOUT.Values[0]);
+                                if (iVelocity - 15 > 0) { iVelocity -= 15; } //parti pris
+                                var evONDouble = new MidiEvent(TypeEvent.NOTE_ON, new List<int> { eventOUT.Values[0], iVelocity }, eventOUT.Channel, eventOUT.Device);
+                                var evOFFDouble = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { eventOUT.Values[0], 0 }, eventOUT.Channel, eventOUT.Device);
+                                evOFFDouble.Delay = 600;
+                                EventsToProcess.Add(eventOUT);
+                                EventsToProcess.Add(evONDouble);
+                                EventsToProcess.Add(evOFFDouble);
+                                bMono = true;
                             }
-                        }
-                        else if (routing.Options.DelayNotesLength > 0)
+                            break;
+                        case PlayModes.OCTAVE_UP:
+                            EventsToProcess.Add(eventOUT);
+                            EventsToProcess.Add(new MidiEvent(eventOUT.Type, new List<int> { eventOUT.Values[0] + 12, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
+                            bMono = true;
+                            break;
+                        case PlayModes.OCTAVE_DOWN:
+                            EventsToProcess.Add(eventOUT);
+                            EventsToProcess.Add(new MidiEvent(eventOUT.Type, new List<int> { eventOUT.Values[0] - 12, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
+                            bMono = true;
+                            break;
+                        default:
+                            routing.MemorizeNotesPlayed(eventOUT);
+                            break;
+                    }
+
+                    if (GiveLife) //donne de la vie au projet en ajoutant un peu de pitch bend et de delay
+                    {
+                        Random random = new Random();
+
+                        if (eventOUT.Type == TypeEvent.NOTE_ON)
                         {
+                            int randomWaitON = random.Next(1, 40);
+                            int randomPB = random.Next(8192 - 400, 8192 + 400);
+
+                            int iNewVol = RandomizeCCValue(7, 8, routing);
+                            int iNewMod = RandomizeCCValue(1, 8, routing);
+                            //int iNewPan = 0; // routing.RandomizeCCValue(10, copiedevent.Channel, copiedevent.Device, 5);
+
+                            MidiEvent pbRandom = new MidiEvent(TypeEvent.PB, new List<int> { randomPB }, eventOUT.Channel, eventOUT.Device);
+
+                            if (iNewVol > 0)
+                            {
+                                EventsToProcess.Add(new MidiEvent(TypeEvent.CC, new List<int> { 7, iNewVol }, eventOUT.Channel, eventOUT.Device));
+                            }
+                            if (iNewMod > 0)
+                            {
+                                EventsToProcess.Add(new MidiEvent(TypeEvent.CC, new List<int> { 1, iNewMod }, eventOUT.Channel, eventOUT.Device));
+                            }
+                            //if (iNewPan > 0)
+                            //{
+                            //    routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 10, iNewPan }, copiedevent.Channel, copiedevent.Device));
+                            //}
+
+                            EventsToProcess.Add(pbRandom);
+
                             if (!bMono)
                             {
-                                eventOUT.Delay = routing.Options.DelayNotesLength;
+                                eventOUT.Delay = randomWaitON + routing.Options.DelayNotesLength > 0 ? routing.Options.DelayNotesLength : 0;
                                 EventsToProcess.Add(eventOUT);
                             }
                         }
@@ -1477,11 +1476,30 @@ namespace MidiTools
                         {
                             if (!bMono)
                             {
-                                EventsToProcess.Add(eventOUT);
+                                int randomWaitOFF = random.Next(41, 60); //trick pour éviter que les note off se déclenchent avant les note on
+
+                                eventOUT.Delay = randomWaitOFF + routing.Options.DelayNotesLength > 0 ? routing.Options.DelayNotesLength : 0;
+                                routing.DeviceOut.SendMidiEvent(eventOUT);
                             }
                         }
                     }
-                    else { EventsToProcess.Add(eventOUT); }
+                    else if (routing.Options.DelayNotesLength > 0)
+                    {
+                        if (!bMono)
+                        {
+                            eventOUT.Delay = routing.Options.DelayNotesLength;
+                            EventsToProcess.Add(eventOUT);
+                        }
+                    }
+                    else
+                    {
+                        if (!bMono)
+                        {
+                            EventsToProcess.Add(eventOUT);
+                        }
+                    }
+                    //}
+                    //else { EventsToProcess.Add(eventOUT); }
                     break;
 
                 default:

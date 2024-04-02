@@ -363,6 +363,8 @@
                                     <ComboBoxItem Tag="HARMONY" Content="Third harmonizer"/>
                                     <ComboBoxItem Tag="REPEAT_NOTE_OFF_FAST" Content="Repeat Note (Short)"/>
                                     <ComboBoxItem Tag="REPEAT_NOTE_OFF_SLOW" Content="Repeat Note (Long)"/>
+                                    <ComboBoxItem Tag="OCTAVE_UP" Content="Octave Doubler (Up)"/>
+                                    <ComboBoxItem Tag="OCTAVE_DOWN" Content="Octave Doubler (Down)"/>
                                 </ComboBox>
                             </Grid>
                         </StackPanel>

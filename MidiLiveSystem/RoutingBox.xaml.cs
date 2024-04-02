@@ -117,7 +117,7 @@ namespace MidiLiveSystem
             MidiRouting.OutputMidiMessage += MidiRouting_OutputMidiMessage;
         }
 
-        private void VSTWindow_OnVSTHostEvent(int iPreset, int iAction)
+        private async void VSTWindow_OnVSTHostEvent(int iPreset, int iAction)
         {
             if (iAction == 0) //fermer la fenêtre
             {
@@ -129,23 +129,23 @@ namespace MidiLiveSystem
             {
                 //TempMemory[iPreset].VSTData = TempVST[CurrentPreset].VSTHostInfo; //pas certain
                 OnUIEvent?.Invoke(BoxGuid, "INITIALIZE_AUDIO", TempVST[CurrentPreset]); //pour initialiser l'audio
-                VSTWindow.LoadPlugin();
+                await VSTWindow.LoadPlugin();
             }
         }
 
-        private void MidiRouting_OutputMidiMessage(bool b, Guid routingGuid)
+        private async void MidiRouting_OutputMidiMessage(bool b, Guid routingGuid)
         {
             if (RoutingGuid == routingGuid)
             {
-                Dispatcher.Invoke(() =>
+                await Dispatcher.InvokeAsync(() =>
                 {
                     if (b)
                     {
-                        tbRoutingPlay.Foreground = Brushes.Red;
+                        tbRoutingPlay.Foreground = Brushes.IndianRed;
                     }
                     else
                     {
-                        tbRoutingPlay.Foreground = Brushes.Yellow;
+                        tbRoutingPlay.Foreground = Brushes.White;
                     }
                 });
             }

@@ -427,7 +427,10 @@ namespace MidiLiveSystem
 
         private async void RoutingBox_UIEvent(Guid gBox, string sControl, object sValue)
         {
-            UIRefreshRate.Enabled = false;
+            lock (UIRefreshRate)
+            {
+                UIRefreshRate.Enabled = false;
+            }
 
             var box = Boxes.FirstOrDefault(b => b.BoxGuid == gBox);
             if (box != null)
@@ -625,7 +628,10 @@ namespace MidiLiveSystem
                 }
             }
 
-            UIRefreshRate.Enabled = true;
+            lock (UIRefreshRate)
+            {
+                UIRefreshRate.Enabled = true;
+            }
         }
 
         private int GetFreeChannelForDevice(Guid boxguid, string sDevice, int iChannelWanted)
