@@ -405,7 +405,7 @@ namespace MidiLiveSystem
         {
             if (Routing != null)
             {
-                await Routing.Panic();
+                await Routing.Panic(true);
             }
         }
 
@@ -482,8 +482,8 @@ namespace MidiLiveSystem
             Configuration.HorizontalGrid = ihorizontal;
             Configuration.VerticalGrid = ivertical;
             Configuration.TriggerRecallButtons = ((ComboBoxItem)cbRecallButtonsTrigger.SelectedItem).Tag.ToString();
-            Configuration.TriggerRecallDevice = cbMidiInRecall.SelectedItem == null ? "" : ((ComboBoxItem)cbMidiInRecall.SelectedItem).Tag.ToString();
-            Configuration.ClockDevice = cbMidiInClock.SelectedItem == null ? "" : ((ComboBoxItem)cbMidiInClock.SelectedItem).Tag.ToString();
+            Configuration.AddTriggerDevice(cbMidiInRecall.SelectedItem == null ? "" : ((ComboBoxItem)cbMidiInRecall.SelectedItem).Tag.ToString());
+            Configuration.AddClockDevice(cbMidiInClock.SelectedItem == null ? "" : ((ComboBoxItem)cbMidiInClock.SelectedItem).Tag.ToString());
             Configuration.ClockActivated = ckActivateClock.IsChecked.Value;
 
             int iTriggerValue = 0;
@@ -585,38 +585,35 @@ namespace MidiLiveSystem
         public int VerticalGrid = -1;
 
         private string _clockDevice = "";
-        internal string ClockDevice
-        {
-            get { return _clockDevice; }
-            set
-            {
-                MidiRouting.CheckAndCloseINPort(_clockDevice);
-                MidiRouting.CheckAndOpenINPort(value);
-                _clockDevice = value;
-            }
-        }
+        public string ClockDevice { get { return _clockDevice; } set { AddClockDevice(value); } }
 
-        internal int BPM = 120;
-        internal bool ClockActivated = false;
+        public int BPM = 120;
+        public bool ClockActivated = false;
 
         private string _triggerDevice = "";
 
         public string TriggerRecallButtons = "UI";
         public int TriggerRecallButtonsValue = 0;
 
-        internal string TriggerRecallDevice { 
-            get { return _triggerDevice; }
-            set
-            {
-                MidiRouting.CheckAndCloseINPort(_triggerDevice);
-                MidiRouting.CheckAndOpenINPort(value);
-                _triggerDevice = value;
-            }
-        }
+        public string TriggerRecallDevice { get { return _triggerDevice; } set { AddTriggerDevice(value); } }
 
         public ProjectConfiguration()
         {
 
+        }
+
+        public void AddClockDevice(string sDevice)
+        {
+            MidiRouting.CheckAndCloseINPort(_clockDevice);
+            MidiRouting.CheckAndOpenINPort(sDevice);
+            _clockDevice = sDevice;
+        }
+
+        public void AddTriggerDevice(string sDevice)
+        {
+            MidiRouting.CheckAndCloseINPort(_triggerDevice);
+            MidiRouting.CheckAndOpenINPort(sDevice);
+            _triggerDevice = sDevice;
         }
 
         internal ProjectConfiguration Clone()

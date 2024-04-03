@@ -63,8 +63,6 @@ namespace MidiLiveSystem
         public bool Detached { get; internal set; } = false;
         public bool HasVSTAttached { get { return TempMemory[CurrentPreset].VSTData != null ? true : false; } }
 
-        public VSTPlugin GetVST { get { return TempVST[CurrentPreset]; } }
-
         public int GridPosition = 0;
         public int CurrentPreset = 1;
 
@@ -1514,6 +1512,11 @@ namespace MidiLiveSystem
                     }
                 }
             });
+        }
+
+        internal VSTPlugin GetVST()
+        {
+            return TempVST[CurrentPreset];
         }
     }
 

@@ -2345,7 +2345,7 @@ namespace MidiTools
             else { return true; }
         }
 
-        public async Task Panic()
+        public async Task Panic(bool bAll)
         {
             List<Task> devicesWork = new List<Task>();
 
@@ -2359,11 +2359,23 @@ namespace MidiTools
 
                         device.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 64, 0 }, Tools.GetChannel(iChCopy), device.Name));
 
-                        for (int iKey = 0; iKey < 128; iKey++)
+                        if (!bAll)
                         {
-                            int iKeyCopy = iKey;
-                            if (device.GetLiveNOTEValue(iChCopy, iKeyCopy))
+                            for (int iKey = 0; iKey < 128; iKey++)
                             {
+                                int iKeyCopy = iKey;
+
+                                if (device.GetLiveNOTEValue(iChCopy, iKeyCopy))
+                                {
+                                    device.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKeyCopy, 0 }, Tools.GetChannel(iChCopy), device.Name));
+                                }
+                            }
+                        }
+                        else
+                        {
+                            for (int iKey = 0; iKey < 128; iKey++)
+                            {
+                                int iKeyCopy = iKey;
                                 device.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKeyCopy, 0 }, Tools.GetChannel(iChCopy), device.Name));
                             }
                         }
@@ -2432,13 +2444,17 @@ namespace MidiTools
                 }
             }
 
-            if (sDeviceOut.StartsWith(Tools.VST_HOST))
+            if (sDeviceOut.StartsWith(Tools.VST_HOST) && UsedDevicesOUT.Count(d => d.Name.Equals(sDeviceOut)) == 0)
             {
                 if (vst.VSTHostInfo != null)
                 {
                     var device = new MidiDevice(vst, sDeviceOut);
                     UsedDevicesOUT.Add(device);
                 }
+            }
+            else if (sDeviceOut.StartsWith(Tools.VST_HOST) && UsedDevicesOUT.Count(d => d.Name.Equals(sDeviceOut)) > 0)
+            {
+                vst = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(sDeviceOut)).Plugin;
             }
             else if (devOUT != null && UsedDevicesOUT.Count(d => d.Name.Equals(sDeviceOut)) == 0)
             {
@@ -2562,7 +2578,7 @@ namespace MidiTools
 
                 if (bOUTChanged)
                 {
-                    oldDeviceOutName = routing.DeviceOut.Name;
+                    oldDeviceOutName = routing.DeviceOut != null ? routing.DeviceOut.Name : "";
                     oldChannelOut = routing.ChannelOut;
                     morphinglength = routing.Options.PresetMorphing;
                     newvolume = options.CC_Volume_Value;
@@ -2812,7 +2828,7 @@ namespace MidiTools
 
         public void DeleteAllRouting()
         {
-            var task = Task.Factory.StartNew(() => Panic());
+            var task = Task.Factory.StartNew(() => Panic(true));
 
             while (!task.IsCompleted)
             {

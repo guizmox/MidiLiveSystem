@@ -427,7 +427,8 @@ namespace VSTHost
                     VSTHostInfo.AudioOutputs = VSTSynth.PluginContext.PluginInfo.AudioOutputCount;
                     VSTHostInfo.MidiInputs = VSTSynth.PluginContext.PluginCommandStub.Commands.GetNumberOfMidiInputChannels();
                     if (VSTHostInfo.MidiInputs == 0) { VSTHostInfo.MidiInputs = 1; } //mono channel
-                    VSTHostInfo.Slot = Slot;
+                    
+                    Slot = VSTHostInfo.Slot;
 
                     vstStream = new VSTStream(VSTSynth);
                     //vstStream.ProcessCalled += VSTSynth.Stream_ProcessCalled;
@@ -529,18 +530,19 @@ namespace VSTHost
         {
             try
             {
+                if (VSTSynth != null && VSTSynth.PluginContext != null)
+                {
+                    VSTSynth.PluginContext.PluginCommandStub.Commands.MainsChanged(false);
+                    VSTSynth.PluginContext.PluginCommandStub.Commands.StopProcess();
+                }
+                if (vstStream != null)
+                {
+                    vstStream.Close();
+                }
+
                 if (UtilityAudio.AudioMixer != null)
                 {
                     UtilityAudio.AudioMixer.RemoveInputStream(vstStream);
-                }
-
-                if (VSTSynth != null && VSTSynth.PluginContext != null)
-                {
-                    GetParameters();
-                    VSTSynth.PluginContext.PluginCommandStub.Commands.StopProcess();
-                    VSTSynth.PluginContext.PluginCommandStub.Commands.MainsChanged(false);
-                    VSTSynth.PluginContext.PluginCommandStub.Commands.Close();
-                    VSTSynth = null;
                 }
 
                 if (vstStream != null)
@@ -548,6 +550,15 @@ namespace VSTHost
                     vstStream.Dispose();
                     vstStream = null;
                 }
+
+                if (VSTSynth != null && VSTSynth.PluginContext != null)
+                {
+                    GetParameters();            
+                    VSTSynth.PluginContext.PluginCommandStub.Commands.Close();
+                    VSTSynth = null;
+                }
+
+
                 Loaded = false;
             }
             catch

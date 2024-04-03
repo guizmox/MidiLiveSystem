@@ -258,7 +258,7 @@ namespace MidiLiveSystem
                    
                 }
 
-                await Routing.Panic();
+                await Routing.Panic(false);
                 Playing = false;
             }
         }
