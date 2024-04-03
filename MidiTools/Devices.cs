@@ -351,42 +351,86 @@ namespace MidiTools
 
         internal void DisableClock()
         {
-            if (MIDI_InputEvents != null)
+            if (IsOutVST)
             {
-                MIDI_InputEvents.EnableDisableMidiClockEvents(false);
+                //if (VST_OutputEvents != null)
+                //{
+                //    VST_OutputEvents.EnableDisableMidiClockEvents(false);
+                //}
+            }
+            else
+            {
+                if (MIDI_InputEvents != null)
+                {
+                    MIDI_InputEvents.EnableDisableMidiClockEvents(false);
+                }
             }
         }
 
         internal void EnableClock()
         {
-            if (MIDI_InputEvents != null)
+            if (IsOutVST)
             {
-                MIDI_InputEvents.EnableDisableMidiClockEvents(true);
+            }
+            else
+            {
+                if (MIDI_InputEvents != null)
+                {
+                    MIDI_InputEvents.EnableDisableMidiClockEvents(true);
+                }
             }
         }
 
         internal int GetLiveCCValue(int channelOut, int iCC)
         {
-            if (MIDI_OutputEvents != null)
+            if (IsOutVST)
             {
-                return MIDI_OutputEvents.CCmemory[channelOut - 1, iCC];
+                if (VST_OutputEvents != null)
+                {
+                    return VST_OutputEvents.CCmemory[channelOut - 1, iCC];
+                }
             }
-            else { return -1; }
+            else
+            {
+                if (MIDI_OutputEvents != null)
+                {
+                    return MIDI_OutputEvents.CCmemory[channelOut - 1, iCC];
+                }
+            }
+            return -1;
         }
 
         internal List<int[]> GetLiveCCData(Channel iChannel)
         {
             List<int[]> ccval = new List<int[]>();
 
-            if (MIDI_OutputEvents != null)
+            if (IsOutVST)
             {
-                int idxch = Tools.GetChannelInt(iChannel) - 1;
-
-                for (int i = 0; i < 128; i++)
+                if (VST_OutputEvents != null)
                 {
-                    if (MIDI_OutputEvents.CCmemory[idxch, i] > -1)
+                    int idxch = Tools.GetChannelInt(iChannel) - 1;
+
+                    for (int i = 0; i < 128; i++)
                     {
-                        ccval.Add(new int[2] { i, MIDI_OutputEvents.CCmemory[idxch, i] });
+                        if (VST_OutputEvents.CCmemory[idxch, i] > -1)
+                        {
+                            ccval.Add(new int[2] { i, VST_OutputEvents.CCmemory[idxch, i] });
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (MIDI_OutputEvents != null)
+                {
+                    int idxch = Tools.GetChannelInt(iChannel) - 1;
+
+                    for (int i = 0; i < 128; i++)
+                    {
+                        if (MIDI_OutputEvents.CCmemory[idxch, i] > -1)
+                        {
+                            ccval.Add(new int[2] { i, MIDI_OutputEvents.CCmemory[idxch, i] });
+                        }
                     }
                 }
             }
@@ -396,37 +440,104 @@ namespace MidiTools
 
         internal bool GetLiveNOTEValue(int channelOut, int iNote)
         {
-            if (MIDI_OutputEvents != null)
+            if (IsOutVST)
             {
-                return MIDI_OutputEvents.NOTEmemory[channelOut - 1, iNote];
+                if (VST_OutputEvents != null)
+                {
+                    return VST_OutputEvents.NOTEmemory[channelOut - 1, iNote];
+                }
             }
-            else { return false; }
+            else
+            {
+                if (MIDI_OutputEvents != null)
+                {
+                    return MIDI_OutputEvents.NOTEmemory[channelOut - 1, iNote];
+                }
+            }
+            return false;
+        }
+
+        internal List<int[]> GetLiveNotes(int channelOut)
+        {
+            List<int[]> notes = new List<int[]>();
+
+            if (IsOutVST)
+            {
+                for (int i = 0; i < 128; i++)
+                {
+                    if (VST_OutputEvents.NOTEmemory[channelOut - 1, i])
+                    {
+                        notes.Add(new int[2] { i, VST_OutputEvents.VELOCITYmemory[channelOut - 1, i] });
+                    }
+                }
+            }
+            else
+            {
+                for (int i = 0; i < 128; i++)
+                {
+                    if (MIDI_OutputEvents.NOTEmemory[channelOut - 1, i])
+                    {
+                        notes.Add(new int[2] { i, MIDI_OutputEvents.VELOCITYmemory[channelOut - 1, i] });
+                    }
+                }
+            }
+            return notes;
         }
 
         internal int GetLiveVelocityValue(int channelOut, int iNote)
         {
-            if (MIDI_OutputEvents != null)
+            if (IsOutVST)
             {
-                return MIDI_OutputEvents.VELOCITYmemory[channelOut - 1, iNote];
+                if (VST_OutputEvents != null)
+                {
+                    return VST_OutputEvents.VELOCITYmemory[channelOut - 1, iNote];
+                }
             }
-            else { return 0; }
+            else
+            {
+                if (MIDI_OutputEvents != null)
+                {
+                    return MIDI_OutputEvents.VELOCITYmemory[channelOut - 1, iNote];
+                }
+            }
+            return 0;
         }
 
         internal int GetLiveLowestNote()
         {
             int iNote = -1;
 
-            if (MIDI_OutputEvents != null)
+            if (IsOutVST)
             {
-                for (int iC = 0; iC < 16; iC++)
+                if (VST_OutputEvents != null)
                 {
-                    for (int iN = 0; iN < 128; iN++)
+                    for (int iC = 0; iC < 16; iC++)
                     {
-                        if (MIDI_OutputEvents.NOTEmemory[iC, iN])
+                        for (int iN = 0; iN < 128; iN++)
                         {
-                            return iN;
-                        }
+                            if (VST_OutputEvents.NOTEmemory[iC, iN])
+                            {
+                                return iN;
+                            }
 
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (MIDI_OutputEvents != null)
+                {
+                    for (int iC = 0; iC < 16; iC++)
+                    {
+                        for (int iN = 0; iN < 128; iN++)
+                        {
+                            if (MIDI_OutputEvents.NOTEmemory[iC, iN])
+                            {
+                                return iN;
+                            }
+
+                        }
                     }
                 }
             }
@@ -441,6 +552,7 @@ namespace MidiTools
                 VST_OutputEvents.SaveParameters();
             }
         }
+
     }
 
     internal class VSTOutputDeviceEvents

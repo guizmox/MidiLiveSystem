@@ -149,6 +149,7 @@ namespace MidiTools
         public bool SmoothCC { get { return SmoothCCLength > 0 ? true : false; } }
         public int SmoothCCLength = 0;
         public int DelayNotesLength = 0;
+        internal int PresetMorphing { get { return SmoothCCLength; } } //pour l'instant j'ai pas trouvé de place sur l'UI pour une option dédiée
 
         public bool AddCCConverter(int iFrom, int iTo)
         {
