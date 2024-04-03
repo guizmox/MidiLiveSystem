@@ -1106,7 +1106,7 @@ namespace MidiTools
             {
                 if (routingOUT.DeviceOut != null)
                 {
-                    await RoutingPanic(routingOUT, routingOUT.DeviceOut.Name, routingOUT.ChannelOut);
+                    await RoutingPanic(routingOUT, routingOUT.DeviceOut, routingOUT.ChannelOut);
                 }
             }
         }
@@ -1157,7 +1157,7 @@ namespace MidiTools
                     {
                         if (routing.DeviceOut != null)
                         {
-                            await RoutingPanic(routing, routing.DeviceOut.Name, routing.ChannelOut);
+                            await RoutingPanic(routing, routing.DeviceOut, routing.ChannelOut);
                         }
                     }
                 }));
@@ -1559,7 +1559,7 @@ namespace MidiTools
                 {
                     if (newop.TranspositionOffset != routing.Options.TranspositionOffset) //midi panic
                     {
-                        await RoutingPanic(routing, routing.DeviceOut.Name, routing.ChannelOut);
+                        await RoutingPanic(routing, routing.DeviceOut, routing.ChannelOut);
                     }
 
                     //comparer
@@ -2374,23 +2374,21 @@ namespace MidiTools
             await Task.WhenAll(devicesWork);
         }
 
-        private async Task RoutingPanic(MatrixItem routing, string deviceOutName, int channelOut)
-        {
-            var device = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(deviceOutName));
-
+        private async Task RoutingPanic(MatrixItem routing, MidiDevice device, int channelOut)
+        { 
             if (device != null && channelOut > 0)
             {
                 List<Task> tasks = new List<Task>();
 
                 tasks.Add(routing.Tasks.AddTask(() =>
                 {
-                    device.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 64, 0 }, Tools.GetChannel(channelOut), deviceOutName));
+                    device.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 64, 0 }, Tools.GetChannel(channelOut), device.Name));
 
                     List<int> pendingnotes = routing.ClearPendingNotes();
 
                     foreach (var i in pendingnotes)
                     {
-                        device.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { i, 0 }, Tools.GetChannel(channelOut), deviceOutName));
+                        device.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { i, 0 }, Tools.GetChannel(channelOut), device.Name));
                     }
                 }));
 
@@ -2401,7 +2399,7 @@ namespace MidiTools
                     {
                         tasks.Add(routing.Tasks.AddTask(() =>
                         {
-                            device.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKeyCopy, 0 }, Tools.GetChannel(channelOut), deviceOutName));
+                            device.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKeyCopy, 0 }, Tools.GetChannel(channelOut), device.Name));
                         }));
                     }
                 }
@@ -2557,14 +2555,14 @@ namespace MidiTools
                     routing.Options.Active = active;
                 }
 
-                string oldDeviceOut = "";
+                string oldDeviceOutName = "";
                 int morphinglength = 0;
                 int newvolume = 0;
                 int oldChannelOut = 0;
 
                 if (bOUTChanged)
                 {
-                    oldDeviceOut = routing.DeviceOut.Name;
+                    oldDeviceOutName = routing.DeviceOut.Name;
                     oldChannelOut = routing.ChannelOut;
                     morphinglength = routing.Options.PresetMorphing;
                     newvolume = options.CC_Volume_Value;
@@ -2604,6 +2602,8 @@ namespace MidiTools
 
                 if (bOUTChanged)
                 {
+                    var oldDeviceOut = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(oldDeviceOutName));
+
                     if (options.SmoothCC)
                     {
                         await PresetMorphing(routing, morphinglength, oldDeviceOut, oldChannelOut, newvolume, sDeviceOut, iChOut, vst);
@@ -2616,11 +2616,10 @@ namespace MidiTools
             }
         }
 
-        private async Task PresetMorphing(MatrixItem routing, int valPresetMorphing, string oldDeviceOutName, int oldChannelOut, int newVolumeValue, string newDeviceOutName, int newChannelOut, VSTPlugin vst)
+        private async Task PresetMorphing(MatrixItem routing, int valPresetMorphing, MidiDevice oldDeviceOut, int oldChannelOut, int newVolumeValue, string newDeviceOutName, int newChannelOut, VSTPlugin vst)
         {
             //var newDeviceOut = AddNewOutDevice(newDeviceOutName, vst);
             var newDeviceOut = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(newDeviceOutName));
-            var oldDeviceOut = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(oldDeviceOutName));
 
             if (newDeviceOut != null && oldDeviceOut != null)
             {
@@ -2754,7 +2753,7 @@ namespace MidiTools
             var routingOff = MidiMatrix.Where(m => m.RoutingGuid != routingGuid);
             foreach (var r in routingOff)
             {
-                await RoutingPanic(r, r.DeviceOut.Name, r.ChannelOut);
+                await RoutingPanic(r, r.DeviceOut, r.ChannelOut);
                 r.TempActive = r.Options.Active;
                 r.Options.Active = false;
             }
@@ -2767,7 +2766,7 @@ namespace MidiTools
             {
                 await routingOn.Tasks.AddTask(async () =>
                 {
-                    await RoutingPanic(routingOn, routingOn.DeviceOut.Name, routingOn.ChannelOut);
+                    await RoutingPanic(routingOn, routingOn.DeviceOut, routingOn.ChannelOut);
                     routingOn.TempActive = true;
                     routingOn.Options.Active = false;
                 });
