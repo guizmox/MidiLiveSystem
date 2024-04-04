@@ -90,6 +90,8 @@ namespace MidiTools
 
     public class MidiDevice
     {
+        private bool[,] BlockIncomingCC = new bool[16,128];
+
         public int CC_Pan = 10;
         public int CC_Volume = 7;
         public int CC_Reverb = 91;
@@ -482,6 +484,58 @@ namespace MidiTools
                 }
             }
             return notes;
+        }
+
+
+        internal void UnblockCC(int iCC, int iChannelOut)
+        {
+            BlockIncomingCC[iChannelOut - 1, iCC] = false;
+        }
+
+        internal bool IsBlocked(int iCC, int iChannelOut)
+        {
+            return BlockIncomingCC[iChannelOut - 1, iCC];
+        }
+
+        internal void UnblockAllCC(int iChannelOut)
+        {
+            for (int i = 0; i < 128; i++)
+            {
+                BlockIncomingCC[iChannelOut - 1, i] = false;
+            }
+        }
+
+        internal List<MidiEvent> SetCC(int iCC, int iCCValue, MidiOptions options, int channelout)
+        {
+            //int iChannel = Tools.GetChannelInt(channel);
+            List<MidiEvent> intermediate = new List<MidiEvent>();
+
+            if (options.SmoothCC)
+            {
+                int liveCC = GetLiveCCValue(channelout, iCC);
+
+                if (!Tools.CCToNotBlock.Contains(iCC))
+                {
+                    if ((liveCC + 16) < iCCValue)
+                    {
+                        for (int i = liveCC; i < iCCValue; i += 2)
+                        {
+                            intermediate.Add(new MidiEvent(TypeEvent.CC, new List<int> { iCC, i }, Tools.GetChannel(channelout), Name));
+                        }
+                        BlockIncomingCC[channelout - 1, iCC] = true;
+                    }
+                    else if ((liveCC - 16) > iCCValue)
+                    {
+                        for (int i = liveCC; i > iCCValue; i -= 2)
+                        {
+                            intermediate.Add(new MidiEvent(TypeEvent.CC, new List<int> { iCC, i }, Tools.GetChannel(channelout), Name));
+                        }
+                        BlockIncomingCC[channelout - 1, iCC] = true;
+                    }
+                }
+            }
+
+            return intermediate;
         }
 
         internal int GetLiveVelocityValue(int channelOut, int iNote)

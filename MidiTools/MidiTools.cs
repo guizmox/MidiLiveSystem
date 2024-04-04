@@ -20,6 +20,8 @@ namespace MidiTools
 {
     public static class Tools
     {
+        public readonly static int[] CCToNotBlock = new int[16] { 0, 6, 32, 64, 65, 66, 67, 68, 120, 121, 122, 123, 124, 125, 126, 127 };
+
         public static string SYSEX_CHECK = @"^(F0)([A-f0-9]*)(F7)$";
         public static string INTERNAL_GENERATOR = "Internal Note Generator";
         public static string INTERNAL_SEQUENCER = "Internal Sequencer";
