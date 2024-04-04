@@ -1,4 +1,5 @@
 ﻿using Jacobi.Vst.Plugin.Framework.Plugin;
+using MessagePack;
 using MicroLibrary;
 using NAudio.Wave;
 using RtMidi.Core;
@@ -22,8 +23,6 @@ using static MidiTools.MidiDevice;
 
 namespace MidiTools
 {
-
-    [Serializable]
     internal class MatrixItem
     {
         internal EventPool Tasks = new EventPool("MatrixItem");
@@ -785,7 +784,6 @@ namespace MidiTools
         }
     }
 
-    [Serializable]
     public class MidiRouting
     {
         private EventPool Tasks = new EventPool("MidiRouting");
@@ -2780,14 +2778,9 @@ namespace MidiTools
             });
         }
 
-        public void DeleteAllRouting()
+        public async Task DeleteAllRouting()
         {
-            var task = Task.Factory.StartNew(() => Panic(true));
-
-            while (!task.IsCompleted)
-            {
-                Thread.Sleep(100);
-            }
+            await Panic(true);
 
             MidiClock.Stop();
             MidiClock.Enabled = false;
@@ -2952,6 +2945,7 @@ namespace MidiTools
                 routing.SetRoutingGuid(newGuid);
             }
         }
+
         public async Task<List<int>> GetCCData(Guid routingGuid, int[] sCC)
         {
             List<int> CCdata = new List<int>();

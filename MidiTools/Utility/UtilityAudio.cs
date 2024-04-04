@@ -2,6 +2,7 @@
 using Jacobi.Vst.Host.Interop;
 using Jacobi.Vst.Plugin.Framework;
 using Jacobi.Vst.Samples.Host;
+using MessagePack;
 using MidiTools;
 using NAudio.Midi;
 using NAudio.Wave;
@@ -24,31 +25,63 @@ using System.Windows.Forms;
 // Modified by perivar@nerseth.com
 namespace VSTHost
 {
+    [MessagePackObject]
     [Serializable]
     public class VSTParameter
     {
+        [Key("Index")]
         public int Index;
+        [Key("Data")]
         public float Data;
+        [Key("Name")]
         public string Name;
     }
 
+    [MessagePackObject]
     [Serializable]
     public class VSTHostInfo
     {
-        public Guid VSTHostGuid = Guid.Empty;
-        public int SynthID = 0;
-        public string AsioDevice = "";
-        public int SampleRate = 48000;
-        public string VSTPath = "";
-        public string Error = "";
-        public string VSTName = "";
-        public int Program = -1;
-        public List<VSTParameter> Parameters = new List<VSTParameter>();
-        public int PluginID = 0;
-        public int AudioOutputs = 0;
-        public int Slot = 1;
-        public int MidiInputs = 1;
-        public byte[] Dump;
+        [Key("VSTHostGuid")]
+        public Guid VSTHostGuid { get; set; } = Guid.Empty;
+
+        [Key("SynthID")]
+        public int SynthID { get; set; } = 0;
+
+        [Key("AsioDevice")]
+        public string AsioDevice { get; set; } = "";
+
+        [Key("SampleRate")]
+        public int SampleRate { get; set; } = 48000;
+
+        [Key("VSTPath")]
+        public string VSTPath { get; set; } = "";
+
+        [Key("Error")]
+        public string Error { get; set; } = "";
+
+        [Key("VSTName")]
+        public string VSTName { get; set; } = "";
+
+        [Key("Program")]
+        public int Program { get; set; } = -1;
+
+        [Key("Parameters")]
+        public List<VSTParameter> Parameters { get; set; } = new List<VSTParameter>();
+
+        [Key("PluginID")]
+        public int PluginID { get; set; } = 0;
+
+        [Key("AudioOutputs")]
+        public int AudioOutputs { get; set; } = 0;
+
+        [Key("Slot")]
+        public int Slot { get; set; } = 1;
+
+        [Key("MidiInputs")]
+        public int MidiInputs { get; set; } = 1;
+
+        [Key("Dump")]
+        public byte[] Dump { get; set; }
 
         public string GetInfo()
         {

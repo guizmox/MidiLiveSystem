@@ -1,4 +1,5 @@
-﻿using MidiTools;
+﻿using MessagePack;
+using MidiTools;
 using NAudio.SoundFont;
 using RtMidi.Core.Devices.Infos;
 using System;
@@ -68,6 +69,7 @@ namespace MidiLiveSystem
 
         public Guid BoxGuid { get; private set; } = Guid.NewGuid();
         public string BoxName { get; private set; } = "Routing Box";
+        public string PresetName { get { return Dispatcher.Invoke(() => tbPresetName.Text.Trim()); } }
 
         private ProjectConfiguration Project;
 
@@ -1520,19 +1522,41 @@ namespace MidiLiveSystem
         }
     }
 
+    [MessagePackObject]
     [Serializable]
     public class BoxPreset
     {
-        public VSTHostInfo VSTData;
+        [Key("VSTData")]
+        public VSTHostInfo VSTData { get; set; }
+
+        [Key("RoutingGuid")]
         public Guid RoutingGuid { get; set; } = Guid.Empty;
+
+        [Key("BoxGuid")]
         public Guid BoxGuid { get; set; } = Guid.Empty;
+
+        [Key("BoxName")]
         public string BoxName { get; set; } = "Routing Name";
+
+        [Key("PresetName")]
         public string PresetName { get; set; } = "My Preset";
+
+        [Key("MidiOptions")]
         public MidiOptions MidiOptions { get; set; } = new MidiOptions();
+
+        [Key("MidiPreset")]
         public MidiPreset MidiPreset { get; set; } = new MidiPreset("", 1, 0, 0, 0, "");
+
+        [Key("DeviceIn")]
         public string DeviceIn { get; set; } = "";
+
+        [Key("DeviceOut")]
         public string DeviceOut { get; set; } = "";
+
+        [Key("ChannelIn")]
         public int ChannelIn { get; set; } = 1;
+
+        [Key("ChannelOut")]
         public int ChannelOut { get; set; } = 0;
 
         public BoxPreset()

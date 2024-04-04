@@ -1,18 +1,24 @@
-﻿using System;
+﻿using MessagePack;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace MidiTools
 {
 
-
+    [MessagePackObject]
     [Serializable]
     public class NoteGenerator
     {
+        [Key("Velocity")]
         public int Velocity = 64;
+        [Key("Note")]
         public int Note = 64;
+        [Key("Octave")]
         public int Octave = 3;
+        [Key("Channel")]
         public int Channel = 1;
+        [Key("Length")]
         public decimal Length = 100;
 
         public NoteGenerator(int iChannel, int iOctave, int iNote, int iVelocity, decimal dLength)

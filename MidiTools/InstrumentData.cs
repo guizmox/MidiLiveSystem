@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MessagePack;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -11,7 +12,7 @@ namespace MidiTools
         public static List<InstrumentData> Instruments = new List<InstrumentData>();
     }
 
-
+    [MessagePackObject]
     [Serializable]
     public class InstrumentData
     {
@@ -31,9 +32,13 @@ namespace MidiTools
             CC_FilterCutOff = 74
         }
 
+        [MessagePackObject]
+        [Serializable]
         public class ParamToCC
         {
+            [Key("CC")]
             public int CC = 0;
+            [Key("Param")]
             public CC_Parameters Param;
 
             public ParamToCC()
@@ -46,10 +51,15 @@ namespace MidiTools
             }
         }
 
+        [Key("Categories")]
         public List<PresetHierarchy> Categories { get; } = new List<PresetHierarchy>();
+        [Key("Device")]
         public string Device { get; set; } = "";
+        [Key("CubaseFile")]
         public string CubaseFile { get; set; } = "";
+        [Key("SortedByBank")]
         public bool SortedByBank = false;
+        [Key("SysExInitializer")]
         public string SysExInitializer
         {
             get { return _sysexinit; }
@@ -60,6 +70,7 @@ namespace MidiTools
                 _sysexinit = value;
             }
         }
+        [Key("DefaultCC")]
         public List<ParamToCC> DefaultCC = new List<ParamToCC>();
 
         private string _sysexinit = "";
@@ -256,14 +267,19 @@ namespace MidiTools
         }
     }
 
-
+    [MessagePackObject]
     [Serializable]
     public class PresetHierarchy
     {
+        [Key("Category")]
         public string Category = "";
+        [Key("Level")]
         public int Level = 0;
+        [Key("IndexInFile")]
         public int IndexInFile = 0;
+        [Key("Raw")]
         public string Raw = "";
+        [Key("Presets")]
         public List<MidiPreset> Presets { get; set; } = new List<MidiPreset>();
 
         public PresetHierarchy(int iIndex, string sRaw, string sCategory, int iLevel)

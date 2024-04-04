@@ -7,16 +7,19 @@ using static MidiTools.MidiDevice;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Timers;
+using MessagePack;
 
 namespace MidiTools
 {
-
+    [MessagePackObject]
     [Serializable]
     public class MidiSequence
     {
+        [IgnoreMember] // Ignorer cette propriété privée lors de la sérialisation
         private EventPool Tasks = new EventPool("MidiSequence");
 
-        public List<LiveData> SequencerDefault = new List<LiveData>();
+        [Key("SequencerDefault")]
+        public List<LiveData> SequencerDefault { get; set; } = new List<LiveData>();
 
         public delegate void SequenceFinishedHandler(string sInfo);
         public event SequenceFinishedHandler SequenceFinished;
@@ -24,21 +27,34 @@ namespace MidiTools
         public delegate void RecorderLengthCounter(string sInfo);
         public event RecorderLengthCounter RecordCounter;
 
-        public bool StopSequenceRequested = false;
-
+        [IgnoreMember] // Ignorer cette propriété privée lors de la sérialisation
         private readonly List<MidiEvent> _eventsIN = new List<MidiEvent>();
+
+        [IgnoreMember] // Ignorer cette propriété privée lors de la sérialisation
         private readonly List<MidiEvent> _eventsOUT = new List<MidiEvent>();
 
+        [Key("EventsOUT")]
         public List<MidiEvent> EventsOUT { get { return _eventsOUT; } }
 
-        public TimeSpan SequenceLength = TimeSpan.Zero;
-        public bool IsStopped = true;
+        [Key("SequenceLength")]
+        public TimeSpan SequenceLength { get; set; } = TimeSpan.Zero;
 
+        [Key("IsStopped")]
+        public bool IsStopped { get; set; } = true;
+
+        [IgnoreMember]
         private System.Timers.Timer Recorder;
+
+        [IgnoreMember]
         private DateTime RecorderStart;
 
+        [IgnoreMember] 
         private System.Timers.Timer Player;
+
+        [IgnoreMember]
         private DateTime PlayerStart;
+
+        private bool StopSequenceRequested = false;
 
         public MidiSequence()
         {

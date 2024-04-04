@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MessagePack;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,17 +9,32 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
 
 namespace MidiTools
 {
+    [MessagePackObject]
     [Serializable]
     public class SequencerData
     {
+        [Key("Sequencer")]
         public Sequencer[] Sequencer;
+
+        [Key("StartStopListener")]
         public string StartStopListener = "";
+
+        [Key("LowKeyTranspose")]
         public static int LowKeyTranspose = 21;
+
+        [Key("HighKeyTranspose")]
         public static int HighKeyTranspose = 48;
 
+        [IgnoreMember]
         public static MicroLibrary.MicroTimer[] SequencerClock = new MicroLibrary.MicroTimer[8];
+
+        [Key("TimerFrequency")]
         public static long[] TimerFrequency = new long[8];
+
+        [Key("Tempo")]
         public static int[] Tempo = new int[8];
+
+        [Key("Quantization")]
         public static string[] Quantization = new string[8];
 
         public SequencerData()

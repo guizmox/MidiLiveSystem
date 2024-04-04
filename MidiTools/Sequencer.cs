@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Primitives;
+﻿using MessagePack;
+using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +9,7 @@ using System.Timers;
 
 namespace MidiTools
 {
+    [MessagePackObject]
     [Serializable]
     public class Sequencer
     {
@@ -16,17 +18,34 @@ namespace MidiTools
         public delegate void SequencerStepHandler(SequenceStep notes, SequenceStep lastnotes, double lengthInMs, int lastPositionInSequence, int positionInSequence);
         public event SequencerStepHandler OnInternalSequencerStep;
 
+        [Key("LiveNotes")]
         public bool[] LiveNotes = new bool[128];
+
+        [Key("StartNote")]
         public int StartNote { get { return Sequence[0].NotesAndVelocity.Count > 0 ? Sequence[0].NotesAndVelocity[0][0] : -1; } }
-        public bool Transpose = false;
-        public int Channel = 0;
+
+        [Key("Transpose")]
+        public bool Transpose { get; set; } = false;
+
+        [Key("Channel")]
+        public int Channel { get; set; } = 0;
+
+        [Key("Tempo")]
         public int Tempo { get; set; } = 120;
+
+        [Key("TransposeOffset")]
         public int TransposeOffset { get; set; } = 0;
 
-        public string Quantization = "4";
-        public int Steps = 32;
-        public bool Muted = false;
+        [Key("Quantization")]
+        public string Quantization { get; set; } = "4";
 
+        [Key("Steps")]
+        public int Steps { get; set; } = 32;
+
+        [Key("Muted")]
+        public bool Muted { get; set; } = false;
+
+        [Key("Sequence")]
         public SequenceStep[] Sequence;
 
         private int Loop;
@@ -176,15 +195,23 @@ namespace MidiTools
         }
     }
 
+    [MessagePackObject]
     [Serializable]
     public class SequenceStep
     {
+        [Key("Step")]
         public int Step = 0;
+
+        [Key("NotesAndVelocity")]
         public List<int[]> NotesAndVelocity = new List<int[]>();
+
+        [Key("GatePercent")]
         public double GatePercent = 50.0;
+
+        [Key("StepCount")]
         public int StepCount = 1;
 
-        private SequenceStep()
+        public SequenceStep()
         {
 
         }

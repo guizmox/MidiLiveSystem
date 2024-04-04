@@ -1,29 +1,16 @@
-﻿using MaterialDesignThemes.Wpf;
+﻿using MessagePack;
 using MidiTools;
 using RtMidi.Core.Enums;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using System.Xml.Linq;
-using System.Xml.Serialization;
 using VSTHost;
-using static MidiLiveSystem.RoutingBox;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace MidiLiveSystem
 {
@@ -308,7 +295,7 @@ namespace MidiLiveSystem
 
             Database.SaveInstruments(CubaseInstrumentData.Instruments);
 
-            Routing.DeleteAllRouting();
+            await Routing.DeleteAllRouting();
         }
 
         private void ControlChangeMixer_Closed(object sender, EventArgs e)
@@ -602,6 +589,12 @@ namespace MidiLiveSystem
                         {
                             await Routing.ModifyRouting(bp2.RoutingGuid, sDevIn2, sDevOut2, box.GetVST(), iChIn2, iChOut2, bp2.MidiOptions, bp2.MidiPreset, sDevIn2.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn2 - 1 ? SeqData.Sequencer[iChIn2 - 1] : null);
                         }
+
+                        if (ConductorWindow != null) //rafraichir le conducteur selon le preset qui a changé
+                        {
+                            await ConductorWindow.InitStage();
+                        }
+
                         break;
 
                     case "COPY_PRESET":
@@ -822,7 +815,7 @@ namespace MidiLiveSystem
 
                 try
                 {
-                    Database.SaveProject(Boxes, Project, RecordedSequence, SeqData);
+                    Database.SaveProjectV2(Boxes, Project, RecordedSequence, SeqData);
                     Database.SaveInstruments(CubaseInstrumentData.Instruments);
                 }
                 catch (Exception ex)
@@ -856,7 +849,7 @@ namespace MidiLiveSystem
                     if (project != null)
                     {
 
-                        Routing.DeleteAllRouting();
+                        await Routing.DeleteAllRouting();
 
                         Project = project.Item2;
                         NewMessage?.Invoke("Project Loaded");
@@ -1307,9 +1300,11 @@ namespace MidiLiveSystem
 
     }
 
+    [MessagePackObject]
     [Serializable]
     public class RoutingBoxes
     {
+        [Key("AllPresets")]
         public BoxPreset[] AllPresets;
 
         public RoutingBoxes()

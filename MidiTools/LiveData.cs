@@ -1,4 +1,5 @@
-﻿using RtMidi.Core.Devices;
+﻿using MessagePack;
+using RtMidi.Core.Devices;
 using RtMidi.Core.Enums;
 using System;
 using System.Collections.Generic;
@@ -8,15 +9,27 @@ using static MidiTools.MidiDevice;
 
 namespace MidiTools
 {
+    [MessagePackObject]
     [Serializable]
     public class LiveData
     {
-        public List<int[]> StartCC = new List<int[]>();
-        public MidiOptions StartOptions;
-        public Channel Channel;
-        public string DeviceOUT;
-        public Guid RoutingGuid;
-        public MidiPreset InitProgram;
+        [Key("StartCC")]
+        public List<int[]> StartCC { get; set; } = new List<int[]>();
+
+        [Key("StartOptions")]
+        public MidiOptions StartOptions { get; set; }
+
+        [Key("Channel")]
+        public Channel Channel { get; set; }
+
+        [Key("DeviceOUT")]
+        public string DeviceOUT { get; set; }
+
+        [Key("RoutingGuid")]
+        public Guid RoutingGuid { get; set; }
+
+        [Key("InitProgram")]
+        public MidiPreset InitProgram { get; set; }
 
 
         public LiveData()

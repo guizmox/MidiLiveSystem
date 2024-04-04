@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32;
+﻿using MessagePack;
+using Microsoft.Win32;
 using MidiTools;
 using RtMidi.Core.Devices;
 using System;
@@ -519,15 +520,21 @@ namespace MidiLiveSystem
 
     }
 
+    [MessagePackObject]
     [Serializable]
     public class ProjectConfiguration
     {
+        [MessagePackObject]
         [Serializable]
         public class RecallConfiguration
         {
+            [Key("ButtonName")]
             public string ButtonName = "";
+            [Key("ButtonIndex")]
             public int ButtonIndex = 0;
+            [Key("BoxGuids")]
             public List<Guid> BoxGuids = new List<Guid>();
+            [Key("BoxPresets")]
             public List<int> BoxPresets = new List<int>();
 
             public RecallConfiguration()
@@ -547,55 +554,75 @@ namespace MidiLiveSystem
         private List<string> _listDevicesIn = null;
         private List<string> _listDevicesOut = null;
 
-        public Guid ProjectId = Guid.NewGuid();
-        public string ProjectName = "My Project";
+        [Key("ProjectId")]
+        public Guid ProjectId { get; set; } = Guid.NewGuid();
+
+        [Key("ProjectName")]
+        public string ProjectName { get; set; } = "My Project";
+
+        [Key("DevicesOUT")]
         public List<string> DevicesOUT
         {
-            get
-            {
-                return _listDevicesOut;
-            }
-            set
-            {
-                _listDevicesOut = value;
-            }
+            get { return _listDevicesOut; }
+            set { _listDevicesOut = value; }
         }
 
-        public List<RecallConfiguration> RecallData = new List<RecallConfiguration>();
+        [Key("RecallData")]
+        public List<RecallConfiguration> RecallData { get; set; } = new List<RecallConfiguration>();
 
+        [Key("DevicesIN")]
         public List<string> DevicesIN
         {
-            get
-            {
-                return _listDevicesIn;
-            }
-            set
-            {
-                _listDevicesIn = value;
-            }
+            get { return _listDevicesIn; }
+            set { _listDevicesIn = value; }
         }
 
-        public bool IsDefaultConfig = true;
+        [Key("IsDefaultConfig")]
+        public bool IsDefaultConfig { get; set; } = true;
 
-        public MidiSequence RecordedSequence;
+        [Key("RecordedSequence")]
+        public MidiSequence RecordedSequence { get; set; }
 
-        public List<string[]> BoxNames = null;
+        [Key("BoxNames")]
+        public List<string[]> BoxNames { get; set; } = null;
 
-        public int HorizontalGrid = -1;
-        public int VerticalGrid = -1;
+        [Key("HorizontalGrid")]
+        public int HorizontalGrid { get; set; } = -1;
 
+        [Key("VerticalGrid")]
+        public int VerticalGrid { get; set; } = -1;
+
+        [IgnoreMember]
         private string _clockDevice = "";
-        public string ClockDevice { get { return _clockDevice; } set { AddClockDevice(value); } }
 
-        public int BPM = 120;
-        public bool ClockActivated = false;
+        [Key("ClockDevice")]
+        public string ClockDevice
+        {
+            get { return _clockDevice; }
+            set { AddClockDevice(value); }
+        }
 
+        [Key("BPM")]
+        public int BPM { get; set; } = 120;
+
+        [Key("ClockActivated")]
+        public bool ClockActivated { get; set; } = false;
+
+        [IgnoreMember]
         private string _triggerDevice = "";
 
-        public string TriggerRecallButtons = "UI";
-        public int TriggerRecallButtonsValue = 0;
+        [Key("TriggerRecallButtons")]
+        public string TriggerRecallButtons { get; set; } = "UI";
 
-        public string TriggerRecallDevice { get { return _triggerDevice; } set { AddTriggerDevice(value); } }
+        [Key("TriggerRecallButtonsValue")]
+        public int TriggerRecallButtonsValue { get; set; } = 0;
+
+        [Key("TriggerRecallDevice")]
+        public string TriggerRecallDevice
+        {
+            get { return _triggerDevice; }
+            set { AddTriggerDevice(value); }
+        }
 
         public ProjectConfiguration()
         {

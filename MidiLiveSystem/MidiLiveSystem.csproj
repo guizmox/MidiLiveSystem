@@ -34,6 +34,7 @@
   <ItemGroup>
     <PackageReference Include="MaterialDesignColors" Version="3.0.0" />
     <PackageReference Include="MaterialDesignThemes" Version="5.0.0" />
+    <PackageReference Include="MessagePack" Version="2.5.140" />
     <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="6.0.28" />
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.8" />
   </ItemGroup>

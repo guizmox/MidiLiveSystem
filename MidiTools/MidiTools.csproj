@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="MessagePack" Version="2.5.140" />
     <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="VST.NET2-Host" Version="2.1.1" />
     <PackageReference Include="VST.NET2-Plugin" Version="2.1.1" />

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -36,16 +37,31 @@ namespace MidiLiveSystem
             Boxes = boxes;
             Routing = routing;
 
-            for (int i = 0; i < boxes.Count; i++)
-            {
-                _buttonPosition.Add(new Point());
-                _isMoving.Add(false);
-                deltaX.Add(0);
-                deltaY.Add(0);
-                _currentTT.Add(new TranslateTransform());
+            Task.Run(() => InitStage());
+        }
 
-                InitializeRoutingBoxButton(boxes[i], i);
-            }
+        public async Task InitStage()
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                gdButtons.Children.Clear();
+                _buttonPosition.Clear();
+                _isMoving.Clear();
+                deltaX.Clear();
+                deltaY.Clear();
+                _currentTT.Clear();
+
+                for (int i = 0; i < Boxes.Count; i++)
+                {
+                    _buttonPosition.Add(new Point());
+                    _isMoving.Add(false);
+                    deltaX.Add(0);
+                    deltaY.Add(0);
+                    _currentTT.Add(new TranslateTransform());
+
+                    InitializeRoutingBoxButton(Boxes[i], i);
+                }
+            });
         }
 
         private void btnClose_Click(object sender, RoutedEventArgs e)
@@ -119,7 +135,7 @@ namespace MidiLiveSystem
 
                 SetBoxData(iVol, iPan, iReverb, iCutOff, iAttack, Boxes[iIndex]);
 
-                ((Button)sender).Content = new TextBlock() { Foreground = Brushes.Yellow, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Text = NameButtonBox(Boxes[iIndex], iVol, iPan), FontSize = 9, TextWrapping = TextWrapping.Wrap };
+                ((Button)sender).Content = new TextBlock() { Foreground = Brushes.Yellow, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Text = NameButtonBox(Boxes[iIndex], iVol, iPan), FontSize = 8, TextWrapping = TextWrapping.Wrap };
 
                 string text = string.Concat("VOL=", iVol, " - PAN=", iPan);
 
@@ -142,7 +158,7 @@ namespace MidiLiveSystem
 
         private string NameButtonBox(RoutingBox box, int iVol, int iPan)
         {
-            return string.Concat(box.BoxName, Environment.NewLine, "VOL=", iVol, " - PAN=", iPan);
+            return string.Concat(box.BoxName, Environment.NewLine, box.PresetName, Environment.NewLine, "VOL=", iVol, " - PAN=", iPan);
         }
 
         private void SetBoxData(int iVol, int iPan, int iReverb, int iCutOff, int iAttack, RoutingBox box)
