@@ -485,6 +485,8 @@ namespace VSTHost
                         VSTHostInfo.VSTName = Path.GetFileName(VSTHostInfo.VSTPath);
                     }
 
+                    LoadVSTParameters();
+
                     if (VSTHostInfo.Program > -1)
                     {
                         try
@@ -496,8 +498,6 @@ namespace VSTHost
                             sInfo = "VST Program can't be set : " + ex.Message;
                         }
                     }
-
-                    LoadVSTParameters();
 
                     VSTEvent?.Invoke("VST Loaded");
                 }
