@@ -2578,7 +2578,7 @@ namespace MidiTools
                             newDeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { note[0], note[1] }, Tools.GetChannel(newChannelOut), newDeviceOut.Name));
                         }
 
-                        for (int iFadeIn = 0; iFadeIn < newVolumeValue; iFadeIn += 2)
+                        for (int iFadeIn = 0; iFadeIn < newVolumeValue; iFadeIn += 2) //+2 car je veux éviter le trou du 50/50
                         {
                             newDeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 7, iFadeIn }, Tools.GetChannel(newChannelOut), newDeviceOut.Name));
                             Thread.Sleep(iRateFadeIn);
