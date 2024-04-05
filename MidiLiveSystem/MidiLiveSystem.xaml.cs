@@ -22,7 +22,7 @@ namespace MidiLiveSystem
     {
         private static string APP_NAME = "Midi Live System";
 
-        internal delegate void CCMixEventHandler(Guid RoutingGuid, List<int> sValues);
+        internal delegate void CCMixEventHandler(Guid RoutingGuid, int[] sValues);
         internal static event CCMixEventHandler CCMixData;
 
         private delegate void UIEventHandler(string sMessage);
@@ -58,7 +58,8 @@ namespace MidiLiveSystem
         public MainWindow()
         {
             InitializeComponent();
-            InitFrames(CurrentHorizontalGrid, CurrentVerticalGrid);
+
+            Task.Run(() => InitFrames(CurrentHorizontalGrid, CurrentVerticalGrid));
 
             UIRefreshRate = new System.Timers.Timer();
             UIRefreshRate.Elapsed += UIRefreshRate_Elapsed;
@@ -74,7 +75,7 @@ namespace MidiLiveSystem
             {
                 Database = new SQLiteDatabaseManager();
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
                 MessageBox.Show(ex.Message);
                 Close();
@@ -106,25 +107,6 @@ namespace MidiLiveSystem
             await Dispatcher.InvokeAsync(() =>
             {
                 Title = string.Concat(APP_NAME, " [", sMessage, "]");
-            });
-        }
-
-        private void Keyboard_KeyPressed(string sKey)
-        {
-            Dispatcher.Invoke(() =>
-            {
-                if (FocusManager.GetFocusedElement(this) is TextBox textBox)
-                {
-                    if (sKey.Equals("BACK", StringComparison.OrdinalIgnoreCase))
-                    {
-                        string sNew = textBox.Text.Length == 0 ? "" : textBox.Text.Substring(0, textBox.Text.Length - 1);
-                        textBox.Text = sNew;
-                    }
-                    else
-                    {
-                        textBox.Text += sKey;
-                    }
-                }
             });
         }
 
@@ -192,56 +174,6 @@ namespace MidiLiveSystem
             }
         }
 
-        private void InitFrames(int iRows, int iCols)
-        {
-            GridFrames.Clear();
-            gridBoxes.Children.Clear();
-            gridBoxes.RowDefinitions.Clear();
-            gridBoxes.ColumnDefinitions.Clear();
-
-            if (iRows == 1 && iCols == 1) //option de maximisation
-            {
-                gridBoxes.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(100, GridUnitType.Star) });
-                gridBoxes.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(100, GridUnitType.Star) });
-            }
-            else
-            {
-                for (int row = 0; row < iRows; row++)
-                {
-                    gridBoxes.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(iCols, GridUnitType.Star) });
-                }
-                for (int col = 0; col < iCols; col++)
-                {
-                    gridBoxes.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(iRows, GridUnitType.Star) });
-                }
-            }
-
-            for (int row = 0; row < iRows; row++)
-            {
-                for (int col = 0; col < iCols; col++)
-                {
-                    Border border = new Border();
-                    border.BorderBrush = Brushes.Gray;
-                    border.BorderThickness = new Thickness(1);
-
-                    Grid.SetRow(border, row);
-                    Grid.SetColumn(border, col);
-                    gridBoxes.Children.Add(border);
-
-                    Frame frame = new Frame
-                    {
-                        Name = string.Concat("frmBox", row, "x", col),
-                        Tag = ""
-                    };
-
-                    GridFrames.Add(frame);
-                    gridBoxes.Children.Add(frame);
-                    Grid.SetRow(frame, row);
-                    Grid.SetColumn(frame, col);
-                };
-            }
-        }
-
         private async void Window_Closed(object sender, EventArgs e)
         {
             MidiRouting.InputStaticMidiMessage -= MidiRouting_InputMidiMessage;
@@ -282,6 +214,10 @@ namespace MidiLiveSystem
             {
                 SequencerWindow.Close();
             }
+            if (ControlChangeMixer != null)
+            {
+                ControlChangeMixer.Close();
+            }
 
             foreach (var detached in DetachedWindows)
             {
@@ -293,29 +229,9 @@ namespace MidiLiveSystem
                 box.CloseVSTWindow();
             }
 
-            Database.SaveInstruments(CubaseInstrumentData.Instruments);
+            await Database.SaveInstruments(CubaseInstrumentData.Instruments);
 
             await Routing.DeleteAllRouting();
-        }
-
-        private void ControlChangeMixer_Closed(object sender, EventArgs e)
-        {
-            ControlChangeMixer.OnUIEvent -= RoutingBox_UIEvent;
-        }
-
-        private void RecallWindow_Closed(object sender, EventArgs e)
-        {
-            RecallWindow.SaveRecallsToProject();
-        }
-
-        private void Log_Closed(object sender, EventArgs e)
-        {
-            MidiRouting.NewLog -= MidiRouting_NewLog;
-            Routing.StopLog();
-
-            btnLog.Background = Brushes.IndianRed;
-            LogWindow.Closed -= Log_Closed;
-            LogWindow = null;
         }
 
         private async void MainConfiguration_Closed(object sender, EventArgs e)
@@ -382,6 +298,26 @@ namespace MidiLiveSystem
             }
         }
 
+        private void ControlChangeMixer_Closed(object sender, EventArgs e)
+        {
+            ControlChangeMixer.OnUIEvent -= RoutingBox_UIEvent;
+        }
+
+        private void RecallWindow_Closed(object sender, EventArgs e)
+        {
+            RecallWindow.SaveRecallsToProject();
+        }
+
+        private void Log_Closed(object sender, EventArgs e)
+        {
+            MidiRouting.NewLog -= MidiRouting_NewLog;
+            Routing.StopLog();
+
+            btnLog.Background = Brushes.IndianRed;
+            LogWindow.Closed -= Log_Closed;
+            LogWindow = null;
+        }
+
         private async void Routing_SequenceFinished(string sInfo)
         {
             Dispatcher.Invoke(() =>
@@ -396,17 +332,17 @@ namespace MidiLiveSystem
             await Routing.OpenUsedPorts(false);
         }
 
-        private void RecordedSequence_RecordCounter(string sInfo)
+        private async void RecordedSequence_RecordCounter(string sInfo)
         {
-            Dispatcher.Invoke(() =>
+            await Dispatcher.InvokeAsync(() =>
             {
                 tbRecord.Text = sInfo;
             });
         }
 
-        private void PlayedSequence_RecordCounter(string sInfo)
+        private async void PlayedSequence_RecordCounter(string sInfo)
         {
-            Dispatcher.Invoke(() =>
+            await Dispatcher.InvokeAsync(() =>
             {
                 tbPlay.Text = sInfo;
             });
@@ -431,11 +367,11 @@ namespace MidiLiveSystem
                         HelpWindow.Show();
                         break;
                     case "MAXIMIZE":
-                        InitFrames(1, 1);
+                        await InitFrames(1, 1);
                         await AddRoutingBoxToFrame(box, false);
                         break;
                     case "MINIMIZE":
-                        InitFrames(Project.HorizontalGrid, Project.VerticalGrid);
+                        await InitFrames(Project.HorizontalGrid, Project.VerticalGrid);
                         await AddAllRoutingBoxes();
                         break;
                     case "DETACH":
@@ -491,7 +427,7 @@ namespace MidiLiveSystem
                             }
 
                             var options = await box.GetOptions();
-                            ControlChangeMixer = new CCMixer(box.BoxGuid, box.RoutingGuid, box.BoxName, options.DefaultCCMix);
+                            ControlChangeMixer = new CCMixer(box.BoxGuid, box.RoutingGuid, box.BoxName, box.GetCurrentPreset().PresetName, options.CCMixDefaultParameters);
                             ControlChangeMixer.OnUIEvent += ControlChange_UIEvent;
                             ControlChangeMixer.Closed += ControlChangeMixer_Closed;
                             ControlChangeMixer.Show();
@@ -595,6 +531,18 @@ namespace MidiLiveSystem
                             await ConductorWindow.InitStage();
                         }
 
+                        if (ControlChangeMixer != null)
+                        {
+                            await ControlChangeMixer.InitPage(box.BoxName, box.GetCurrentPreset().PresetName);
+                            MidiOptions presetopt = await box.GetOptions();
+                            await ControlChangeMixer.InitMixer();
+                        }
+
+                        break;
+
+                    case "SEND_CC_DATA":
+                        int[] cc = (int[])sValue;
+                        await Routing.SendCC(box.RoutingGuid, cc[0], cc[1]);
                         break;
 
                     case "COPY_PRESET":
@@ -627,50 +575,6 @@ namespace MidiLiveSystem
             }
         }
 
-        private int GetFreeChannelForDevice(Guid boxguid, string sDevice, int iChannelWanted)
-        {
-            if (iChannelWanted == 0) { iChannelWanted = 1; }
-
-            bool[] channels = new bool[16];
-
-            foreach (var Box in Boxes.Where(b => b.BoxGuid != boxguid))
-            {
-                foreach (var preset in Box.GetRoutingBoxMemory())
-                {
-                    if (preset.DeviceOut.Equals(sDevice) && preset.ChannelOut > 0)
-                    {
-                        channels[preset.ChannelOut - 1] = true;
-                    }
-                }
-            }
-
-            if (!channels[iChannelWanted - 1])
-            {
-                return iChannelWanted;
-            }
-            else
-            {
-                for (int iC = 0; iC < channels.Length; iC++)
-                {
-                    if (!channels[iC])
-                    { return iC + 1; }
-                }
-            }
-            return -1;
-        }
-
-        private bool CheckVSTUsage(Guid intialboxguid, VSTPlugin vst)
-        {
-            foreach (var b in Boxes.Where(bb => bb.BoxGuid != intialboxguid))
-            {
-                if (b.HasVSTAttached && b.GetVST().Slot == vst.Slot)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
         private async void ControlChange_UIEvent(Guid gBox, string sControl, object sValue)
         {
             var box = Boxes.FirstOrDefault(b => b.BoxGuid == gBox);
@@ -681,15 +585,19 @@ namespace MidiLiveSystem
                     case "CC_MIX_DATA":
                         if (box.RoutingGuid != Guid.Empty)
                         {
-                            List<int> sData = await Routing.GetCCData(box.RoutingGuid, (int[])sValue);
-                            CCMixData?.Invoke(box.RoutingGuid, sData);
+                            MidiOptions presetopt = await box.GetOptions();
+                            CCMixData?.Invoke(box.RoutingGuid, presetopt.DefaultRoutingCC);
                         }
                         break;
                     case "CC_SEND_MIX_DATA":
                         if (box.RoutingGuid != Guid.Empty)
                         {
                             int[] iCC = (int[])sValue;
-                            await Routing.SendCC(box.RoutingGuid, iCC[0], iCC[1]);
+                            if (iCC[1] > -1) //on n'envoie rien si on fait un INIT à -1
+                            {
+                                await Routing.SendCC(box.RoutingGuid, iCC[0], iCC[1]);
+                            }
+                            box.SetInitCC(iCC);
                         }
                         break;
                     case "CC_SAVE_MIX_DEFAULT":
@@ -729,45 +637,6 @@ namespace MidiLiveSystem
             await LogWindow.AddLog(sDevice, bIn, sLog);
         }
 
-        private void btnSettings_Click(object sender, RoutedEventArgs e)
-        {
-            if (ConfigWindow != null)
-            {
-                if (!ConfigWindow.IsActive)
-                {
-                    ConfigWindow.Closed -= MainConfiguration_Closed;
-                    ConfigWindow = new MidiConfiguration(Project, Boxes, Routing);
-                    ConfigWindow.Show();
-                    ConfigWindow.Closed += MainConfiguration_Closed;
-                }
-                else if (!ConfigWindow.IsFocused)
-                {
-                    ConfigWindow.Focus();
-                }
-            }
-            else
-            {
-                ConfigWindow = new MidiConfiguration(Project, Boxes, Routing);
-
-                ConfigWindow.Show();
-                ConfigWindow.Closed += MainConfiguration_Closed;
-            }
-        }
-
-        private void btnSequencer_Click(object sender, RoutedEventArgs e)
-        {
-            if (SequencerWindow.IsVisible)
-            {
-                SequencerWindow.Close();
-            }
-            else
-            {
-                SequencerWindow.Close();
-                SequencerWindow = new InternalSequencer(Project, Routing, SeqData);
-                SequencerWindow.Show();
-            }
-        }
-
         private async void btnAddBox_Click(object sender, RoutedEventArgs e)
         {
             RoutingBox rtb = new RoutingBox(Project, MidiRouting.InputDevices, MidiRouting.OutputDevices, Boxes.Count);
@@ -776,38 +645,12 @@ namespace MidiLiveSystem
 
         }
 
-        private void btnConductor_Click(object sender, RoutedEventArgs e)
-        {
-            if (Boxes.Count > 0)
-            {
-                if (ConductorWindow != null)
-                {
-                    if (!ConductorWindow.IsActive)
-                    {
-                        ConductorWindow = new Conductor(Boxes, Routing);
-                        ConductorWindow.Show();
-                    }
-                    else if (!ConductorWindow.IsFocused)
-                    {
-                        ConductorWindow.Focus();
-                    }
-                }
-                else
-                {
-                    ConductorWindow = new Conductor(Boxes, Routing);
-                    ConductorWindow.Show();
-                }
-            }
-            else
-            {
-                MessageBox.Show("You need to add at least one Routing Box");
-            }
-        }
-
         private async void btnSaveProject_Click(object sender, RoutedEventArgs e)
         {
             if (Boxes.Count > 0)
             {
+                await btnSaveProject.Dispatcher.InvokeAsync(() => tbSaveProject.Text = "Saving...");
+
                 await SaveTemplate();
                 await Routing.SaveVSTParameters();
 
@@ -815,13 +658,15 @@ namespace MidiLiveSystem
 
                 try
                 {
-                    Database.SaveProjectV2(Boxes, Project, RecordedSequence, SeqData);
-                    Database.SaveInstruments(CubaseInstrumentData.Instruments);
+                    await Database.SaveProjectV2(Boxes, Project, RecordedSequence, SeqData);
+                    await Database.SaveInstruments(CubaseInstrumentData.Instruments);
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show("Unable to Save Project : " + ex.Message);
                 }
+
+                await btnSaveProject.Dispatcher.InvokeAsync(() => tbSaveProject.Text = "Save Project");
             }
             else { MessageBox.Show("Nothing to Save."); }
         }
@@ -829,6 +674,8 @@ namespace MidiLiveSystem
         private async void btnOpenProject_Click(object sender, RoutedEventArgs e)
         {
             UIRefreshRate.Enabled = false;
+
+            await Dispatcher.InvokeAsync(() => IsEnabled = false);
 
             try
             {
@@ -920,25 +767,125 @@ namespace MidiLiveSystem
                 MessageBox.Show("Unable to Load Project : " + ex.Message);
             }
 
+            await Dispatcher.InvokeAsync(() => IsEnabled = true);
+
             UIRefreshRate.Enabled = true;
         }
 
-        private async Task SearchBoxesForAudioInitialization(RoutingBoxes rtb)
+        private async void btnSwitchView_Click(object sender, RoutedEventArgs e)
         {
-            for (int iB = 0; iB < rtb.AllPresets.Length; iB++)
+            if (Boxes.Count > 0)
             {
-                if (rtb.AllPresets[iB].DeviceOut.StartsWith(Tools.VST_HOST)) //initialization de l'audio si ce n'est pas fait
+                if (ViewOnConfig)
                 {
-                    VSTHostInfo info = rtb.AllPresets[iB].VSTData; //c'est juste pour récupérer n'importe quelle info de plugin pour obtenir le driver audio et le sample rate
-                    if (info != null)
+                    foreach (var box in Boxes)
                     {
-                        bool b = await Routing.InitializeAudio(new VSTPlugin { VSTHostInfo = info });
-                        if (!b)
+                        await Dispatcher.InvokeAsync(() =>
                         {
-                            MessageBox.Show("Unable to initialize Audio Device !");
-                        }
+
+                            box.tabSwitch.SelectedIndex = 0;
+                        });
+                    }
+                    ViewOnConfig = false;
+                }
+                else
+                {
+                    foreach (var box in Boxes)
+                    {
+                        await Dispatcher.InvokeAsync(() =>
+                        {
+
+                            box.tabSwitch.SelectedIndex = 1;
+                        });
+                    }
+                    ViewOnConfig = true;
+                }
+            }
+        }
+
+        private void Keyboard_KeyPressed(string sKey)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (FocusManager.GetFocusedElement(this) is TextBox textBox)
+                {
+                    if (sKey.Equals("BACK", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string sNew = textBox.Text.Length == 0 ? "" : textBox.Text.Substring(0, textBox.Text.Length - 1);
+                        textBox.Text = sNew;
+                    }
+                    else
+                    {
+                        textBox.Text += sKey;
                     }
                 }
+            });
+        }
+
+        private void btnSettings_Click(object sender, RoutedEventArgs e)
+        {
+            if (ConfigWindow != null)
+            {
+                if (!ConfigWindow.IsActive)
+                {
+                    ConfigWindow.Closed -= MainConfiguration_Closed;
+                    ConfigWindow = new MidiConfiguration(Project, Boxes, Routing);
+                    ConfigWindow.Show();
+                    ConfigWindow.Closed += MainConfiguration_Closed;
+                }
+                else if (!ConfigWindow.IsFocused)
+                {
+                    ConfigWindow.Focus();
+                }
+            }
+            else
+            {
+                ConfigWindow = new MidiConfiguration(Project, Boxes, Routing);
+
+                ConfigWindow.Show();
+                ConfigWindow.Closed += MainConfiguration_Closed;
+            }
+        }
+
+        private void btnSequencer_Click(object sender, RoutedEventArgs e)
+        {
+            if (SequencerWindow.IsVisible)
+            {
+                SequencerWindow.Close();
+            }
+            else
+            {
+                SequencerWindow.Close();
+                SequencerWindow = new InternalSequencer(Project, Routing, SeqData);
+                SequencerWindow.Show();
+            }
+        }
+
+        private void btnConductor_Click(object sender, RoutedEventArgs e)
+        {
+            if (Boxes.Count > 0)
+            {
+                if (ConductorWindow != null)
+                {
+                    if (!ConductorWindow.IsActive)
+                    {
+                        ConductorWindow = new Conductor(Boxes, Routing);
+                        ConductorWindow.Show();
+                    }
+                    else if (!ConductorWindow.IsFocused)
+                    {
+                        ConductorWindow.Focus();
+                    }
+                }
+                else
+                {
+                    ConductorWindow = new Conductor(Boxes, Routing);
+                    ConductorWindow.Show();
+                }
+            }
+            else
+            {
+                MessageBox.Show("You need to add at least one Routing Box");
             }
         }
 
@@ -1104,50 +1051,83 @@ namespace MidiLiveSystem
             }
         }
 
-        private void btnSwitchView_Click(object sender, RoutedEventArgs e)
+        private async Task InitFrames(int iRows, int iCols)
         {
-            if (Boxes.Count > 0)
+            await Dispatcher.InvokeAsync(() =>
             {
-                if (ViewOnConfig)
+                GridFrames.Clear();
+                gridBoxes.Children.Clear();
+                gridBoxes.RowDefinitions.Clear();
+                gridBoxes.ColumnDefinitions.Clear();
+
+                if (iRows == 1 && iCols == 1) //option de maximisation
                 {
-                    foreach (var box in Boxes)
-                    {
-                        box.tabSwitch.SelectedIndex = 0;
-                    }
-                    ViewOnConfig = false;
+                    gridBoxes.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(100, GridUnitType.Star) });
+                    gridBoxes.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(100, GridUnitType.Star) });
                 }
                 else
                 {
-                    foreach (var box in Boxes)
+                    for (int row = 0; row < iRows; row++)
                     {
-                        box.tabSwitch.SelectedIndex = 1;
+                        gridBoxes.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(iCols, GridUnitType.Star) });
                     }
-                    ViewOnConfig = true;
+                    for (int col = 0; col < iCols; col++)
+                    {
+                        gridBoxes.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(iRows, GridUnitType.Star) });
+                    }
                 }
-            }
+
+                for (int row = 0; row < iRows; row++)
+                {
+                    for (int col = 0; col < iCols; col++)
+                    {
+                        Border border = new Border();
+                        border.BorderBrush = Brushes.Gray;
+                        border.BorderThickness = new Thickness(1);
+
+                        Grid.SetRow(border, row);
+                        Grid.SetColumn(border, col);
+                        gridBoxes.Children.Add(border);
+
+                        Frame frame = new Frame
+                        {
+                            Name = string.Concat("frmBox", row, "x", col),
+                            Tag = ""
+                        };
+
+                        GridFrames.Add(frame);
+                        gridBoxes.Children.Add(frame);
+                        Grid.SetRow(frame, row);
+                        Grid.SetColumn(frame, col);
+                    };
+                }
+            });
         }
 
-        private void RemoveAllBoxes(int iRows, int iCols)
+        private async Task RemoveAllBoxes(int iRows, int iCols)
         {
             if (Boxes != null)
             {
                 foreach (var box in Boxes)
                 {
-                    box.OnUIEvent -= RoutingBox_UIEvent;
-                    var frame = GridFrames.FirstOrDefault(frame => frame.Tag.ToString().Equals(box.BoxGuid.ToString()));
-                    if (frame != null)
+                    await Dispatcher.InvokeAsync(() =>
                     {
-                        frame.Content = null;
-                    }
+                        box.OnUIEvent -= RoutingBox_UIEvent;
+                        var frame = GridFrames.FirstOrDefault(frame => frame.Tag.ToString().Equals(box.BoxGuid.ToString()));
+                        if (frame != null)
+                        {
+                            frame.Content = null;
+                        }
+                    });
                 }
             }
 
-            InitFrames(iRows, iCols);
+            await InitFrames(iRows, iCols);
         }
 
         private async Task AddAllRoutingBoxes()
         {
-            RemoveAllBoxes(CurrentHorizontalGrid, CurrentVerticalGrid);
+            await RemoveAllBoxes(CurrentHorizontalGrid, CurrentVerticalGrid);
 
             foreach (var box in Boxes.OrderBy(b => b.GridPosition))
             {
@@ -1296,6 +1276,84 @@ namespace MidiLiveSystem
             {
                 await Routing.ModifyRouting(snapshot.RoutingGuid, sDevIn, sDevOut, vst, iChIn, iChOut, options, preset, sDevIn.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn - 1 ? SeqData.Sequencer[iChIn - 1] : null);
             }
+        }
+
+        private async Task SearchBoxesForAudioInitialization(RoutingBoxes rtb)
+        {
+            for (int iB = 0; iB < rtb.AllPresets.Length; iB++)
+            {
+                if (rtb.AllPresets[iB].DeviceOut.StartsWith(Tools.VST_HOST)) //initialization de l'audio si ce n'est pas fait
+                {
+                    VSTHostInfo info = rtb.AllPresets[iB].VSTData; //c'est juste pour récupérer n'importe quelle info de plugin pour obtenir le driver audio et le sample rate
+                    if (info != null)
+                    {
+                        bool b = await Routing.InitializeAudio(new VSTPlugin { VSTHostInfo = info });
+                        if (!b)
+                        {
+                            MessageBox.Show("Unable to initialize Audio Device !");
+                        }
+                    }
+                }
+            }
+        }
+
+        private int GetFreeChannelForDevice(Guid boxguid, string sDevice, int iChannelWanted)
+        {
+            if (iChannelWanted == 0) { iChannelWanted = 1; }
+
+            bool[] channels = new bool[16];
+
+            foreach (var Box in Boxes)
+            {
+                if (Box.BoxGuid == boxguid)
+                {
+                    var mem = Box.GetRoutingBoxMemory();
+                    bool bHasMorphing = mem.Any(p => p.MidiOptions.PresetMorphing > 0);
+                    foreach (var preset in mem)
+                    {
+                        if (bHasMorphing && preset.DeviceOut.Equals(sDevice) && preset.ChannelOut > 0)//si on a demandé un morphing de preset, on doit absolument attribuer un nouveau canal MIDI car on ne peut pas morpher sur le même
+                        {
+                            channels[preset.ChannelOut - 1] = true;
+                        }
+                    }
+                }
+                else
+                {
+                    foreach (var preset in Box.GetRoutingBoxMemory())
+                    {
+                        if (preset.DeviceOut.Equals(sDevice) && preset.ChannelOut > 0)
+                        {
+                            channels[preset.ChannelOut - 1] = true;
+                        }
+                    }
+                }
+            }
+
+            if (!channels[iChannelWanted - 1])
+            {
+                return iChannelWanted;
+            }
+            else
+            {
+                for (int iC = 0; iC < channels.Length; iC++)
+                {
+                    if (!channels[iC])
+                    { return iC + 1; }
+                }
+            }
+            return -1;
+        }
+
+        private bool CheckVSTUsage(Guid intialboxguid, VSTPlugin vst)
+        {
+            foreach (var b in Boxes.Where(bb => bb.BoxGuid != intialboxguid))
+            {
+                if (b.HasVSTAttached && b.GetVST().Slot == vst.Slot)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
     }

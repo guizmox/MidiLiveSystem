@@ -88,14 +88,14 @@ namespace MidiLiveSystem
             }
         }
 
-        private void btnChooseProject_Click(object sender, RoutedEventArgs e)
+        private async void btnChooseProject_Click(object sender, RoutedEventArgs e)
         {
             var item = tvProjects.SelectedItem;
 
             if (item != null)
             {
                 string sGuid = ((TreeViewItem)item).Tag.ToString();
-                Tuple<Guid, ProjectConfiguration, RoutingBoxes, MidiSequence, SequencerData> project = Database.GetProjectV2(sGuid);
+                Tuple<Guid, ProjectConfiguration, RoutingBoxes, MidiSequence, SequencerData> project = await Database.GetProjectV2(sGuid);
                 
                 if (project != null)
                 {

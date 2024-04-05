@@ -71,7 +71,7 @@
                                 VerticalAlignment="Center"
                                 Kind="ContentSave" />
                         </TextBlock>
-                        <TextBlock Text="Save Project"  FontSize="11"/>
+                        <TextBlock x:Name="tbSaveProject" Text="Save Project"  FontSize="11"/>
                     </StackPanel>
                 </Button>
 

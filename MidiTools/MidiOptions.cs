@@ -34,7 +34,7 @@ namespace MidiTools
     public class MidiOptions
     {
         [Key("DefaultCCMix")]
-        public int[] DefaultCCMix { get; set; } = { 1, 7, 10, 11, 70, 71, 91, 93 };
+        public int[] CCMixDefaultParameters { get; set; } = { 1, 7, 10, 11, 70, 71, 91, 93 };
 
         [Key("Active")]
         public bool Active { get; set; } = true;
@@ -45,16 +45,6 @@ namespace MidiTools
         private int _VelocityFilterHigh = 127;
         private int _NoteFilterLow = 0;
         private int _NoteFilterHigh = 127;
-
-        private int _CC_Pan_Value = -1;
-        private int _CC_Volume_Value = -1;
-        private int _CC_Reverb_Value = -1;
-        private int _CC_Chorus_Value = -1;
-        private int _CC_Release_Value = -1;
-        private int _CC_Attack_Value = -1;
-        private int _CC_Decay_Value = -1;
-        private int _CC_Timbre_Value = -1;
-        private int _CC_FilterCutOff_Value = -1;
 
         [Key("VelocityFilterLow")]
         public int VelocityFilterLow
@@ -169,24 +159,27 @@ namespace MidiTools
         [Key("CC_ToVolume")]
         public int CC_ToVolume { get; set; } = -1;
 
+        [Key("CC_Init")]
+        public int[] DefaultRoutingCC = { -1, -1, -1, -1, -1, -1, -1, 100, -1, -1, 64, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 - 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 - 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 - 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 - 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 - 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 - 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 - 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 - 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
+
         [Key("CC_Pan_Value")]
-        public int CC_Pan_Value { get { return _CC_Pan_Value; } set { if (value < -1) { _CC_Pan_Value = -1; } else if (value > 127) { _CC_Pan_Value = 64; } else { _CC_Pan_Value = value; } } }
+        public int CC_Pan_Value { get { return DefaultRoutingCC[10]; } set { if (value < -1) { DefaultRoutingCC[10] = -1; } else if (value > 127) { DefaultRoutingCC[10] = 64; } else { DefaultRoutingCC[10] = value; } } }
         [Key("CC_Volume_Value")]
-        public int CC_Volume_Value { get { return _CC_Volume_Value; } set { if (value < -1) { _CC_Volume_Value = -1; } else if (value > 127) { _CC_Volume_Value = 127; } else { _CC_Volume_Value = value; } } }
+        public int CC_Volume_Value { get { return DefaultRoutingCC[7]; } set { if (value < -1) { DefaultRoutingCC[7] = -1; } else if (value > 127) { DefaultRoutingCC[7] = 127; } else { DefaultRoutingCC[7] = value; } } }
         [Key("CC_Reverb_Value")]
-        public int CC_Reverb_Value { get { return _CC_Reverb_Value; } set { if (value < -1) { _CC_Reverb_Value = -1; } else if (value > 127) { _CC_Reverb_Value = 127; } else { _CC_Reverb_Value = value; } } }
+        public int CC_Reverb_Value { get { return DefaultRoutingCC[91]; } set { if (value < -1) { DefaultRoutingCC[91] = -1; } else if (value > 127) { DefaultRoutingCC[91] = 127; } else { DefaultRoutingCC[91] = value; } } }
         [Key("CC_Chorus_Value")]
-        public int CC_Chorus_Value { get { return _CC_Chorus_Value; } set { if (value < -1) { _CC_Chorus_Value = -1; } else if (value > 127) { _CC_Chorus_Value = 127; } else { _CC_Chorus_Value = value; } } }
+        public int CC_Chorus_Value { get { return DefaultRoutingCC[93]; } set { if (value < -1) { DefaultRoutingCC[93] = -1; } else if (value > 127) { DefaultRoutingCC[93] = 127; } else { DefaultRoutingCC[93] = value; } } }
         [Key("CC_Release_Value")]
-        public int CC_Release_Value { get { return _CC_Release_Value; } set { if (value < -1) { _CC_Release_Value = -1; } else if (value > 127) { _CC_Release_Value = 127; } else { _CC_Release_Value = value; } } }
+        public int CC_Release_Value { get { return DefaultRoutingCC[72]; } set { if (value < -1) { DefaultRoutingCC[72] = -1; } else if (value > 127) { DefaultRoutingCC[72] = 127; } else { DefaultRoutingCC[72] = value; } } }
         [Key("CC_Attack_Value")]
-        public int CC_Attack_Value { get { return _CC_Attack_Value; } set { if (value < -1) { _CC_Attack_Value = -1; } else if (value > 127) { _CC_Attack_Value = 127; } else { _CC_Attack_Value = value; } } }
+        public int CC_Attack_Value { get { return DefaultRoutingCC[73]; } set { if (value < -1) { DefaultRoutingCC[73] = -1; } else if (value > 127) { DefaultRoutingCC[73] = 127; } else { DefaultRoutingCC[73] = value; } } }
         [Key("CC_Decay_Value")]
-        public int CC_Decay_Value { get { return _CC_Decay_Value; } set { if (value < -1) { _CC_Decay_Value = -1; } else if (value > 127) { _CC_Decay_Value = 127; } else { _CC_Decay_Value = value; } } }
+        public int CC_Decay_Value { get { return DefaultRoutingCC[75]; } set { if (value < -1) { DefaultRoutingCC[75] = -1; } else if (value > 127) { DefaultRoutingCC[75] = 127; } else { DefaultRoutingCC[75] = value; } } }
         [Key("CC_Timbre_Value")]
-        public int CC_Timbre_Value { get { return _CC_Timbre_Value; } set { if (value < -1) { _CC_Timbre_Value = -1; } else if (value > 127) { _CC_Timbre_Value = 127; } else { _CC_Timbre_Value = value; } } }
+        public int CC_Timbre_Value { get { return DefaultRoutingCC[71]; } set { if (value < -1) { DefaultRoutingCC[71] = -1; } else if (value > 127) { DefaultRoutingCC[71] = 127; } else { DefaultRoutingCC[71] = value; } } }
         [Key("CC_FilterCutOff_Value")]
-        public int CC_FilterCutOff_Value { get { return _CC_FilterCutOff_Value; } set { if (value < -1) { _CC_FilterCutOff_Value = -1; } else if (value > 127) { _CC_FilterCutOff_Value = 127; } else { _CC_FilterCutOff_Value = value; } } }
+        public int CC_FilterCutOff_Value { get { return DefaultRoutingCC[74]; } set { if (value < -1) { DefaultRoutingCC[74] = -1; } else if (value > 127) { DefaultRoutingCC[74] = 127; } else { DefaultRoutingCC[74] = value; } } }
 
         [Key("CC_Converters")]
         public List<int[]> CC_Converters { get; private set; } = new List<int[]>();
@@ -202,7 +195,7 @@ namespace MidiTools
         [Key("DelayNotesLength")]
         public int DelayNotesLength = 0;
         [Key("PresetMorphing")]
-        internal int PresetMorphing { get { return SmoothCCLength; } } //pour l'instant j'ai pas trouvé de place sur l'UI pour une option dédiée
+        public int PresetMorphing { get; set; } = 0;
 
         public bool AddCCConverter(int iFrom, int iTo)
         {
@@ -233,6 +226,16 @@ namespace MidiTools
         internal MidiOptions Clone()
         {
             return (MidiOptions)this.MemberwiseClone();
+        }
+
+        public void SetDefaultCCValue(int[] iCC)
+        {
+            if (iCC[1] > 127) { iCC[1] = 127; }
+            else if (iCC[1] < 0) { iCC[1] = -1; }
+
+            if (iCC[0] == 10 && iCC[1] < 0) { iCC[1] = 64; }
+
+            DefaultRoutingCC[iCC[0]] = iCC[1];
         }
     }
 }

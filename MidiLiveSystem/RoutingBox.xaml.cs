@@ -1,4 +1,5 @@
 ﻿using MessagePack;
+using Microsoft.Extensions.Options;
 using MidiTools;
 using NAudio.SoundFont;
 using RtMidi.Core.Devices.Infos;
@@ -78,11 +79,14 @@ namespace MidiLiveSystem
 
         BoxPreset[] TempMemory = new BoxPreset[8];
         VSTPlugin[] TempVST = new VSTPlugin[8];
+        int[,] TempCCMix = new int[8, 128];
 
         PresetBrowser InstrumentPresets = null;
 
         public RoutingBox(ProjectConfiguration conf, List<IMidiInputDeviceInfo> inputDevices, List<IMidiOutputDeviceInfo> outputDevices, int gridPosition, Guid boxGuid, string sBoxName, Guid routingGuid, BoxPreset[] presets)
         {
+            InitializeComponent();
+
             BoxGuid = boxGuid;
             RoutingGuid = routingGuid;
             LoadMemory(presets);
@@ -91,8 +95,6 @@ namespace MidiLiveSystem
             BoxName = presets != null ? presets[0].BoxName : "Routing Box " + (GridPosition + 1).ToString();
             Project = conf;
 
-            InitializeComponent();
-
             InitPage(inputDevices, outputDevices);
 
             MidiRouting.OutputMidiMessage += MidiRouting_OutputMidiMessage;
@@ -100,8 +102,21 @@ namespace MidiLiveSystem
 
         public RoutingBox(ProjectConfiguration conf, List<IMidiInputDeviceInfo> inputDevices, List<IMidiOutputDeviceInfo> outputDevices, int gridPosition)
         {
+            InitializeComponent();
+
             GridPosition = gridPosition;
             BoxName = "Routing Box " + (GridPosition + 1).ToString();
+
+            for (int iP = 0; iP < 8; iP++)
+            {
+                for (int iCC = 0; iCC < 128; iCC++)
+                {
+                    int iValue = -1;
+                    if (iCC == 10) { iValue = 64; }
+                    else if (iCC == 7) { iValue = 100; }
+                    TempCCMix[iP, iCC] = iValue;
+                }
+            }
 
             TempVST = new VSTPlugin[8] { new VSTPlugin(), new VSTPlugin(), new VSTPlugin(), new VSTPlugin(), new VSTPlugin(), new VSTPlugin(), new VSTPlugin(), new VSTPlugin() };
 
@@ -109,8 +124,6 @@ namespace MidiLiveSystem
                                             new BoxPreset(RoutingGuid, BoxGuid, "Preset 4", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 5", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 6", BoxName),
                                             new BoxPreset(RoutingGuid, BoxGuid, "Preset 7", BoxName), new BoxPreset(RoutingGuid, BoxGuid, "Preset 8", BoxName) };
             Project = conf;
-
-            InitializeComponent();
 
             InitPage(inputDevices, outputDevices);
 
@@ -694,9 +707,28 @@ namespace MidiLiveSystem
             {
                 TempVST[i].VSTHostInfo = mem[i].VSTData;
             }
+
+            //for (int iP = 0; iP < 8; iP++)
+            //{
+            //    for (int iCC = 0; iCC < 128; iCC++)
+            //    {
+            //        int iValue = -1;
+            //        if (iCC == 7) { iValue = 100; }
+            //        else if (iCC == 10) { iValue = 64; }
+            //        TempCCMix[iP, iCC] = iValue;
+            //    }
+            //}
+
+            for (int i = 0; i < 8; i++)
+            {
+                for (int iCC = 0; iCC < 128; iCC++)
+                {
+                    TempCCMix[i, iCC] = mem[i].MidiOptions.DefaultRoutingCC[iCC];
+                }
+            }
         }
 
-        private async Task LoadPreset(int iNew)
+       private async Task LoadPreset(int iNew)
         {
             int iPrec = -1;
 
@@ -895,7 +927,7 @@ namespace MidiLiveSystem
                 var options = await GetOptions();
                 var preset = await GetPreset();
                 VSTHostInfo vst = TempVST[CurrentPreset].VSTHostInfo;
-                
+
                 var bp = new BoxPreset(RoutingGuid, BoxGuid, routingname, presetname, options, preset, sDeviceIn, sDeviceOut, vst, iChannelIn, iChannelOut);
 
                 boxPreset = bp;
@@ -965,49 +997,7 @@ namespace MidiLiveSystem
 
                 if (!tbSmoothCC.IsFocused) { tbSmoothCC.Text = bp.MidiOptions.SmoothCCLength.ToString(); }
                 if (!tbDelayNotes.IsFocused) { tbDelayNotes.Text = bp.MidiOptions.DelayNotesLength.ToString(); }
-
-                if (!cbCCDefaultValues.IsFocused)
-                {
-                    foreach (var item in cbCCDefaultValues.Items)
-                    {
-                        ComboBoxCustomItem cb = (ComboBoxCustomItem)item;
-
-                        switch (cb.Id)
-                        {
-                            case "tbCC_Chorus":
-                                cb.Value = bp.MidiOptions.CC_Chorus_Value.ToString();
-                                break;
-                            case "tbCC_Pan":
-                                if (bp.MidiOptions.CC_Pan_Value == -1)
-                                { bp.MidiOptions.CC_Pan_Value = 64; }
-                                cb.Value = bp.MidiOptions.CC_Pan_Value.ToString();
-                                break;
-                            case "tbCC_Volume":
-                                if (bp.MidiOptions.CC_Volume_Value == -1)
-                                { bp.MidiOptions.CC_Volume_Value = 100; }
-                                cb.Value = bp.MidiOptions.CC_Volume_Value.ToString();
-                                break;
-                            case "tbCC_Attack":
-                                cb.Value = bp.MidiOptions.CC_Attack_Value.ToString();
-                                break;
-                            case "tbCC_Decay":
-                                cb.Value = bp.MidiOptions.CC_Decay_Value.ToString();
-                                break;
-                            case "tbCC_Release":
-                                cb.Value = bp.MidiOptions.CC_Release_Value.ToString();
-                                break;
-                            case "tbCC_Reverb":
-                                cb.Value = bp.MidiOptions.CC_Reverb_Value.ToString();
-                                break;
-                            case "tbCC_Timbre":
-                                cb.Value = bp.MidiOptions.CC_Timbre_Value.ToString();
-                                break;
-                            case "tbCC_CutOff":
-                                cb.Value = bp.MidiOptions.CC_FilterCutOff_Value.ToString();
-                                break;
-                        }
-                    }
-                }
+                if (!tbSmoothPresetChange.IsFocused) { tbSmoothPresetChange.Text = bp.MidiOptions.PresetMorphing.ToString(); }
 
                 int iCCConvertIndex = cbCCConvert.SelectedIndex;
                 cbCCConvert.Items.Clear();
@@ -1079,6 +1069,12 @@ namespace MidiLiveSystem
             await Dispatcher.InvokeAsync(() =>
             {
                 options.Active = tbMute.Background == Brushes.IndianRed ? false : true;
+
+                for (int iCC = 0; iCC < 128; iCC++)
+                {
+                    options.SetDefaultCCValue(new int[] { iCC, TempCCMix[CurrentPreset, iCC] });
+                }
+
                 //options.Active = .Active;
 
                 //options.Active = tbMute.Background == Brushes.IndianRed ? false : true;
@@ -1151,49 +1147,6 @@ namespace MidiLiveSystem
                 options.AllowProgramChange = ckAllowProgramChange.IsChecked.Value;
                 options.AllowSysex = ckAllowSysex.IsChecked.Value;
 
-                foreach (ComboBoxCustomItem cb in cbCCDefaultValues.Items)
-                {
-                    switch (cb.Id)
-                    {
-                        case "tbCC_Chorus":
-                            options.CC_Chorus_Value = TextParser(cb.Value);
-                            cb.Value = options.CC_Chorus_Value.ToString();
-                            break;
-                        case "tbCC_Pan":
-                            options.CC_Pan_Value = TextParser(cb.Value);
-                            cb.Value = options.CC_Pan_Value.ToString();
-                            break;
-                        case "tbCC_Volume":
-                            options.CC_Volume_Value = TextParser(cb.Value);
-                            cb.Value = options.CC_Volume_Value.ToString();
-                            break;
-                        case "tbCC_Attack":
-                            options.CC_Attack_Value = TextParser(cb.Value);
-                            cb.Value = options.CC_Attack_Value.ToString();
-                            break;
-                        case "tbCC_Decay":
-                            options.CC_Decay_Value = TextParser(cb.Value);
-                            cb.Value = options.CC_Decay_Value.ToString();
-                            break;
-                        case "tbCC_Release":
-                            options.CC_Release_Value = TextParser(cb.Value);
-                            cb.Value = options.CC_Release_Value.ToString();
-                            break;
-                        case "tbCC_Reverb":
-                            options.CC_Reverb_Value = TextParser(cb.Value);
-                            cb.Value = options.CC_Reverb_Value.ToString();
-                            break;
-                        case "tbCC_Timbre":
-                            options.CC_Timbre_Value = TextParser(cb.Value);
-                            cb.Value = options.CC_Timbre_Value.ToString();
-                            break;
-                        case "tbCC_CutOff":
-                            options.CC_FilterCutOff_Value = TextParser(cb.Value);
-                            cb.Value = options.CC_FilterCutOff_Value.ToString();
-                            break;
-                    }
-                }
-
                 Enum.TryParse<PlayModes>(cbPlayMode.SelectedValue.ToString(), out options.PlayMode);
 
                 //pour éviter que le volume soit à 0 après un click sur aftertouch
@@ -1256,6 +1209,14 @@ namespace MidiLiveSystem
                     }
                 }
 
+                int iMorph = 0;
+                if (int.TryParse(tbSmoothPresetChange.Text.Trim(), out iMorph))
+                {
+                    if (iMorph >= 0 && iMorph <= 5000)
+                    {
+                        options.PresetMorphing = iMorph;
+                    }
+                }
             });
 
             return options;
@@ -1362,7 +1323,7 @@ namespace MidiLiveSystem
             {
                 foreach (var mem in TempMemory)
                 {
-                    mem.MidiOptions.DefaultCCMix = sCC;
+                    mem.MidiOptions.CCMixDefaultParameters = sCC;
                 }
             });
         }
@@ -1519,6 +1480,20 @@ namespace MidiLiveSystem
         internal VSTPlugin GetVST()
         {
             return TempVST[CurrentPreset];
+        }
+
+        internal void SetInitCC(int[] iCC)
+        {
+            TempCCMix[CurrentPreset, iCC[0]] = iCC[1];
+            OnUIEvent?.Invoke(BoxGuid, "SEND_CC_DATA", iCC);
+            //var options = TempMemory[CurrentPreset].MidiOptions;
+            //options.SetDefaultCCValue(iCC);
+        }
+
+        internal int GetCCValue(int cc)
+        {
+            return TempCCMix[CurrentPreset, cc];
+            //return TempMemory[CurrentPreset].MidiOptions.DefaultRoutingCC[cc];
         }
     }
 

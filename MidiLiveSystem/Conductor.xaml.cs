@@ -163,61 +163,32 @@ namespace MidiLiveSystem
 
         private void SetBoxData(int iVol, int iPan, int iReverb, int iCutOff, int iAttack, RoutingBox box)
         {
-            foreach (var item in box.cbCCDefaultValues.Items)
-            {
-                ComboBoxCustomItem cb = (ComboBoxCustomItem)item;
+            box.SetInitCC(new int[] { 7, iVol });
+            box.SetInitCC(new int[] { 10, iPan });
 
-                switch (cb.Id)
-                {
-                    case "tbCC_Chorus":
-                        break;
-                    case "tbCC_Pan":
-                        cb.Value = iPan.ToString();
-                        break;
-                    case "tbCC_Volume":
-                        cb.Value = iVol.ToString();
-                        break;
-                    case "tbCC_Attack":
-                        if (ckAttack.IsChecked.Value)
-                        { cb.Value = iAttack.ToString(); }
-                        break;
-                    case "tbCC_Decay":
-                        break;
-                    case "tbCC_Release":
-                        break;
-                    case "tbCC_Reverb":
-                        if (ckReverb.IsChecked.Value)
-                        { cb.Value = iReverb.ToString(); }
-                        break;
-                    case "tbCC_Timbre":
-                        break;
-                    case "tbCC_CutOff":
-                        if (ckCutoff.IsChecked.Value)
-                        { cb.Value = iCutOff.ToString(); }
-                        break;
-                }
+            if (ckReverb.IsChecked.Value)
+            {
+                box.SetInitCC(new int[] { 91, iReverb });
+            }
+
+            if (ckAttack.IsChecked.Value)
+            {
+                box.SetInitCC(new int[] { 73, iAttack });
+            }
+
+            if (ckCutoff.IsChecked.Value)
+            {
+                box.SetInitCC(new int[] { 74, iCutOff });
             }
         }
 
         private void InitializeRoutingBoxButton(RoutingBox box, int iIndex)
         {
-            int iVol = 100;
-            int iPan = 64;
+            int iVol = box.GetCCValue(7);
+            int iPan = box.GetCCValue(10);
 
-            foreach (var item in box.cbCCDefaultValues.Items)
-            {
-                ComboBoxCustomItem cb = (ComboBoxCustomItem)item;
-
-                switch (cb.Id)
-                {
-                    case "tbCC_Pan":
-                        iPan = Convert.ToInt32(cb.Value);
-                        break;
-                    case "tbCC_Volume":
-                        iVol = Convert.ToInt32(cb.Value);
-                        break;
-                }
-            }
+            if (iVol < 0) { iVol = 100; }
+            if (iPan < 0) { iPan = 64; }
 
             var dropShadowEffect = new DropShadowEffect
             {

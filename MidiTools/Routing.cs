@@ -872,6 +872,8 @@ namespace MidiTools
         private int _lowestNotePlayed = -1;
         private string AudioDevice = "";
         private int AudioSampleRate = 48000;
+        private Channel MorphChannel;
+        private MidiDevice MorphDevice;
 
         public MidiRouting()
         {
@@ -1162,7 +1164,7 @@ namespace MidiTools
                         {
                             routing.CurrentATValue = evIN.Values[0];
 
-                            _eventsOUT = new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Volume, evIN.Values[0] }, Tools.GetChannel(iChannelOut), deviceout.Name);
+                            _eventsOUT = new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC[7], evIN.Values[0] }, Tools.GetChannel(iChannelOut), deviceout.Name);
                         }
                         break;
                     case TypeEvent.NOTE_OFF:
@@ -1470,41 +1472,12 @@ namespace MidiTools
             {
                 if (newop == null) //tout charger
                 {
-                    if (routing.Options.CC_Attack_Value > -1 || (bInit && routing.Options.CC_Attack_Value > -1))
+                    for (int iCC = 0; iCC < 128; iCC++)
                     {
-                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Attack, routing.Options.CC_Attack_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
-                    }
-                    if (routing.Options.CC_Timbre_Value > -1 || (bInit && routing.Options.CC_Timbre_Value > -1))
-                    {
-                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Timbre, routing.Options.CC_Timbre_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
-                    }
-                    if (routing.Options.CC_FilterCutOff_Value > -1 || (bInit && routing.Options.CC_FilterCutOff_Value > -1))
-                    {
-                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_FilterCutOff, routing.Options.CC_FilterCutOff_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
-                    }
-                    if (routing.Options.CC_Chorus_Value > -1 || (bInit && routing.Options.CC_Chorus_Value > -1))
-                    {
-                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Chorus, routing.Options.CC_Chorus_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
-                    }
-                    if (routing.Options.CC_Decay_Value > -1 || (bInit && routing.Options.CC_Decay_Value > -1))
-                    {
-                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Decay, routing.Options.CC_Decay_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
-                    }
-                    if (routing.Options.CC_Pan_Value > -1 || (bInit && routing.Options.CC_Pan_Value > -1))
-                    {
-                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Pan, routing.Options.CC_Pan_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
-                    }
-                    if (routing.Options.CC_Release_Value > -1 || (bInit && routing.Options.CC_Release_Value > -1))
-                    {
-                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Release, routing.Options.CC_Release_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
-                    }
-                    if (routing.Options.CC_Reverb_Value > -1 || (bInit && routing.Options.CC_Reverb_Value > -1))
-                    {
-                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Reverb, routing.Options.CC_Reverb_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
-                    }
-                    if (routing.Options.CC_Volume_Value > -1 || (bInit && routing.Options.CC_Volume_Value > -1))
-                    {
-                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Volume, routing.Options.CC_Volume_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
+                        if (routing.Options.DefaultRoutingCC[iCC] > -1 || (bInit && routing.Options.DefaultRoutingCC[iCC] > -1))
+                        {
+                            await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { iCC, routing.Options.DefaultRoutingCC[iCC] }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
+                        }
                     }
                 }
                 else
@@ -1514,42 +1487,12 @@ namespace MidiTools
                         await RoutingPanic(routing, routing.DeviceOut, routing.ChannelOut);
                     }
 
-                    //comparer
-                    if (newop.CC_Attack_Value != routing.Options.CC_Attack_Value || (bInit && routing.Options.CC_Attack_Value > -1))
+                    for (int iCC = 0; iCC < 128; iCC++)
                     {
-                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Attack, newop.CC_Attack_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
-                    }
-                    if (newop.CC_Timbre_Value != routing.Options.CC_Timbre_Value || (bInit && routing.Options.CC_Timbre_Value > -1))
-                    {
-                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Timbre, newop.CC_Timbre_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
-                    }
-                    if (newop.CC_FilterCutOff_Value != routing.Options.CC_FilterCutOff_Value || (bInit && routing.Options.CC_FilterCutOff_Value > -1))
-                    {
-                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_FilterCutOff, newop.CC_FilterCutOff_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
-                    }
-                    if (newop.CC_Chorus_Value != routing.Options.CC_Chorus_Value || (bInit && routing.Options.CC_Chorus_Value > -1))
-                    {
-                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Chorus, newop.CC_Chorus_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
-                    }
-                    if (newop.CC_Decay_Value != routing.Options.CC_Decay_Value || (bInit && routing.Options.CC_Decay_Value > -1))
-                    {
-                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Decay, newop.CC_Decay_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
-                    }
-                    if (newop.CC_Pan_Value != routing.Options.CC_Pan_Value || (bInit && routing.Options.CC_Pan_Value > -1))
-                    {
-                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Pan, newop.CC_Pan_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
-                    }
-                    if (newop.CC_Release_Value != routing.Options.CC_Release_Value || (bInit && routing.Options.CC_Release_Value > -1))
-                    {
-                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Release, newop.CC_Release_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
-                    }
-                    if (newop.CC_Reverb_Value != routing.Options.CC_Reverb_Value || (bInit && routing.Options.CC_Reverb_Value > -1))
-                    {
-                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Reverb, newop.CC_Reverb_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
-                    }
-                    if (newop.CC_Volume_Value != routing.Options.CC_Volume_Value || (bInit && routing.Options.CC_Volume_Value > -1))
-                    {
-                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { routing.DeviceOut.CC_Volume, newop.CC_Volume_Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
+                        if (newop.DefaultRoutingCC[iCC] != routing.Options.DefaultRoutingCC[iCC] || (bInit && routing.Options.DefaultRoutingCC[iCC] > -1))
+                        {
+                            await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { iCC, newop.DefaultRoutingCC[iCC] }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
+                        }
                     }
                 }
                 //if (bChanges) { routing.UnblockAllCC(); }
@@ -1565,15 +1508,15 @@ namespace MidiTools
                 var instr = instruments.FirstOrDefault(i => i.Device.Equals(routing.DeviceOut.Name));
                 if (instr != null && instr.DefaultCC.Count > 0)
                 {
-                    routing.DeviceOut.CC_Volume = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Volume);
-                    routing.DeviceOut.CC_Attack = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Attack);
-                    routing.DeviceOut.CC_Chorus = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Chorus);
-                    routing.DeviceOut.CC_Decay = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Decay);
-                    routing.DeviceOut.CC_FilterCutOff = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_FilterCutOff);
-                    routing.DeviceOut.CC_Pan = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Pan);
-                    routing.DeviceOut.CC_Release = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Release);
-                    routing.DeviceOut.CC_Reverb = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Reverb);
-                    routing.DeviceOut.CC_Timbre = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Timbre);
+                    routing.DeviceOut.CC[7] = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Volume);
+                    routing.DeviceOut.CC[73] = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Attack);
+                    routing.DeviceOut.CC[93] = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Chorus);
+                    routing.DeviceOut.CC[75] = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Decay);
+                    routing.DeviceOut.CC[74] = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_FilterCutOff);
+                    routing.DeviceOut.CC[10] = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Pan);
+                    routing.DeviceOut.CC[72] = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Release);
+                    routing.DeviceOut.CC[91] = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Reverb);
+                    routing.DeviceOut.CC[71] = instr.GetCCParameter(InstrumentData.CC_Parameters.CC_Timbre);
                 }
             }
         }
@@ -2572,7 +2515,7 @@ namespace MidiTools
                 {
                     var oldDeviceOut = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(oldDeviceOutName));
 
-                    if (options.SmoothCC)
+                    if (morphinglength > 0)
                     {
                         await PresetMorphing(routing, morphinglength, oldDeviceOut, oldChannelOut, newvolume, sDeviceOut, iChOut, vst);
                     }
@@ -2586,6 +2529,9 @@ namespace MidiTools
 
         private async Task PresetMorphing(MatrixItem routing, int valPresetMorphing, MidiDevice oldDeviceOut, int oldChannelOut, int newVolumeValue, string newDeviceOutName, int newChannelOut, VSTPlugin vst)
         {
+            MorphChannel = Tools.GetChannel(oldChannelOut);
+            MorphDevice = oldDeviceOut;
+
             //var newDeviceOut = AddNewOutDevice(newDeviceOutName, vst);
             var newDeviceOut = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(newDeviceOutName));
 
@@ -2596,32 +2542,18 @@ namespace MidiTools
                     int iVolumeOld = oldDeviceOut.GetLiveCCValue(oldChannelOut, 7);
                     int iRateFadeOut = valPresetMorphing / iVolumeOld; //le temps pour chaque pallier de 1
                     int iRateFadeIn = valPresetMorphing / newVolumeValue; //le temps pour chaque pallier de 1
-
-                    //transférer toutes les notes de l'ancien device vers le nouveau
-                    List<int[]> notesToTransfer = oldDeviceOut.GetLiveNotes(oldChannelOut);
+                    bool bWait = true;
 
                     List<Task> tasks = new List<Task>();
 
                     tasks.Add(routing.Tasks.AddTask(() =>
                     {
-                        for (int iFadeOut = iVolumeOld; iFadeOut > 0; iFadeOut -= 1)
-                        {
-                            oldDeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 7, iFadeOut }, Tools.GetChannel(oldChannelOut), oldDeviceOut.Name));
-                            Thread.Sleep(iRateFadeOut);
-                        }
-
-                        foreach (var note in notesToTransfer) //transfert des notes qui étaient sur l'ancien routing 
-                        {
-                            oldDeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { note[0], 0 }, Tools.GetChannel(oldChannelOut), oldDeviceOut.Name));
-                        }
-                    }));
-
-                    tasks.Add(routing.Tasks.AddTask(() =>
-                    {
-                        foreach (var note in notesToTransfer) //transfert des notes qui étaient sur l'ancien routing 
+                        List<int[]> transfernotes = oldDeviceOut.GetLiveNotes(oldChannelOut);
+                        foreach (var note in transfernotes) //transfert des notes qui étaient sur l'ancien routing 
                         {
                             newDeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { note[0], note[1] }, Tools.GetChannel(newChannelOut), newDeviceOut.Name));
                         }
+                        bWait = false;
 
                         for (int iFadeIn = 0; iFadeIn < newVolumeValue; iFadeIn += 1)
                         {
@@ -2630,8 +2562,35 @@ namespace MidiTools
                         }
                     }));
 
+                    tasks.Add(routing.Tasks.AddTask(() =>
+                    {
+                        while (bWait) { Thread.Sleep(1); } //pour éviter de renvoyer au précédent device les notes qu'on a transférées au nouveau
+
+                        newDeviceOut.OnMidiEvent += DeviceMorphing_OnMidiEvent;
+
+                        for (int iFadeOut = iVolumeOld; iFadeOut > 0; iFadeOut -= 1)
+                        {
+                            oldDeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 7, iFadeOut }, Tools.GetChannel(oldChannelOut), oldDeviceOut.Name));
+                            Thread.Sleep(iRateFadeOut);
+                        }
+
+                        newDeviceOut.OnMidiEvent -= DeviceMorphing_OnMidiEvent;
+                    }));
+
                     await Task.WhenAll(tasks);
+
+                    MorphChannel = Tools.GetChannel(1);
+                    MorphDevice = null;
                 }
+            }
+        }
+
+        private void DeviceMorphing_OnMidiEvent(bool bIn, MidiEvent ev)
+        {
+            //pendant le temps du morphing il faut continuer à balancer les évènements entrants dans l'ancien device
+            if (ev.Type == TypeEvent.NOTE_ON ||ev.Type == TypeEvent.NOTE_OFF && MorphDevice != null)
+            {
+                MorphDevice.SendMidiEvent(new MidiEvent(ev.Type, ev.Values, MorphChannel, MorphDevice.Name));
             }
         }
 

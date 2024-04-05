@@ -5,3 +5,4 @@
 - VST Host : les VST ne se rechargeront pas à l'ouverture du projet
 - change preset = change sound stage
 - ME80 program non sauvegardé ?
+- CC Mixer => pour remplacer l'init CC ??

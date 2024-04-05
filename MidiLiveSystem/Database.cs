@@ -16,6 +16,7 @@ using MessagePack;
 using MessagePack.Resolvers;
 using System.Collections;
 using NAudio.SoundFont;
+using System.Threading.Tasks;
 
 namespace MidiLiveSystem
 {
@@ -79,15 +80,15 @@ namespace MidiLiveSystem
             }
         }
 
-        public void SaveInstruments(List<InstrumentData> instruments)
+        public async Task SaveInstruments(List<InstrumentData> instruments)
         {
             using (var connection = new SqliteConnection(connectionString))
             {
-                connection.Open();
+                await connection.OpenAsync();
 
                 var deleteCommand = connection.CreateCommand();
                 deleteCommand.CommandText = "DELETE FROM Instruments;";
-                deleteCommand.ExecuteNonQuery();
+                await deleteCommand.ExecuteNonQueryAsync();
             }
 
             using (var connection = new SqliteConnection(connectionString))
@@ -109,7 +110,7 @@ namespace MidiLiveSystem
                     insertCommand.CommandText = "INSERT INTO Instruments (DeviceName, InstrumentData) VALUES (@devicename, @instrumentdata)";
                     insertCommand.Parameters.AddWithValue("@devicename", sDevice);
                     insertCommand.Parameters.AddWithValue("@instrumentdata", sData);
-                    insertCommand.ExecuteNonQuery();
+                    await insertCommand.ExecuteNonQueryAsync();
                 }
             }
         }
@@ -234,7 +235,7 @@ namespace MidiLiveSystem
             }
         }
 
-        public void SaveProjectV2(List<RoutingBox> Boxes, ProjectConfiguration Project, MidiSequence RecordedSequence, SequencerData SeqData)
+        public async Task SaveProjectV2(List<RoutingBox> Boxes, ProjectConfiguration Project, MidiSequence RecordedSequence, SequencerData SeqData)
         {
             Project.IsDefaultConfig = false; //pour signifier que la config a été chargée, même si on est pas allé dans la menu de configuration du projet (et éviter de générer un nouvel ID à cause de ce flag)
             string sId = Project.ProjectId.ToString();
@@ -273,19 +274,19 @@ namespace MidiLiveSystem
 
             using (var connection = new SqliteConnection(connectionString))
             {
-                connection.Open();
+                await connection.OpenAsync();
 
                 if (sVersionsToDelete.Count > 0)
                 {
                     string sDelete = sVersionsToDelete.Count > 1 ? string.Concat(sVersionsToDelete, ",") : sVersionsToDelete[0];
                     var deleteCommand = connection.CreateCommand();
                     deleteCommand.CommandText = "DELETE FROM Projects WHERE ProjectGuid = '" + sId + "' AND Id IN (" + sDelete + ");";
-                    deleteCommand.ExecuteNonQuery();
+                    await deleteCommand.ExecuteNonQueryAsync();
                 }
 
                 var updateCommand = connection.CreateCommand();
                 updateCommand.CommandText = "UPDATE Projects SET Active = 0 WHERE ProjectGuid = '" + sId + "';";
-                updateCommand.ExecuteNonQuery();
+                await updateCommand.ExecuteNonQueryAsync();
 
                 var insertCommand = connection.CreateCommand();
                 insertCommand.CommandText = "INSERT INTO Projects (ProjectGuid, ProjectName, Config, Routing, Recording, Sequences, DateProject, Author, Active) VALUES (@projectid, @projectname, @config, @routing, @recording, @sequences, @dateproject, @author, @active)";
@@ -311,7 +312,7 @@ namespace MidiLiveSystem
                 insertCommand.Parameters.AddWithValue("@dateproject", DateTime.Now.ToString());
                 insertCommand.Parameters.AddWithValue("@author", Environment.UserName);
                 insertCommand.Parameters.AddWithValue("@active", "1");
-                insertCommand.ExecuteNonQuery();
+                await insertCommand.ExecuteNonQueryAsync();
             }
         }
 
@@ -494,7 +495,7 @@ namespace MidiLiveSystem
             return null;
         }
 
-        public Tuple<Guid, ProjectConfiguration, RoutingBoxes, MidiSequence, SequencerData> GetProjectV2(string idDb)
+        public async Task<Tuple<Guid, ProjectConfiguration, RoutingBoxes, MidiSequence, SequencerData>> GetProjectV2(string idDb)
         {
             string sId = "";
             string sProjectGuid = "";
@@ -514,14 +515,14 @@ namespace MidiLiveSystem
 
             using (var connection = new SqliteConnection(connectionString))
             {
-                connection.Open();
+                await connection.OpenAsync();
 
                 var selectCommand = connection.CreateCommand();
                 selectCommand.CommandText = "SELECT Id, ProjectGuid, ProjectName, Config, Routing, Recording, Sequences, DateProject, Author, Active FROM Projects WHERE Id = '" + sDbID + "' AND Active = 1;";
 
-                using (var reader = selectCommand.ExecuteReader())
+                using (var reader = await selectCommand.ExecuteReaderAsync())
                 {
-                    while (reader.Read())
+                    while (await reader.ReadAsync())
                     {
                         sId = reader.GetString(0);
                         sProjectGuid = reader.GetString(1);

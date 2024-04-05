@@ -33,7 +33,7 @@ namespace MidiLiveSystem
         internal int[] BoxMixers = new int[8] { 1, 7, 10, 11, 70, 71, 91, 93 };
         internal int[] BoxMixersValues = new int[8] { 0, 0, 0, 0, 0, 0, 0, 0 };
 
-        public CCMixer(Guid boxGuid, Guid routingGuid, string boxname, int[] boxmix)
+        public CCMixer(Guid boxGuid, Guid routingGuid, string boxname, string presetname, int[] boxmix)
         {
             InitializeComponent();
 
@@ -44,9 +44,10 @@ namespace MidiLiveSystem
                 BoxMixers = boxmix;
             }
 
+            Task.Run(() => InitPage(boxname, presetname));
+
             MidiRouting.OutputCCValues += MidiRouting_OutputCCValues;
 
-            InitPage(boxname);
         }
 
         private void Window_Closed(object sender, EventArgs e)
@@ -56,44 +57,54 @@ namespace MidiLiveSystem
             MidiRouting.OutputCCValues -= MidiRouting_OutputCCValues;
         }
 
-        private void InitPage(string boxname)
+        public async Task InitPage(string boxname, string presetname)
         {
-            Title = string.Concat(Title, " - ", boxname);
-            MainWindow.CCMixData += MainWindow_CCMixData;
-
-            var CC = CCList();
-
-            for (int i = 0; i < BoxMixers.Length; i++)
+            await Dispatcher.InvokeAsync(() =>
             {
-                ComboBox comboBox = new ComboBox();
-                comboBox.Name = "cbCC" + (i + 1);
-                comboBox.HorizontalAlignment = HorizontalAlignment.Center;
-                comboBox.VerticalAlignment = VerticalAlignment.Center;
-                comboBox.MinWidth = 100;
-                comboBox.SelectedValuePath = "Tag";
-                comboBox.Tag = (i + 1);
-                comboBox.SelectionChanged += ComboBox_SelectionChanged;
-                Grid.SetColumn(comboBox, i);
-                Grid.SetRow(comboBox, 0);
-                gdMix.Children.Add(comboBox);
-                ComboBoxes.Add(comboBox);
-                FillComboBox(CC, ComboBoxes.Last());
+                gdMix.Children.Clear();
+                Sliders.Clear();
+                ComboBoxes.Clear();
+                BoxMixersValues = new int[8] { 0, 0, 0, 0, 0, 0, 0, 0 };
 
-                Slider slider = new Slider();
-                slider.Name = "slCC" + (i + 1);
-                slider.Minimum = 0;
-                slider.Maximum = 127;
-                slider.SmallChange = 1;
-                slider.Tag = (i + 1);
-                //slider.Foreground = Brushes.White;
-                slider.Orientation = Orientation.Vertical;
-                slider.HorizontalAlignment = HorizontalAlignment.Center;
-                slider.ValueChanged += slCC_ValueChanged;
-                Grid.SetColumn(slider, i);
-                Grid.SetRow(slider, 1);
-                gdMix.Children.Add(slider);
-                Sliders.Add(slider);
-            }
+                Title = string.Concat("Control Change Mixer", " [", boxname, " - Preset : ", presetname, "]");
+                MainWindow.CCMixData += MainWindow_CCMixData;
+
+                var CC = CCList();
+
+                for (int i = 0; i < BoxMixers.Length; i++)
+                {
+                    ComboBox comboBox = new ComboBox();
+                    comboBox.Name = "cbCC" + (i + 1);
+                    comboBox.HorizontalAlignment = HorizontalAlignment.Center;
+                    comboBox.VerticalAlignment = VerticalAlignment.Center;
+                    comboBox.MinWidth = 100;
+                    comboBox.SelectedValuePath = "Tag";
+                    comboBox.Tag = (i + 1);
+                    comboBox.SelectionChanged += ComboBox_SelectionChanged;
+                    Grid.SetColumn(comboBox, i);
+                    Grid.SetRow(comboBox, 0);
+                    gdMix.Children.Add(comboBox);
+                    ComboBoxes.Add(comboBox);
+                    FillComboBox(CC, ComboBoxes.Last());
+
+                    Slider slider = new Slider();
+                    slider.Name = "slCC" + (i + 1);
+                    slider.Minimum = -1;
+                    slider.Maximum = 127;
+                    slider.SmallChange = 1;
+                    slider.Tag = (i + 1);
+                    slider.Value = -1;
+                    slider.Foreground = Brushes.IndianRed;
+                    //slider.Foreground = Brushes.White;
+                    slider.Orientation = Orientation.Vertical;
+                    slider.HorizontalAlignment = HorizontalAlignment.Center;
+                    slider.ValueChanged += slCC_ValueChanged;
+                    Grid.SetColumn(slider, i);
+                    Grid.SetRow(slider, 1);
+                    gdMix.Children.Add(slider);
+                    Sliders.Add(slider);
+                }
+            });
         }
 
         private async void ComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -134,20 +145,25 @@ namespace MidiLiveSystem
             });
         }
 
-        private void MainWindow_CCMixData(Guid routingguid, List<int> sValues)
+        private async void MainWindow_CCMixData(Guid routingguid, int[] sValues)
         {
-            if (routingguid == RoutingGuid)
+            await Dispatcher.InvokeAsync(() =>
             {
-                if (sValues.Count == 8)
+                if (routingguid == RoutingGuid)
                 {
-                    BoxMixersValues = sValues.ToArray();
-
-                    for (int i = 0; i < BoxMixers.Length; i++)
+                    for (int iCC = 0; iCC < sValues.Length; iCC++)
                     {
-                        Sliders[i].Value = sValues[i];
+                        for (int iBox = 0; iBox < 8; iBox++)
+                        {
+                            if (BoxMixers[iBox] == iCC)
+                            {
+                                Sliders[iBox].Value = sValues[iCC];
+                                break;
+                            }
+                        }
                     }
                 }
-            }
+            });
         }
 
         private async void slCC_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -156,11 +172,18 @@ namespace MidiLiveSystem
             {
                 Slider sl = (Slider)sender;
 
-                int iIndex = Convert.ToInt32(sl.Tag) - 1;
-                int iValue = (int)sl.Value;
+                if (sl.Value == -1) { sl.Foreground = Brushes.IndianRed; }
+                else { sl.Foreground = Brushes.BlueViolet; }
 
-                BoxMixersValues[iIndex] = iValue;
-                OnUIEvent?.Invoke(BoxGuid, "CC_SEND_MIX_DATA", new int[] { BoxMixers[iIndex], BoxMixersValues[iIndex] });
+                if (sl.IsFocused)
+                {
+                    int iIndex = Convert.ToInt32(sl.Tag) - 1;
+                    int iValue = (int)sl.Value;
+
+                    BoxMixersValues[iIndex] = iValue;
+
+                    OnUIEvent?.Invoke(BoxGuid, "CC_SEND_MIX_DATA", new int[] { BoxMixers[iIndex], BoxMixersValues[iIndex] });
+                }
             });
         }
 
@@ -178,16 +201,16 @@ namespace MidiLiveSystem
         {
             List<string[]> midiControllers = new List<string[]>
         {
-            new string[] {"1", "Modulation Wheel (MSB)", "Generally this CC controls a vibrato effect (pitch, loudness, brightness). What is modulated is based on the patch."},
-            new string[] {"2", "Breath Controller (MSB)", "Oftentimes associated with aftertouch messages. It was originally intended for use with a breath MIDI controller in which blowing harder produced higher MIDI control values. It can be used for modulation as well."},
-            new string[] {"4", "Foot Pedal (MSB)", "Often used with aftertouch messages. It can send a continuous stream of values based on how the pedal is used."},
-            new string[] {"5", "Portamento Time (MSB)", "Controls portamento rate to slide between 2 notes played subsequently."},
-            new string[] {"7", "Volume (MSB)", "Controls the volume of the channel."},
-            new string[] {"8", "Balance (MSB)", "Controls the left and right balance, generally for stereo patches. A value of 64 equals the center."},
-            new string[] {"10", "Pan (MSB)", "Controls the left and right balance, generally for mono patches. A value of 64 equals the center."},
-            new string[] {"11", "Expression (MSB)", "Expression is a percentage of volume (CC7)."},
-            new string[] {"12", "Effect Controller 1 (MSB)", "Usually used to control a parameter of an effect within the synth or workstation."},
-            new string[] {"13", "Effect Controller 2 (MSB)", "Usually used to control a parameter of an effect within the synth or workstation."},
+            new string[] {"1", "Modulation Wheel", "Generally this CC controls a vibrato effect (pitch, loudness, brightness). What is modulated is based on the patch."},
+            new string[] {"2", "Breath Controller", "Oftentimes associated with aftertouch messages. It was originally intended for use with a breath MIDI controller in which blowing harder produced higher MIDI control values. It can be used for modulation as well."},
+            new string[] {"4", "Foot Pedal", "Often used with aftertouch messages. It can send a continuous stream of values based on how the pedal is used."},
+            new string[] {"5", "Portamento Time", "Controls portamento rate to slide between 2 notes played subsequently."},
+            new string[] {"7", "Volume", "Controls the volume of the channel."},
+            new string[] {"8", "Balance", "Controls the left and right balance, generally for stereo patches. A value of 64 equals the center."},
+            new string[] {"10", "Pan", "Controls the left and right balance, generally for mono patches. A value of 64 equals the center."},
+            new string[] {"11", "Expression", "Expression is a percentage of volume (CC7)."},
+            new string[] {"12", "Effect Controller 1", "Usually used to control a parameter of an effect within the synth or workstation."},
+            new string[] {"13", "Effect Controller 2", "Usually used to control a parameter of an effect within the synth or workstation."},
             new string[] {"64", "Damper Pedal on/off", "On/off switch that controls sustain pedal. Nearly every synth will react to CC 64. (See also Sostenuto CC 66)"},
             new string[] {"65", "Portamento on/off", "On/off switch"},
             new string[] {"66", "Sostenuto Pedal on/off", "On/off switch – Like the Sustain controller (CC 64), However, it only holds notes that were “On” when the pedal was pressed. People use it to “hold” chords” and play melodies over the held chord."},
