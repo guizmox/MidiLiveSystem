@@ -1551,14 +1551,21 @@ namespace MidiTools
         {
             if (routing.DeviceOut != null)
             {
-                if (bInit || (newpres.Lsb != routing.Preset.Lsb || newpres.Msb != routing.Preset.Msb || newpres.Prg != routing.Preset.Prg || newpres.Channel != routing.Preset.Channel))
+                if (routing.DeviceOut.Name.StartsWith(Tools.VST_HOST))
                 {
-                    await SendProgramChange(routing, newpres);
                     routing.Preset = newpres;
                 }
                 else
                 {
-                    routing.Preset = newpres;
+                    if (bInit || (newpres.Lsb != routing.Preset.Lsb || newpres.Msb != routing.Preset.Msb || newpres.Prg != routing.Preset.Prg || newpres.Channel != routing.Preset.Channel))
+                    {
+                        await SendProgramChange(routing, newpres);
+                        routing.Preset = newpres;
+                    }
+                    else
+                    {
+                        routing.Preset = newpres;
+                    }
                 }
             }
             else
@@ -2571,7 +2578,7 @@ namespace MidiTools
                             newDeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { note[0], note[1] }, Tools.GetChannel(newChannelOut), newDeviceOut.Name));
                         }
 
-                        for (int iFadeIn = 0; iFadeIn < newVolumeValue; iFadeIn += 1)
+                        for (int iFadeIn = 0; iFadeIn < newVolumeValue; iFadeIn += 2)
                         {
                             newDeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 7, iFadeIn }, Tools.GetChannel(newChannelOut), newDeviceOut.Name));
                             Thread.Sleep(iRateFadeIn);

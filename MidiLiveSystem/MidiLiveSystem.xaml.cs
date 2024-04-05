@@ -526,7 +526,7 @@ namespace MidiLiveSystem
 
                         if (bp1.RoutingGuid != Guid.Empty)
                         {
-                            await Routing.ModifyRouting(bp1.RoutingGuid, sDevIn1, sDevOut1, box.GetVST(), iChIn1, iChOut1, bp1.MidiOptions, bp1.MidiPreset, sDevIn1.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn1 - 1 ? SeqData.Sequencer[iChIn1 - 1] : null);
+                            await Routing.ModifyRouting(bp1.RoutingGuid, sDevIn1, sDevOut1, box.GetVST(), iChIn1, iChOut1, bp1.MidiOptions, bp1.MidiPreset, sDevIn1.Equals(Tools.INTERNAL_SEQUENCER) && iChIn1 > 0 && SeqData.Sequencer.Length >= iChIn1 - 1 ? SeqData.Sequencer[iChIn1 - 1] : null);
                             await Routing.SendNote(box.RoutingGuid, bp1.MidiOptions.PlayNote);
                         }
                         break;
@@ -542,7 +542,7 @@ namespace MidiLiveSystem
 
                         if (bp2.RoutingGuid != Guid.Empty)
                         {
-                            await Routing.ModifyRouting(bp2.RoutingGuid, sDevIn2, sDevOut2, box.GetVST(), iChIn2, iChOut2, bp2.MidiOptions, bp2.MidiPreset, sDevIn2.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn2 - 1 ? SeqData.Sequencer[iChIn2 - 1] : null);
+                            await Routing.ModifyRouting(bp2.RoutingGuid, sDevIn2, sDevOut2, box.GetVST(), iChIn2, iChOut2, bp2.MidiOptions, bp2.MidiPreset, sDevIn2.Equals(Tools.INTERNAL_SEQUENCER) && iChIn2 > 0 && SeqData.Sequencer.Length >= iChIn2 - 1 ? SeqData.Sequencer[iChIn2 - 1] : null);
                         }
 
                         if (ConductorWindow != null) //rafraichir le conducteur selon le preset qui a changé
@@ -970,15 +970,18 @@ namespace MidiLiveSystem
 
         private void btnRecallButtons_Click(object sender, RoutedEventArgs e)
         {
-            if (RecallWindow.IsVisible)
+            if (RecallWindow != null && RecallWindow.IsVisible)
             {
                 RecallWindow.Closed -= RecallWindow_Closed;
                 RecallWindow.Close();
             }
             else
             {
-                RecallWindow.Close();
-                RecallWindow.Closed -= RecallWindow_Closed;
+                if (RecallWindow != null)
+                {
+                    RecallWindow.Close();
+                    RecallWindow.Closed -= RecallWindow_Closed;
+                }
                 RecallWindow = new RecallButtons(Boxes, Project);
                 RecallWindow.Show();
                 RecallWindow.Closed += RecallWindow_Closed;
@@ -1303,13 +1306,13 @@ namespace MidiLiveSystem
                 }
                 else
                 {
-                    var routingguid = await Routing.AddRouting(sDevIn, sDevOut, vst, iChIn, iChOut, options, preset, sDevIn.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn - 1 ? SeqData.Sequencer[iChIn - 1] : null);
+                    var routingguid = await Routing.AddRouting(sDevIn, sDevOut, vst, iChIn, iChOut, options, preset, sDevIn.Equals(Tools.INTERNAL_SEQUENCER) && iChIn > 0 && SeqData.Sequencer.Length >= iChIn - 1 ? SeqData.Sequencer[iChIn - 1] : null);
                     box.SetRoutingGuid(routingguid);
                 }
             }
             else
             {
-                await Routing.ModifyRouting(snapshot.RoutingGuid, sDevIn, sDevOut, vst, iChIn, iChOut, options, preset, sDevIn.Equals(Tools.INTERNAL_SEQUENCER) && SeqData.Sequencer.Length >= iChIn - 1 ? SeqData.Sequencer[iChIn - 1] : null);
+                await Routing.ModifyRouting(snapshot.RoutingGuid, sDevIn, sDevOut, vst, iChIn, iChOut, options, preset, sDevIn.Equals(Tools.INTERNAL_SEQUENCER) && iChIn > 0 && SeqData.Sequencer.Length >= iChIn - 1 ? SeqData.Sequencer[iChIn - 1] : null);
             }
         }
 

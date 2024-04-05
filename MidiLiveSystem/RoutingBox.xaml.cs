@@ -669,6 +669,8 @@ namespace MidiLiveSystem
             {
                 if (bShowVSTControls)
                 {
+                    lbPreset.Text = "VST Program";
+                    lbPreset.Tag = "0-0-0";
                     cbVSTSlot.Visibility = Visibility.Visible;
                     tbChoosePreset.Visibility = Visibility.Hidden;
                     lbPreset.Visibility = Visibility.Hidden;
