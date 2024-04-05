@@ -1746,9 +1746,9 @@ namespace MidiTools
                                     string sLsb = matchOUT.Groups[9].Value;
                                     if (sPrg2.Length == 0) //valeur fixée
                                     {
-                                       deviceout.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 0, Convert.ToInt32(sMsb) }, Tools.GetChannel(iChannelOut), deviceout.Name));
-                                       deviceout.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 32, Convert.ToInt32(sLsb) }, Tools.GetChannel(iChannelOut), deviceout.Name));
-                                       deviceout.SendMidiEvent(new MidiEvent(TypeEvent.PC, new List<int> { Convert.ToInt32(sPrg1) }, Tools.GetChannel(iChannelOut), deviceout.Name));
+                                        deviceout.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 0, Convert.ToInt32(sMsb) }, Tools.GetChannel(iChannelOut), deviceout.Name));
+                                        deviceout.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 32, Convert.ToInt32(sLsb) }, Tools.GetChannel(iChannelOut), deviceout.Name));
+                                        deviceout.SendMidiEvent(new MidiEvent(TypeEvent.PC, new List<int> { Convert.ToInt32(sPrg1) }, Tools.GetChannel(iChannelOut), deviceout.Name));
                                         _eventsProcessedOUT += 3;
                                     }
                                     else //valeur IN
@@ -1769,9 +1769,9 @@ namespace MidiTools
                                             { iPrgValue = (ev.Values[0] + 8192) / 256; }
                                         }
 
-                                       deviceout.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 0, Convert.ToInt32(sMsb) }, Tools.GetChannel(iChannelOut), deviceout.Name));
-                                       deviceout.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 32, Convert.ToInt32(sLsb) }, Tools.GetChannel(iChannelOut), deviceout.Name));
-                                       deviceout.SendMidiEvent(new MidiEvent(TypeEvent.PC, new List<int> { iPrgValue }, Tools.GetChannel(iChannelOut), deviceout.Name));
+                                        deviceout.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 0, Convert.ToInt32(sMsb) }, Tools.GetChannel(iChannelOut), deviceout.Name));
+                                        deviceout.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 32, Convert.ToInt32(sLsb) }, Tools.GetChannel(iChannelOut), deviceout.Name));
+                                        deviceout.SendMidiEvent(new MidiEvent(TypeEvent.PC, new List<int> { iPrgValue }, Tools.GetChannel(iChannelOut), deviceout.Name));
                                         _eventsProcessedOUT += 3;
                                     }
                                     break;
@@ -1784,7 +1784,7 @@ namespace MidiTools
                                     string sValue2 = matchOUT.Groups[8].Value;
                                     if (sValue2.Length == 0) //la valeur est fixée
                                     {
-                                       deviceout.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { Convert.ToInt32(sCC), Convert.ToInt32(sValue1) }, Tools.GetChannel(iChannelOut), deviceout.Name));
+                                        deviceout.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { Convert.ToInt32(sCC), Convert.ToInt32(sValue1) }, Tools.GetChannel(iChannelOut), deviceout.Name));
                                         _eventsProcessedOUT += 1;
                                     }
                                     else //la valeur suit la valeur d'entrée
@@ -1805,7 +1805,7 @@ namespace MidiTools
                                             { iCCValue = (ev.Values[0] + 8192) / 256; }
                                         }
 
-                                       deviceout.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { Convert.ToInt32(sCC), iCCValue }, Tools.GetChannel(iChannelOut), deviceout.Name));
+                                        deviceout.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { Convert.ToInt32(sCC), iCCValue }, Tools.GetChannel(iChannelOut), deviceout.Name));
                                         _eventsProcessedOUT += 1;
                                     }
                                     break;
@@ -1832,9 +1832,9 @@ namespace MidiTools
                                         {
                                             await routing.Tasks.AddTask(() =>
                                             {
-                                               deviceout.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelo }, Tools.GetChannel(iChannelOut), deviceout.Name));
+                                                deviceout.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelo }, Tools.GetChannel(iChannelOut), deviceout.Name));
                                                 Thread.Sleep(Convert.ToInt32(sLen));
-                                               deviceout.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, 0 }, Tools.GetChannel(iChannelOut), deviceout.Name));
+                                                deviceout.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, 0 }, Tools.GetChannel(iChannelOut), deviceout.Name));
                                                 _eventsProcessedOUT += 2;
                                             });
 
@@ -1858,9 +1858,9 @@ namespace MidiTools
 
                                             await routing.Tasks.AddTask(() =>
                                             {
-                                               deviceout.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelo }, Tools.GetChannel(iChannelOut), deviceout.Name));
+                                                deviceout.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelo }, Tools.GetChannel(iChannelOut), deviceout.Name));
                                                 Thread.Sleep(Convert.ToInt32(sLen));
-                                               deviceout.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, 0 }, Tools.GetChannel(iChannelOut), deviceout.Name));
+                                                deviceout.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, 0 }, Tools.GetChannel(iChannelOut), deviceout.Name));
                                                 _eventsProcessedOUT += 2;
                                             });
                                         }
@@ -1888,9 +1888,9 @@ namespace MidiTools
 
                                             await routing.Tasks.AddTask(() =>
                                             {
-                                               deviceout.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelo }, Tools.GetChannel(iChannelOut), deviceout.Name));
+                                                deviceout.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelo }, Tools.GetChannel(iChannelOut), deviceout.Name));
                                                 Thread.Sleep(Convert.ToInt32(sLen));
-                                               deviceout.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, 0 }, Tools.GetChannel(iChannelOut), deviceout.Name));
+                                                deviceout.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, 0 }, Tools.GetChannel(iChannelOut), deviceout.Name));
                                                 _eventsProcessedOUT += 2;
                                             });
                                         }
@@ -1913,9 +1913,9 @@ namespace MidiTools
 
                                             await routing.Tasks.AddTask(() =>
                                             {
-                                               deviceout.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelo }, Tools.GetChannel(iChannelOut), deviceout.Name));
+                                                deviceout.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelo }, Tools.GetChannel(iChannelOut), deviceout.Name));
                                                 Thread.Sleep(Convert.ToInt32(sLen));
-                                               deviceout.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, 0 }, Tools.GetChannel(iChannelOut), deviceout.Name));
+                                                deviceout.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, 0 }, Tools.GetChannel(iChannelOut), deviceout.Name));
                                                 _eventsProcessedOUT += 2;
                                             });
                                         }
@@ -1924,7 +1924,7 @@ namespace MidiTools
                                 case "SYS#":
                                     matchOUT = Regex.Match(translate[0], "(\\[)(OUT)=(SYS#)([A-f0-9]+)(\\])");
                                     string sys = matchOUT.Groups[4].Value;
-                                   deviceout.SendMidiEvent(new MidiEvent(TypeEvent.SYSEX, sys, deviceout.Name));
+                                    deviceout.SendMidiEvent(new MidiEvent(TypeEvent.SYSEX, sys, deviceout.Name));
                                     _eventsProcessedOUT += 1;
                                     break;
                                 case "AT#":
@@ -1935,7 +1935,7 @@ namespace MidiTools
                                     string sAT2 = matchOUT.Groups[7].Value;
                                     if (sAT2.Length == 0) //valeur fixée
                                     {
-                                       deviceout.SendMidiEvent(new MidiEvent(TypeEvent.CH_PRES, new List<int> { Convert.ToInt32(sAT1) }, Tools.GetChannel(iChannelOut), deviceout.Name));
+                                        deviceout.SendMidiEvent(new MidiEvent(TypeEvent.CH_PRES, new List<int> { Convert.ToInt32(sAT1) }, Tools.GetChannel(iChannelOut), deviceout.Name));
                                         _eventsProcessedOUT += 1;
                                     }
                                     else //valeur IN
@@ -1956,7 +1956,7 @@ namespace MidiTools
                                             { iATValue = (ev.Values[0] + 8192) / 256; }
                                         }
 
-                                       deviceout.SendMidiEvent(new MidiEvent(TypeEvent.CH_PRES, new List<int> { iATValue }, Tools.GetChannel(iChannelOut), deviceout.Name));
+                                        deviceout.SendMidiEvent(new MidiEvent(TypeEvent.CH_PRES, new List<int> { iATValue }, Tools.GetChannel(iChannelOut), deviceout.Name));
                                         _eventsProcessedOUT += 1;
                                     }
                                     break;
@@ -1996,7 +1996,7 @@ namespace MidiTools
                                         iPBValue = iPBValue >= 64 ? iPBValue * 128 : iPBValue * 64;
                                     }
 
-                                   deviceout.SendMidiEvent(new MidiEvent(TypeEvent.PB, new List<int> { iPBValue }, Tools.GetChannel(iChannelOut), deviceout.Name));
+                                    deviceout.SendMidiEvent(new MidiEvent(TypeEvent.PB, new List<int> { iPBValue }, Tools.GetChannel(iChannelOut), deviceout.Name));
                                     _eventsProcessedOUT += 1;
 
                                     break;
@@ -2251,11 +2251,9 @@ namespace MidiTools
 
         public async Task Panic(bool bAll)
         {
-            List<Task> devicesWork = new List<Task>();
-
-            foreach (var device in UsedDevicesOUT)
+            await Task.Run(() =>
             {
-                devicesWork.Add(Tasks.AddTask(() =>
+                foreach (var device in UsedDevicesOUT)
                 {
                     for (int iCh = 1; iCh <= 16; iCh++)
                     {
@@ -2284,19 +2282,15 @@ namespace MidiTools
                             }
                         }
                     }
-                }));
-            }
-
-            await Task.WhenAll(devicesWork);
+                }
+            });
         }
 
         private async Task RoutingPanic(MatrixItem routing, MidiDevice device, int channelOut)
-        { 
+        {
             if (device != null && channelOut > 0)
             {
-                List<Task> tasks = new List<Task>();
-
-                tasks.Add(routing.Tasks.AddTask(() =>
+                await routing.Tasks.AddTask(() =>
                 {
                     device.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 64, 0 }, Tools.GetChannel(channelOut), device.Name));
 
@@ -2306,21 +2300,19 @@ namespace MidiTools
                     {
                         device.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { i, 0 }, Tools.GetChannel(channelOut), device.Name));
                     }
-                }));
+                });
 
                 for (int iKey = 0; iKey < 128; iKey++)
                 {
                     int iKeyCopy = iKey;
                     if (device.GetLiveNOTEValue(channelOut, iKeyCopy))
                     {
-                        tasks.Add(routing.Tasks.AddTask(() =>
+                        await routing.Tasks.AddTask(() =>
                         {
                             device.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKeyCopy, 0 }, Tools.GetChannel(channelOut), device.Name));
-                        }));
+                        });
                     }
                 }
-
-                await Task.WhenAll(tasks);
             }
         }
 
@@ -2488,7 +2480,7 @@ namespace MidiTools
                     oldChannelOut = routing.ChannelOut;
                     morphinglength = routing.Options.PresetMorphing;
                     newvolume = options.CC_Volume_Value;
-                    
+
                     await routing.CancelTask();
 
                     bool active = routing.Options.Active;
@@ -2541,7 +2533,7 @@ namespace MidiTools
         private async Task PresetMorphing(MatrixItem newrouting, MatrixItem oldrouting, int valPresetMorphing, int newVolumeValue, string newDeviceOutName, int newChannelOut, VSTPlugin vst)
         {
             MidiMatrix.Add(oldrouting);
-            if (oldrouting.DeviceInSequencer != null) 
+            if (oldrouting.DeviceInSequencer != null)
             {
                 oldrouting.AddSequencer(oldrouting.DeviceInSequencer);
                 //oldrouting.OnSequencerPlayNote += MatrixItem_OnSequencerPlayNote;
@@ -2757,8 +2749,9 @@ namespace MidiTools
             {
                 try
                 {
-                    device.CloseDevice();
+                    device.OnMidiClockEvent -= MidiClock_OnEvent;
                     device.OnMidiEvent -= DeviceIn_OnMidiEvent;
+                    device.CloseDevice();
                 }
                 catch { throw; }
             }
@@ -2767,6 +2760,8 @@ namespace MidiTools
             {
                 try
                 {
+                    device.OnMidiClockEvent -= MidiClock_OnEvent;
+                    device.OnMidiEvent -= DeviceIn_OnMidiEvent;
                     device.CloseDevice();
                 }
                 catch { throw; }

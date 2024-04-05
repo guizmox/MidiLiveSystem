@@ -22,7 +22,7 @@ namespace MidiTools
         public bool[] LiveNotes = new bool[128];
 
         [Key("StartNote")]
-        public int StartNote { get { return Sequence[0].NotesAndVelocity.Count > 0 ? Sequence[0].NotesAndVelocity[0][0] : -1; } }
+        public int StartNote { get { return Sequence[0] != null && Sequence[0].NotesAndVelocity.Count > 0 ? Sequence[0].NotesAndVelocity[0][0] : -1; } }
 
         [Key("Transpose")]
         public bool Transpose { get; set; } = false;

@@ -1,5 +1,7 @@
 ﻿using MessagePack;
 using MidiTools;
+using NAudio.CoreAudioApi;
+using NAudio.SoundFont;
 using RtMidi.Core.Enums;
 using System;
 using System.Collections.Generic;
@@ -112,14 +114,30 @@ namespace MidiLiveSystem
 
         private async void MidiRouting_InputMidiMessage(MidiEvent ev)
         {
-            if (RecallWindow != null && Project.TriggerRecallDevice.Equals(ev.Device))
+            if (Project.TriggerRecallDevice.Equals(ev.Device))
             {
                 if (ev.Type == MidiDevice.TypeEvent.NOTE_ON && Project.TriggerRecallButtons.Equals("NOTE") && ev.Values[0] >= Project.TriggerRecallButtonsValue && ev.Values[0] <= Project.TriggerRecallButtonsValue + 8)
                 {
+                    if (RecallWindow == null)
+                    {
+                        await Dispatcher.InvokeAsync(() =>
+                        {
+                            RecallWindow = new RecallButtons(Boxes, Project);
+                            RecallWindow.Closed += RecallWindow_Closed;
+                        });
+                    }
                     await RecallWindow.SetButton(true, Project.TriggerRecallButtonsValue, ev.Values[0]);
                 }
                 else if (ev.Type == MidiDevice.TypeEvent.NOTE_ON && Project.TriggerRecallButtons.Equals("CC") && ev.Values[1] < 8)
                 {
+                    if (RecallWindow == null)
+                    {
+                        await Dispatcher.InvokeAsync(() =>
+                        {
+                            RecallWindow = new RecallButtons(Boxes, Project);
+                            RecallWindow.Closed += RecallWindow_Closed;
+                        });
+                    }
                     await RecallWindow.SetButton(false, Project.TriggerRecallButtonsValue, ev.Values[1]);
                 }
             }
@@ -680,9 +698,15 @@ namespace MidiLiveSystem
 
             try
             {
-                if (RecallWindow.IsVisible) //pour forcer le rafraichissement suite au rechargement de la config
+                if (RecallWindow != null) //pour forcer le rafraichissement suite au rechargement de la config
                 {
                     RecallWindow.Close();
+                    RecallWindow = null;
+                }
+
+                if (LogWindow != null && LogWindow.IsVisible)
+                {
+                    LogWindow.Close();
                 }
 
                 SequencerWindow.Close();
@@ -696,11 +720,21 @@ namespace MidiLiveSystem
                     var project = prj.Project;
                     if (project != null)
                     {
-
                         await Routing.DeleteAllRouting();
 
                         Project = project.Item2;
                         NewMessage?.Invoke("Project Loaded");
+
+                        //ouverture des ports techniques
+                        if (Project.ClockDevice.Length > 0)
+                        {
+                            MidiRouting.CheckAndOpenINPort(Project.ClockDevice);
+                        }
+                        if (Project.TriggerRecallDevice.Length > 0)
+                        {
+                            MidiRouting.CheckAndOpenINPort(Project.TriggerRecallDevice);
+                        }
+                        NewMessage?.Invoke("IN Ports Opened");
 
                         await SearchBoxesForAudioInitialization(project.Item3); //initialisation de l'audio si besoin (usage de VST)
 
