@@ -186,6 +186,11 @@ namespace MidiLiveSystem
                 await Task.Delay(1000);
             }
 
+            if (SequencerWindow != null)
+            {
+                await SequencerWindow.StopPlay(false);
+                SequencerWindow.Close();
+            }
             if (LogWindow != null)
             {
                 LogWindow.Close();
@@ -209,10 +214,6 @@ namespace MidiLiveSystem
             if (RecallWindow != null)
             {
                 RecallWindow.Close();
-            }
-            if (SequencerWindow != null)
-            {
-                SequencerWindow.Close();
             }
             if (ControlChangeMixer != null)
             {

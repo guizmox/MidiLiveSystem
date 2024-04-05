@@ -782,6 +782,17 @@ namespace MidiTools
 
             cancellationTokenSource = new CancellationTokenSource();
         }
+
+        internal MatrixItem Clone()
+        {
+            var mi = (MatrixItem)this.MemberwiseClone();
+            mi.SetRoutingGuid(Guid.NewGuid());
+            mi.Options.Active = true;
+            mi.ChangeLocked = true;
+            cancellationTokenSource = new CancellationTokenSource();
+
+            return mi;
+        }
     }
 
     public class MidiRouting
@@ -872,8 +883,6 @@ namespace MidiTools
         private int _lowestNotePlayed = -1;
         private string AudioDevice = "";
         private int AudioSampleRate = 48000;
-        private Channel MorphChannel;
-        private MidiDevice MorphDevice;
 
         public MidiRouting()
         {
@@ -2470,9 +2479,11 @@ namespace MidiTools
                 int morphinglength = 0;
                 int newvolume = 0;
                 int oldChannelOut = 0;
+                MatrixItem routingCopy = null;
 
                 if (bOUTChanged)
                 {
+                    routingCopy = routing.Clone();
                     oldDeviceOutName = routing.DeviceOut != null ? routing.DeviceOut.Name : "";
                     oldChannelOut = routing.ChannelOut;
                     morphinglength = routing.Options.PresetMorphing;
@@ -2517,7 +2528,7 @@ namespace MidiTools
 
                     if (morphinglength > 0)
                     {
-                        await PresetMorphing(routing, morphinglength, oldDeviceOut, oldChannelOut, newvolume, sDeviceOut, iChOut, vst);
+                        await PresetMorphing(routing, routingCopy, morphinglength, newvolume, sDeviceOut, iChOut, vst);
                     }
 
                     await RoutingPanic(routing, oldDeviceOut, oldChannelOut);
@@ -2527,33 +2538,46 @@ namespace MidiTools
             }
         }
 
-        private async Task PresetMorphing(MatrixItem routing, int valPresetMorphing, MidiDevice oldDeviceOut, int oldChannelOut, int newVolumeValue, string newDeviceOutName, int newChannelOut, VSTPlugin vst)
+        private async Task PresetMorphing(MatrixItem newrouting, MatrixItem oldrouting, int valPresetMorphing, int newVolumeValue, string newDeviceOutName, int newChannelOut, VSTPlugin vst)
         {
-            MorphChannel = Tools.GetChannel(oldChannelOut);
-            MorphDevice = oldDeviceOut;
+            MidiMatrix.Add(oldrouting);
+            if (oldrouting.DeviceInSequencer != null) 
+            {
+                oldrouting.AddSequencer(oldrouting.DeviceInSequencer);
+                //oldrouting.OnSequencerPlayNote += MatrixItem_OnSequencerPlayNote;
+            }
 
             //var newDeviceOut = AddNewOutDevice(newDeviceOutName, vst);
             var newDeviceOut = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(newDeviceOutName));
 
-            if (newDeviceOut != null && oldDeviceOut != null)
+            if (newDeviceOut != null && oldrouting.DeviceOut != null)
             {
-                if (!newDeviceOut.Name.Equals(oldDeviceOut.Name) || oldChannelOut != newChannelOut)
+                if (!newDeviceOut.Name.Equals(oldrouting.DeviceOut.Name) || oldrouting.ChannelOut != newChannelOut)
                 {
-                    int iVolumeOld = oldDeviceOut.GetLiveCCValue(oldChannelOut, 7);
+                    int iVolumeOld = oldrouting.DeviceOut.GetLiveCCValue(oldrouting.ChannelOut, 7);
                     int iRateFadeOut = valPresetMorphing / iVolumeOld; //le temps pour chaque pallier de 1
                     int iRateFadeIn = valPresetMorphing / newVolumeValue; //le temps pour chaque pallier de 1
-                    bool bWait = true;
 
                     List<Task> tasks = new List<Task>();
 
-                    tasks.Add(routing.Tasks.AddTask(() =>
+                    //dans le précédent routing, j'envoie un smooth CC de volume à 0 qui devrait normalement se synchroniser avec celui qui est fait dans l'autre sens dans le nouveau routing
+                    tasks.Add(newrouting.Tasks.AddTask(() =>
                     {
-                        List<int[]> transfernotes = oldDeviceOut.GetLiveNotes(oldChannelOut);
+                        oldrouting.DeviceOut.BlockCC(7, oldrouting.ChannelOut); //pour empêcher l'arrivée d'informations contradictoires
+                        for (int iFadeOut = iVolumeOld; iFadeOut > 0; iFadeOut -= 1)
+                        {
+                            oldrouting.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 7, iFadeOut }, Tools.GetChannel(oldrouting.ChannelOut), oldrouting.DeviceOut.Name));
+                            Thread.Sleep(iRateFadeOut);
+                        }
+                    }));
+
+                    tasks.Add(newrouting.Tasks.AddTask(() =>
+                    {
+                        List<int[]> transfernotes = oldrouting.DeviceOut.GetLiveNotes(oldrouting.ChannelOut);
                         foreach (var note in transfernotes) //transfert des notes qui étaient sur l'ancien routing 
                         {
                             newDeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { note[0], note[1] }, Tools.GetChannel(newChannelOut), newDeviceOut.Name));
                         }
-                        bWait = false;
 
                         for (int iFadeIn = 0; iFadeIn < newVolumeValue; iFadeIn += 1)
                         {
@@ -2562,36 +2586,17 @@ namespace MidiTools
                         }
                     }));
 
-                    tasks.Add(routing.Tasks.AddTask(() =>
-                    {
-                        while (bWait) { Thread.Sleep(1); } //pour éviter de renvoyer au précédent device les notes qu'on a transférées au nouveau
-
-                        newDeviceOut.OnMidiEvent += DeviceMorphing_OnMidiEvent;
-
-                        for (int iFadeOut = iVolumeOld; iFadeOut > 0; iFadeOut -= 1)
-                        {
-                            oldDeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 7, iFadeOut }, Tools.GetChannel(oldChannelOut), oldDeviceOut.Name));
-                            Thread.Sleep(iRateFadeOut);
-                        }
-
-                        newDeviceOut.OnMidiEvent -= DeviceMorphing_OnMidiEvent;
-                    }));
-
                     await Task.WhenAll(tasks);
-
-                    MorphChannel = Tools.GetChannel(1);
-                    MorphDevice = null;
                 }
             }
-        }
 
-        private void DeviceMorphing_OnMidiEvent(bool bIn, MidiEvent ev)
-        {
-            //pendant le temps du morphing il faut continuer à balancer les évènements entrants dans l'ancien device
-            if (ev.Type == TypeEvent.NOTE_ON ||ev.Type == TypeEvent.NOTE_OFF && MorphDevice != null)
+            if (oldrouting.DeviceInSequencer != null)
             {
-                MorphDevice.SendMidiEvent(new MidiEvent(ev.Type, ev.Values, MorphChannel, MorphDevice.Name));
+                oldrouting.RemoveSequencer();
+                //oldrouting.OnSequencerPlayNote -= MatrixItem_OnSequencerPlayNote;
             }
+
+            MidiMatrix.Remove(oldrouting);
         }
 
         public async Task UpdateUsedDevices(List<string> devices)

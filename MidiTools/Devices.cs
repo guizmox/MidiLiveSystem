@@ -556,6 +556,14 @@ namespace MidiTools
             return intermediate;
         }
 
+        internal void BlockCC(int iCC, int channelout)
+        {
+            if (!Tools.CCToNotBlock.Contains(iCC))
+            {
+                BlockIncomingCC[channelout - 1, iCC] = true;
+            }
+        }
+
         internal int GetLiveVelocityValue(int channelOut, int iNote)
         {
             if (IsOutVST)
