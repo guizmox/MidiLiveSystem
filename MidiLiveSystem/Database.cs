@@ -254,15 +254,14 @@ namespace MidiLiveSystem
                 allpresets.AddRange(box.GetRoutingBoxMemory());
             }
 
+            //MessagePackSerializer.DefaultOptions = MessagePackSerializer.DefaultOptions
+            //.WithResolver(MessagePack.Resolvers.StandardResolver.Instance)
+            //.WithCustomFormatter(new GZipMessagePackFormatter<Project>());
+
             byte[] binaryProject = MessagePackSerializer.Serialize(Project);
             byte[] binaryRouting = MessagePackSerializer.Serialize(new RoutingBoxes() { AllPresets = allpresets.ToArray() });
             byte[] binaryRecording = MessagePackSerializer.Serialize(RecordedSequence);
             byte[] binarySequencer = MessagePackSerializer.Serialize(SeqData);
-
-            byte[] bProject = BitConverter.GetBytes((Int32)binaryProject.Length);
-            byte[] bRouting = BitConverter.GetBytes((Int32)binaryRouting.Length);
-            byte[] bRecording = BitConverter.GetBytes((Int32)binaryRecording.Length);
-            byte[] bSequencer = BitConverter.GetBytes((Int32)binarySequencer.Length);
 
             List<string> sVersionsToDelete = GetOldProjectVersion(sId);
 

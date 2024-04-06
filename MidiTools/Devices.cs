@@ -465,14 +465,14 @@ namespace MidiTools
             {
                 if (VST_OutputEvents != null)
                 {
-                    return VST_OutputEvents.NOTEmemory[channelOut - 1, iNote];
+                    return VST_OutputEvents.NOTEmemory[channelOut - 1, iNote] > 0 ? true : false;
                 }
             }
             else
             {
                 if (MIDI_OutputEvents != null)
                 {
-                    return MIDI_OutputEvents.NOTEmemory[channelOut - 1, iNote];
+                    return MIDI_OutputEvents.NOTEmemory[channelOut - 1, iNote] > 0 ? true : false;
                 }
             }
             return false;
@@ -486,7 +486,7 @@ namespace MidiTools
             {
                 for (int i = 0; i < 128; i++)
                 {
-                    if (VST_OutputEvents.NOTEmemory[channelOut - 1, i])
+                    if (VST_OutputEvents.NOTEmemory[channelOut - 1, i] > 0)
                     {
                         notes.Add(new int[2] { i, VST_OutputEvents.VELOCITYmemory[channelOut - 1, i] });
                     }
@@ -496,7 +496,7 @@ namespace MidiTools
             {
                 for (int i = 0; i < 128; i++)
                 {
-                    if (MIDI_OutputEvents.NOTEmemory[channelOut - 1, i])
+                    if (MIDI_OutputEvents.NOTEmemory[channelOut - 1, i] > 0)
                     {
                         notes.Add(new int[2] { i, MIDI_OutputEvents.VELOCITYmemory[channelOut - 1, i] });
                     }
@@ -595,7 +595,7 @@ namespace MidiTools
                     {
                         for (int iN = 0; iN < 128; iN++)
                         {
-                            if (VST_OutputEvents.NOTEmemory[iC, iN])
+                            if (VST_OutputEvents.NOTEmemory[iC, iN] > 0)
                             {
                                 return iN;
                             }
@@ -612,7 +612,7 @@ namespace MidiTools
                     {
                         for (int iN = 0; iN < 128; iN++)
                         {
-                            if (MIDI_OutputEvents.NOTEmemory[iC, iN])
+                            if (MIDI_OutputEvents.NOTEmemory[iC, iN] > 0)
                             {
                                 return iN;
                             }
@@ -641,7 +641,7 @@ namespace MidiTools
         internal event MidiEventHandler OnMidiEvent;
 
         internal int[,] CCmemory = new int[16, 128];
-        internal bool[,] NOTEmemory = new bool[16, 128];
+        internal int[,] NOTEmemory = new int[16, 128];
         internal int[,] VELOCITYmemory = new int[16, 128];
 
         private VSTHostInfo InitialInfoToStartAudio;
@@ -666,13 +666,13 @@ namespace MidiTools
                     case TypeEvent.CLOCK:
                         break;
                     case TypeEvent.NOTE_ON:
-                        NOTEmemory[iChannel, ev.Values[0]] = true;
+                        NOTEmemory[iChannel, ev.Values[0]] += 1;
                         VELOCITYmemory[iChannel, ev.Values[0]] = ev.Values[1];
                         Plugin.VSTSynth.MIDI_NoteOn(ev.Values[0], ev.Values[1], iChannel + 1);
                         AddLog(Plugin.VSTHostInfo.VSTName, false, ev.Channel, "Note On", ev.Values[0].ToString(), "Velocity", ev.Values[1].ToString());
                         break;
                     case TypeEvent.NOTE_OFF:
-                        NOTEmemory[iChannel, ev.Values[0]] = false;
+                        NOTEmemory[iChannel, ev.Values[0]] = Math.Max(0, NOTEmemory[iChannel, ev.Values[0]] - 1);
                         VELOCITYmemory[iChannel, ev.Values[0]] = ev.Values[1];
                         Plugin.VSTSynth.MIDI_NoteOff(ev.Values[0], ev.Values[1], iChannel + 1);
                         AddLog(Plugin.VSTHostInfo.VSTName, false, ev.Channel, "Note Off", ev.Values[0].ToString(), "Velocity", ev.Values[1].ToString());
@@ -724,7 +724,7 @@ namespace MidiTools
         internal event MidiEventHandler OnMidiEvent;
 
         internal int[,] CCmemory = new int[16, 128];
-        internal bool[,] NOTEmemory = new bool[16, 128];
+        internal int[,] NOTEmemory = new int[16, 128];
         internal int[,] VELOCITYmemory = new int[16, 128];
 
         private IMidiOutputDevice outputDevice;
@@ -797,7 +797,7 @@ namespace MidiTools
                 case TypeEvent.NOTE_ON:
                     if (outputDevice != null && outputDevice.IsOpen)
                     {
-                        NOTEmemory[Tools.GetChannelInt(ev.Channel) - 1, ev.Values[0]] = true;
+                        NOTEmemory[Tools.GetChannelInt(ev.Channel) - 1, ev.Values[0]] += 1;
                         VELOCITYmemory[Tools.GetChannelInt(ev.Channel) - 1, ev.Values[0]] = ev.Values[1];
                         NoteOnMessage msg = new NoteOnMessage(ev.Channel, ev.GetKey(), ev.Values[1]);
                         outputDevice.Send(msg);
@@ -807,7 +807,7 @@ namespace MidiTools
                 case TypeEvent.NOTE_OFF:
                     if (outputDevice != null && outputDevice.IsOpen)
                     {
-                        NOTEmemory[Tools.GetChannelInt(ev.Channel) - 1, ev.Values[0]] = false;
+                        NOTEmemory[Tools.GetChannelInt(ev.Channel) - 1, ev.Values[0]] = Math.Max(0, NOTEmemory[Tools.GetChannelInt(ev.Channel) - 1, ev.Values[0]] - 1);
                         VELOCITYmemory[Tools.GetChannelInt(ev.Channel) - 1, ev.Values[0]] = ev.Values[1];
                         NoteOffMessage msg = new NoteOffMessage(ev.Channel, ev.GetKey(), ev.Values[1]);
                         outputDevice.Send(msg);

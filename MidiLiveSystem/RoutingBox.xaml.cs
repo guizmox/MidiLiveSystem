@@ -655,7 +655,10 @@ namespace MidiLiveSystem
             if (TempMemory[CurrentPreset].DeviceOut.StartsWith(Tools.VST_HOST))
             {
                 await SwitchVSTPanel(true);
-                //OnUIEvent?.Invoke(BoxGuid, "CHECK_VST_HOST", string.Concat(cbMidiOut.SelectedValue.ToString(), "-{", cbVSTSlot.SelectedValue.ToString(), "}"));
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    OnUIEvent?.Invoke(BoxGuid, "CHECK_VST_HOST", string.Concat(cbMidiOut.SelectedValue.ToString(), "-{", cbVSTSlot.SelectedValue.ToString(), "}"));
+                });
             }
             else
             {

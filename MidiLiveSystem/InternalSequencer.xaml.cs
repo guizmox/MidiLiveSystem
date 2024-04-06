@@ -111,6 +111,7 @@ namespace MidiLiveSystem
                     if (SequencerBoxes[i].IsRecording)
                     {
                         await SequencerBoxes[i].AddMidiEvent(ev);
+                        await Routing.SendNoteToSequencerBoxes(ev, SequencerBoxes[i].SequencerChannel);
                     }
                 }
             }
@@ -258,7 +259,7 @@ namespace MidiLiveSystem
                    
                 }
 
-                await Routing.Panic(false);
+                Routing.Panic(false);
                 Playing = false;
             }
         }

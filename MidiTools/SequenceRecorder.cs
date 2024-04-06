@@ -221,7 +221,7 @@ namespace MidiTools
             StartStopPlayerCounter(true);
 
             await PlaySequence(_eventsOUT, routing);
-            await routing.Panic(false);
+            routing.Panic(false);
 
             StartStopPlayerCounter(false);
 

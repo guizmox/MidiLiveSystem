@@ -28,7 +28,7 @@ namespace MidiLiveSystem
         private System.Timers.Timer BufferProcessor;
         internal bool IsRecording { get; private set; } = false;
 
-        internal int SequencerIndex = 0;
+        internal int SequencerChannel = 0;
         internal Sequencer InternalSequence;
         private List<MidiEvent> Buffer = new List<MidiEvent>();
         private int ActualStep = 0;
@@ -49,7 +49,7 @@ namespace MidiLiveSystem
             BufferProcessor.Interval = 250;
             BufferProcessor.Start();
 
-            SequencerIndex = iSequencer;
+            SequencerChannel = iSequencer;
             InternalSequence = seq;
 
             InitPage();
@@ -132,7 +132,7 @@ namespace MidiLiveSystem
             double tempo = await slTempo.Dispatcher.InvokeAsync(() => slTempo.Value);
             await lbTempo.Dispatcher.InvokeAsync(() => lbTempo.Content = string.Concat("Tempo (", tempo.ToString(), ")"));
             InternalSequence.Tempo = (int)tempo;
-            SequencerData.ChangeTempo((int)tempo, SequencerIndex);
+            SequencerData.ChangeTempo((int)tempo, SequencerChannel);
         }
 
         private async void ckTranspose_Click(object sender, RoutedEventArgs e)
@@ -407,12 +407,12 @@ namespace MidiLiveSystem
             bool bTranspose = await ckTranspose.Dispatcher.InvokeAsync(() => ckTranspose.IsChecked.Value);
             string sQuantize = await cbQuantization.Dispatcher.InvokeAsync(() => cbQuantization.SelectedValue.ToString());
 
-            InternalSequence.Channel = SequencerIndex;
+            InternalSequence.Channel = SequencerChannel;
             InternalSequence.Quantization = sQuantize;
             InternalSequence.Steps = iSteps;
             InternalSequence.SetSequence(stepsRecorded);
             InternalSequence.Transpose = bTranspose;
-            SequencerData.ChangeTempo((int)dTempo, SequencerIndex);
+            SequencerData.ChangeTempo((int)dTempo, SequencerChannel);
 
             await FillUI();
         }
