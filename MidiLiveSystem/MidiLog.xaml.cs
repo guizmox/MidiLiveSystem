@@ -1,4 +1,5 @@
 ﻿using MidiTools;
+using NAudio.CoreAudioApi;
 using System;
 using System.Collections.Generic;
 using System.Text;

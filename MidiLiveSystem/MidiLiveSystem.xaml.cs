@@ -273,7 +273,11 @@ namespace MidiLiveSystem
                     Project = config;
                     await AddAllRoutingBoxes();
                 }
+
                 Project = config;
+
+                await Routing.ChangeAllInputsMidiIn(Project.AllInputs);
+
                 await SaveTemplate();
 
                 //rename des box
@@ -730,6 +734,9 @@ namespace MidiLiveSystem
 
                         Project = project.Item2;
                         NewMessage?.Invoke("Project Loaded");
+
+
+                        await Routing.ChangeAllInputsMidiIn(Project.AllInputs);
 
                         //ouverture des ports techniques
                         if (Project.ClockDevice.Length > 0)

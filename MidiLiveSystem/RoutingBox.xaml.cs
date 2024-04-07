@@ -173,6 +173,7 @@ namespace MidiLiveSystem
 
             cbMidiIn.Items.Add(new ComboBoxItem() { Tag = Tools.INTERNAL_GENERATOR, Content = Tools.INTERNAL_GENERATOR });
             cbMidiIn.Items.Add(new ComboBoxItem() { Tag = Tools.INTERNAL_SEQUENCER, Content = Tools.INTERNAL_SEQUENCER });
+            cbMidiIn.Items.Add(new ComboBoxItem() { Tag = Tools.ALL_INPUTS, Content = Tools.ALL_INPUTS });
 
             foreach (var s in outputDevices)
             {

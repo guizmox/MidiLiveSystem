@@ -182,11 +182,11 @@ namespace MidiTools
         public int CC_FilterCutOff_Value { get { return DefaultRoutingCC[74]; } set { if (value < -1) { DefaultRoutingCC[74] = -1; } else if (value > 127) { DefaultRoutingCC[74] = 127; } else { DefaultRoutingCC[74] = value; } } }
 
         [Key("CC_Converters")]
-        public List<int[]> CC_Converters { get; private set; } = new List<int[]>();
+        public List<int[]> CC_Converters { get; set; } = new List<int[]>();
         [Key("Note_Converters")]
-        public List<int[]> Note_Converters { get; private set; } = new List<int[]>();
+        public List<int[]> Note_Converters { get; set; } = new List<int[]>();
         [Key("Translators")]
-        public List<string[]> Translators { get; private set; } = new List<string[]>();
+        public List<string[]> Translators { get; set; } = new List<string[]>();
 
         [Key("SmoothCC")]
         public bool SmoothCC { get { return SmoothCCLength > 0 ? true : false; } }

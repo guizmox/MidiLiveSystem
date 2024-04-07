@@ -2,6 +2,7 @@
 using MessagePack;
 using MicroLibrary;
 using Microsoft.Extensions.Primitives;
+using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using RtMidi.Core;
 using RtMidi.Core.Enums;
@@ -803,6 +804,8 @@ namespace MidiTools
 
     public class MidiRouting
     {
+        private List<string> _allinputs = new List<string>();
+
         private EventPool Tasks = new EventPool("MidiRouting");
 
         private List<string> DevicesRoutingIN = new List<string>();
@@ -873,6 +876,7 @@ namespace MidiTools
         }
 
         public int LowestNoteRunning { get { return _lowestNotePlayed; } }
+        private List<string> AllInputs { get { lock (_allinputs) { return _allinputs; } } set { lock (_allinputs) { _allinputs = value; } } }
 
         private readonly List<MatrixItem> MidiMatrix = new List<MatrixItem>();
         internal static List<MidiDevice> UsedDevicesIN = new List<MidiDevice>();
@@ -1096,7 +1100,12 @@ namespace MidiTools
         private async Task CreateOUTEventFromInput(MidiEvent ev)
         {
             //attention : c'est bien un message du device IN qui arrive !
-            List<MatrixItem> matrix = MidiMatrix.Where(i => i.DeviceOut != null && i.DropMode < 2 && i.Options.Active && i.DeviceIn != null && i.DeviceIn.Name == ev.Device && Tools.GetChannel(i.ChannelIn) == ev.Channel).ToList();
+            List<MatrixItem> matrix = MidiMatrix.Where(i => i.DeviceOut != null
+                                                       && i.DropMode < 2
+                                                       && i.Options.Active
+                                                       && i.DeviceIn != null
+                                                       && (i.DeviceIn.Name == ev.Device || i.DeviceIn.Name.Equals(Tools.ALL_INPUTS) && AllInputs.Contains(ev.Device))
+                                                       && Tools.GetChannel(i.ChannelIn) == ev.Channel).ToList();
 
             List<Task> tasksmatrix = new List<Task>();
 
@@ -2083,8 +2092,6 @@ namespace MidiTools
         }
 
         internal void InitDevicesForSequencePlay(List<LiveData> initParams)
-
-
         {
             MidiDevice device = null;
 
@@ -2288,6 +2295,7 @@ namespace MidiTools
 
         public static bool CheckAndOpenINPort(string sDevice)
         {
+
             var exists = UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDevice));
 
             if (exists == null)
@@ -2416,12 +2424,13 @@ namespace MidiTools
                 else if (sDeviceIn.Equals(Tools.INTERNAL_SEQUENCER))
                 {
                 }
+                else if (sDeviceIn.Equals(Tools.ALL_INPUTS))
+                {
+                    AddNewInDevice(AllInputs, true);
+                }
                 else
                 {
-                    var device = new MidiDevice(devIN);
-                    device.UsedForRouting = true;
-                    device.OnMidiEvent += DeviceIn_OnMidiEvent;
-                    UsedDevicesIN.Add(device);
+                    AddNewInDevice(new List<string> { sDeviceIn }, false);
                 }
             }
 
@@ -2429,8 +2438,7 @@ namespace MidiTools
             {
                 if (vst.VSTHostInfo != null)
                 {
-                    var device = new MidiDevice(vst, sDeviceOut);
-                    UsedDevicesOUT.Add(device);
+                    AddNewOutDevice(sDeviceOut, vst);
                 }
             }
             else if (sDeviceOut.StartsWith(Tools.VST_HOST) && UsedDevicesOUT.Count(d => d.Name.Equals(sDeviceOut)) > 0)
@@ -2439,8 +2447,7 @@ namespace MidiTools
             }
             else if (devOUT != null && UsedDevicesOUT.Count(d => d.Name.Equals(sDeviceOut)) == 0)
             {
-                var device = new MidiDevice(devOUT, CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(devOUT.Name)));
-                UsedDevicesOUT.Add(device);
+                AddNewOutDevice(devOUT.Name);
             }
 
             //iAction : 0 = delete, 1 = adds
@@ -2537,6 +2544,21 @@ namespace MidiTools
                             routing.DeviceInInternalName = Tools.INTERNAL_SEQUENCER;
                         }
                     }
+                    else if (sDeviceIn.Equals(Tools.ALL_INPUTS))
+                    {
+                        routing.OnSequencerPlayNote -= MatrixItem_OnSequencerPlayNote;
+                        routing.RemoveSequencer();
+                        routing.DeviceInInternalName = "";
+
+                        if (AllInputs.Count > 0)
+                        {
+                            routing.DeviceIn = AddNewInDevice(AllInputs, true);
+                        }
+                        else
+                        {
+                            routing.DeviceIn = null;
+                        }
+                    }
                     else
                     {
                         routing.OnSequencerPlayNote -= MatrixItem_OnSequencerPlayNote;
@@ -2545,7 +2567,7 @@ namespace MidiTools
 
                         if (sDeviceIn.Length > 0)
                         {
-                            routing.DeviceIn = AddNewInDevice(sDeviceIn);
+                            routing.DeviceIn = AddNewInDevice(new List<string> { sDeviceIn }, false);
                         }
                         else
                         {
@@ -2745,22 +2767,63 @@ namespace MidiTools
             else { dev.UsedForRouting = true; return dev; }
         }
 
-        private MidiDevice AddNewInDevice(string sDeviceIn)
+        private MidiDevice AddNewInDevice(List<string> sDevicesIn, bool bAllInputs)
         {
-            var dev = UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDeviceIn));
-            if (dev == null)
+            if (!bAllInputs)
             {
-                var indev = InputDevices.FirstOrDefault(d => d.Name.Equals(sDeviceIn));
-                if (indev != null)
+                var dev = UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(sDevicesIn[0]));
+                if (dev == null)
                 {
-                    var newdev = new MidiDevice(indev);
+                    var indev = InputDevices.FirstOrDefault(d => d.Name.Equals(sDevicesIn[0]));
+                    if (indev != null)
+                    {
+                        var newdev = new MidiDevice(indev);
+                        newdev.UsedForRouting = true;
+                        newdev.OnMidiEvent += DeviceIn_OnMidiEvent;
+                        UsedDevicesIN.Add(newdev);
+                        return newdev;
+                    }
+                    else { return null; }
+                }
+                else { return dev; }
+            }
+            else
+            {
+                var dev = UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(Tools.ALL_INPUTS));
+                if (dev == null)
+                {
+                    var newdev = new MidiDevice(sDevicesIn);
+                    newdev.UsedForRouting = true;
                     newdev.OnMidiEvent += DeviceIn_OnMidiEvent;
                     UsedDevicesIN.Add(newdev);
                     return newdev;
                 }
-                else { return null; }
+                else { return dev; }
             }
-            else { return dev; }
+        }
+
+        public async Task ChangeAllInputsMidiIn(List<string> sDevicesIn)
+        {
+            await Tasks.AddTask(() =>
+            {
+                List<string> toremove = AllInputs.Except(sDevicesIn).ToList();
+                List<string> toadd = sDevicesIn.Except(AllInputs).ToList();
+
+                var device = UsedDevicesIN.FirstOrDefault(d => d.Name.Equals(Tools.ALL_INPUTS));
+                if (device != null)
+                {
+                    foreach (var add in toadd)
+                    {
+                        device.AddAllInputsDevice(add);
+                    }
+                    foreach (var rem in toremove)
+                    {
+                        device.RemoveAllInputsDevice(rem);
+                    }
+                }
+
+                AllInputs = sDevicesIn;
+            });
         }
 
         public async Task SetSolo(Guid routingGuid)
@@ -2989,7 +3052,7 @@ namespace MidiTools
 
                     if (exists == null)
                     {
-                        var newdev = AddNewInDevice(sDevice);
+                        var newdev = AddNewInDevice(new List<string> { sDevice }, false);
                         newdev.IsReserverdForInternalPurposes = true;
                     }
                 }

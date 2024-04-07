@@ -81,11 +81,13 @@ namespace MidiLiveSystem
                     if (MidiTools.MidiRouting.InputDevices.Count(dev => dev.Name.Equals(d)) == 0)
                     {
                         cbMidiIn.Items.Add(new ComboBoxItem() { Tag = d, Content = string.Concat(d, " (NOT FOUND !)") });
+                        cbAllInputs.Items.Add(new CheckBox() { Tag = string.Concat(d, " (NOT FOUND !)"), IsChecked = false, Content = string.Concat(d, " (NOT FOUND !)") });
                         cbMidiInClock.Items.Add(new ComboBoxItem() { Tag = d, Content = string.Concat(d, " (NOT FOUND !)") });
                     }
                     else
                     {
                         cbMidiIn.Items.Add(new ComboBoxItem() { Tag = d, Content = d });
+                        cbAllInputs.Items.Add(new CheckBox() { Tag = d, IsChecked = false, Content = d });
                         cbMidiInClock.Items.Add(new ComboBoxItem() { Tag = d, Content = d });
                         cbMidiInRecall.Items.Add(new ComboBoxItem() { Tag = d, Content = d });
                     }
@@ -100,6 +102,14 @@ namespace MidiLiveSystem
                     else
                     {
                         cbMidiOut.Items.Add(new ComboBoxItem() { Tag = d, Content = d });
+                    }
+                }
+
+                foreach (CheckBox cb in cbAllInputs.Items)
+                {
+                    if (Configuration.AllInputs.Contains(cb.Tag.ToString()))
+                    {
+                        cb.IsChecked = true;
                     }
                 }
 
@@ -137,6 +147,7 @@ namespace MidiLiveSystem
                 foreach (var s in MidiTools.MidiRouting.InputDevices)
                 {
                     cbMidiIn.Items.Add(new ComboBoxItem() { Tag = s.Name, Content = s.Name });
+                    cbAllInputs.Items.Add(new CheckBox() { Tag = s.Name, IsChecked = false, Content = s.Name });
                     cbMidiInClock.Items.Add(new ComboBoxItem() { Tag = s.Name, Content = s.Name });
                     cbMidiInRecall.Items.Add(new ComboBoxItem() { Tag = s.Name, Content = s.Name });
                 }
@@ -457,6 +468,7 @@ namespace MidiLiveSystem
 
             List<string> sDevicesIn = new List<string>();
             List<string> sDevicesOut = new List<string>();
+            List<string> allinputs = new List<string>();
 
             foreach (ComboBoxItem cb in cbMidiIn.Items)
             {
@@ -465,6 +477,13 @@ namespace MidiLiveSystem
             foreach (ComboBoxItem cb in cbMidiOut.Items)
             {
                 sDevicesOut.Add(cb.Tag.ToString());
+            }
+            foreach (CheckBox cb in cbAllInputs.Items)
+            {
+                if (cb.IsChecked.Value)
+                {
+                    allinputs.Add(cb.Tag.ToString());
+                }
             }
 
             List<string[]> boxnames = new List<string[]>();
@@ -480,6 +499,7 @@ namespace MidiLiveSystem
             Configuration.ProjectName = projectName;
             Configuration.DevicesIN = sDevicesIn;
             Configuration.DevicesOUT = sDevicesOut;
+            Configuration.AllInputs = allinputs;
             Configuration.HorizontalGrid = ihorizontal;
             Configuration.VerticalGrid = ivertical;
             Configuration.TriggerRecallButtons = ((ComboBoxItem)cbRecallButtonsTrigger.SelectedItem).Tag.ToString();
@@ -553,6 +573,7 @@ namespace MidiLiveSystem
 
         private List<string> _listDevicesIn = null;
         private List<string> _listDevicesOut = null;
+        private List<string> _allinputs = new List<string>();
 
         [Key("ProjectId")]
         public Guid ProjectId { get; set; } = Guid.NewGuid();
@@ -565,6 +586,13 @@ namespace MidiLiveSystem
         {
             get { return _listDevicesOut; }
             set { _listDevicesOut = value; }
+        }
+        
+        [Key("AllInputs")]
+        public List<string> AllInputs
+        {
+            get { return _allinputs; }
+            set { _allinputs = value; }
         }
 
         [Key("RecallData")]

@@ -25,6 +25,8 @@ namespace MidiTools
         public static string SYSEX_CHECK = @"^(F0)([A-f0-9]*)(F7)$";
         public static string INTERNAL_GENERATOR = "Internal Note Generator";
         public static string INTERNAL_SEQUENCER = "Internal Sequencer";
+        public static string ALL_INPUTS = "All Inputs";
+
         public static string VST_HOST = "VST 2 Internal Host";
 
         public static string MidiNoteNumberToNoteName(int noteNumber)

@@ -143,6 +143,7 @@ namespace MidiTools
         internal VSTPlugin Plugin;
         private bool IsOutVST = false;
 
+        private List<MidiDevice> AllInputs = new List<MidiDevice>();
         private MidiInputDeviceEvents MIDI_InputEvents;
         private MidiOutputDeviceEvents MIDI_OutputEvents;
         private VSTOutputDeviceEvents VST_OutputEvents;
@@ -190,6 +191,28 @@ namespace MidiTools
             Name = sPluginSlot;
             var b = OpenDevice();
             if (b) { vst.LoadVST(); }
+        }
+
+        internal MidiDevice(List<string> allmidiinputs)
+        {
+            MIDI_InOrOut = 1;
+            Name = Tools.ALL_INPUTS;
+            
+            foreach (var input in allmidiinputs) 
+            {
+                var i = MidiRouting.InputDevices.FirstOrDefault(i => i.Name.Equals(input));
+                if (i != null)
+                {
+                    var newdevice = new MidiDevice(i);
+                    newdevice.OnMidiEvent += AllMidiIn_OnMidiEvent;
+                    AllInputs.Add(newdevice);
+                }
+            }
+        }
+
+        private void AllMidiIn_OnMidiEvent(bool bIn, MidiEvent ev)
+        {
+            OnMidiEvent.Invoke(bIn, ev);
         }
 
         private void MIDI_InputEvents_OnMidiEvent(MidiEvent ev)
@@ -294,20 +317,48 @@ namespace MidiTools
             {
                 if (MIDI_InOrOut == 1) //IN
                 {
-                    try
+                    if (Name.Equals(Tools.ALL_INPUTS)) //mode all IN
                     {
-                        if (MIDI_InputEvents != null)
+                        bool bOK = true;
+                        foreach (var input in AllInputs)
                         {
-                            MIDI_InputEvents.Stop();
-                            MIDI_InputEvents.OnMidiEvent -= MIDI_InputEvents_OnMidiEvent;
-                            MIDI_InputEvents = null;
+                            try
+                            {
+                                input.OnMidiEvent -= AllMidiIn_OnMidiEvent;
+                                if (input.MIDI_InputEvents != null)
+                                {
+                                    input.MIDI_InputEvents.Stop();
+                                    input.MIDI_InputEvents.OnMidiEvent -= MIDI_InputEvents_OnMidiEvent;
+                                    input.MIDI_InputEvents = null;
+                                }
+                            }
+                            catch
+                            {
+                                AllInputs.Clear();
+                                input.MIDI_InputEvents = null;
+                                bOK = false;
+                            }
                         }
-                        return true;
+                        AllInputs.Clear();
+                        return bOK;
                     }
-                    catch
+                    else
                     {
-                        MIDI_InputEvents = null;
-                        return false;
+                        try
+                        {
+                            if (MIDI_InputEvents != null)
+                            {
+                                MIDI_InputEvents.Stop();
+                                MIDI_InputEvents.OnMidiEvent -= MIDI_InputEvents_OnMidiEvent;
+                                MIDI_InputEvents = null;
+                            }
+                            return true;
+                        }
+                        catch
+                        {
+                            MIDI_InputEvents = null;
+                            return false;
+                        }
                     }
                 }
                 else //OUT
@@ -348,6 +399,28 @@ namespace MidiTools
                 }
 
                 OnLogAdded?.Invoke(sDevice, bIn, sMessage);
+            }
+        }
+
+        internal void AddAllInputsDevice(string sDevice)
+        {
+            var i = MidiRouting.InputDevices.FirstOrDefault(i => i.Name.Equals(sDevice));
+            if (i != null && !AllInputs.Any(ai => ai.Name.Equals(sDevice)))
+            {
+                var newdevice = new MidiDevice(i);
+                newdevice.OnMidiEvent += AllMidiIn_OnMidiEvent;
+                AllInputs.Add(newdevice);
+            }
+        }
+
+        internal void RemoveAllInputsDevice(string sDevice)
+        {
+            var i = MidiRouting.InputDevices.FirstOrDefault(i => i.Name.Equals(sDevice));
+            if (i != null && AllInputs.Any(ai => ai.Name.Equals(sDevice)))
+            {
+                var dev = AllInputs.FirstOrDefault(ai => ai.Name.Equals(sDevice));
+                dev.OnMidiEvent -= AllMidiIn_OnMidiEvent;
+                dev.CloseDevice();
             }
         }
 
