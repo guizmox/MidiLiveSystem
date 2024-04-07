@@ -353,7 +353,7 @@ namespace MidiLiveSystem
 
         private async void RecordedSequence_RecordCounter(string sInfo)
         {
-            await Dispatcher.InvokeAsync(() =>
+            await tbRecord.Dispatcher.InvokeAsync(() =>
             {
                 tbRecord.Text = sInfo;
             });
@@ -361,7 +361,7 @@ namespace MidiLiveSystem
 
         private async void PlayedSequence_RecordCounter(string sInfo)
         {
-            await Dispatcher.InvokeAsync(() =>
+            await tbPlay.Dispatcher.InvokeAsync(() =>
             {
                 tbPlay.Text = sInfo;
             });
@@ -720,6 +720,12 @@ namespace MidiLiveSystem
                     var project = prj.Project;
                     if (project != null)
                     {
+                        foreach (var box in Boxes)
+                        {
+                            if (box.VSTWindow != null)
+                            { box.CloseVSTWindow(); }
+                        }
+
                         await Routing.DeleteAllRouting();
 
                         Project = project.Item2;
@@ -988,7 +994,7 @@ namespace MidiLiveSystem
             }
         }
 
-        private void btnRecordSequence_Click(object sender, RoutedEventArgs e)
+        private async void btnRecordSequence_Click(object sender, RoutedEventArgs e)
         {
             if (RecordedSequence == null)
             {
@@ -1048,23 +1054,26 @@ namespace MidiLiveSystem
 
             if (bRecord)
             {
+                await tbRecord.Dispatcher.InvokeAsync(() => tbRecord.Text = "LOADING...");
+
                 RecordedSequence = new MidiSequence();
 
-                tbRecord.Text = "GO !";
                 RecordedSequence.RecordCounter += RecordedSequence_RecordCounter;
                 RecordedSequence.SequenceFinished += Routing_SequenceFinished;
-                RecordedSequence.StartRecording(true, true, Routing);
+                await RecordedSequence.StartRecording(true, true, Routing);
+                await tbRecord.Dispatcher.InvokeAsync(() => tbRecord.Text = "GO !");
             }
         }
 
-        private void btnPlaySequence_Click(object sender, RoutedEventArgs e)
+        private async void btnPlaySequence_Click(object sender, RoutedEventArgs e)
         {
             if (RecordedSequence != null)
             {
-                tbPlay.Text = "PLAY";
+                await tbPlay.Dispatcher.InvokeAsync(() => tbPlay.Text = "LOADING...");
                 RecordedSequence.SequenceFinished -= Routing_SequenceFinished;
-                RecordedSequence.RecordCounter += PlayedSequence_RecordCounter;
                 RecordedSequence.SequenceFinished += Routing_SequenceFinished;
+
+                RecordedSequence.RecordCounter -= PlayedSequence_RecordCounter;
 
                 if (RecordedSequence.EventsOUT.Count > 0)
                 {
@@ -1079,7 +1088,8 @@ namespace MidiLiveSystem
 
                         RecordedSequence.RecordCounter += PlayedSequence_RecordCounter;
                         UIRefreshRate.Stop(); //blocage de tout ce qui va potentiellement aller modifier le routing
-                        RecordedSequence.PlaySequenceAsync(Routing);
+
+                        RecordedSequence.PlayRecordingAsync(Routing);
                     }
                 }
                 else

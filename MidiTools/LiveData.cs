@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Timers;
+using VSTHost;
 using static MidiTools.MidiDevice;
 
 namespace MidiTools
@@ -30,6 +31,15 @@ namespace MidiTools
 
         [Key("InitProgram")]
         public MidiPreset InitProgram { get; set; }
+
+        [Key("InitVSTState")]
+        public byte[] InitVSTState { get; set; }
+
+        [Key("InitVSTParameters")]
+        public List<VSTParameter> InitVSTParameters { get; set; }
+
+        [Key("InitVSTProgram")]
+        public int InitVSTProgram { get; set; }
 
 
         public LiveData()

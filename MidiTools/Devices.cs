@@ -425,32 +425,35 @@ namespace MidiTools
         {
             List<int[]> ccval = new List<int[]>();
 
-            if (IsOutVST)
+            if ((int)iChannel > -1)
             {
-                if (VST_OutputEvents != null)
+                if (IsOutVST)
                 {
-                    int idxch = Tools.GetChannelInt(iChannel) - 1;
-
-                    for (int i = 0; i < 128; i++)
+                    if (VST_OutputEvents != null)
                     {
-                        if (VST_OutputEvents.CCmemory[idxch, i] > -1)
+                        int idxch = Tools.GetChannelInt(iChannel) - 1;
+
+                        for (int i = 0; i < 128; i++)
                         {
-                            ccval.Add(new int[2] { i, VST_OutputEvents.CCmemory[idxch, i] });
+                            if (VST_OutputEvents.CCmemory[idxch, i] > -1)
+                            {
+                                ccval.Add(new int[2] { i, VST_OutputEvents.CCmemory[idxch, i] });
+                            }
                         }
                     }
                 }
-            }
-            else
-            {
-                if (MIDI_OutputEvents != null)
+                else
                 {
-                    int idxch = Tools.GetChannelInt(iChannel) - 1;
-
-                    for (int i = 0; i < 128; i++)
+                    if (MIDI_OutputEvents != null)
                     {
-                        if (MIDI_OutputEvents.CCmemory[idxch, i] > -1)
+                        int idxch = Tools.GetChannelInt(iChannel) - 1;
+
+                        for (int i = 0; i < 128; i++)
                         {
-                            ccval.Add(new int[2] { i, MIDI_OutputEvents.CCmemory[idxch, i] });
+                            if (MIDI_OutputEvents.CCmemory[idxch, i] > -1)
+                            {
+                                ccval.Add(new int[2] { i, MIDI_OutputEvents.CCmemory[idxch, i] });
+                            }
                         }
                     }
                 }
@@ -476,6 +479,46 @@ namespace MidiTools
                 }
             }
             return false;
+        }
+
+        internal bool PendingNotesOrSustain(int channelOut)
+        {
+            if (channelOut > 0)
+            {
+                if (IsOutVST)
+                {
+                    for (int i = 0; i < 128; i++)
+                    {
+                        if (VST_OutputEvents.NOTEmemory[channelOut - 1, i] > 0)
+                        {
+                            return true;
+                        }
+                    }
+                    if (VST_OutputEvents.CCmemory[channelOut - 1, 64] >= 64)
+                    {
+                        return true;
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < 128; i++)
+                    {
+                        if (MIDI_OutputEvents.NOTEmemory[channelOut - 1, i] > 0)
+                        {
+                            return true;
+                        }
+                    }
+                    if (MIDI_OutputEvents.CCmemory[channelOut - 1, 64] >= 64)
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            else
+            {
+                return false;
+            }
         }
 
         internal List<int[]> GetLiveNotes(int channelOut)
@@ -632,7 +675,6 @@ namespace MidiTools
                 VST_OutputEvents.SaveParameters();
             }
         }
-
     }
 
     internal class VSTOutputDeviceEvents
@@ -644,12 +686,19 @@ namespace MidiTools
         internal int[,] NOTEmemory = new int[16, 128];
         internal int[,] VELOCITYmemory = new int[16, 128];
 
-        private VSTHostInfo InitialInfoToStartAudio;
         private VSTPlugin Plugin;
         internal bool Locked = false;
 
         internal VSTOutputDeviceEvents(VSTPlugin plugin)
         {
+            for (int i = 0; i < 16; i++)
+            {
+                for (int i2 = 0; i2 < 128; i2++)
+                {
+                    CCmemory[i, i2] = -1;
+                }
+            }
+
             Plugin = plugin;
         }
 

@@ -124,31 +124,38 @@ namespace MidiTools
             //F0 ... F7 to byte[]
             //on va envoyer les différents messages par paquets séparés
             StringBuilder sbSysEx = new StringBuilder();
-            for (int i = 0; i <= sData.Length - 2; i += 2)
+            if (string.IsNullOrEmpty(sData))
             {
-                var sys = sData.Substring(i, 2);
-                if (!sys.Equals("F7", StringComparison.OrdinalIgnoreCase))
-                {
-                    sbSysEx.Append(sys);
-                }
-                else
-                {
-                    sMessages.Add(sbSysEx.ToString());
-                    sbSysEx.Clear();
-                }
+
             }
-
-            foreach (var sysex in sMessages)
+            else
             {
-                var hex = sysex.Substring(2);
-
-                if (hex.Length > 0)
+                for (int i = 0; i <= sData.Length - 2; i += 2)
                 {
-                    var bytes = Enumerable.Range(0, hex.Length / 2)
-                      .Select(x => Convert.ToByte(hex.Substring(x * 2, 2), 16))
-                      .ToArray();
+                    var sys = sData.Substring(i, 2);
+                    if (!sys.Equals("F7", StringComparison.OrdinalIgnoreCase))
+                    {
+                        sbSysEx.Append(sys);
+                    }
+                    else
+                    {
+                        sMessages.Add(sbSysEx.ToString());
+                        sbSysEx.Clear();
+                    }
+                }
 
-                    list.Add(bytes);
+                foreach (var sysex in sMessages)
+                {
+                    var hex = sysex.Substring(2);
+
+                    if (hex.Length > 0)
+                    {
+                        var bytes = Enumerable.Range(0, hex.Length / 2)
+                          .Select(x => Convert.ToByte(hex.Substring(x * 2, 2), 16))
+                          .ToArray();
+
+                        list.Add(bytes);
+                    }
                 }
             }
 

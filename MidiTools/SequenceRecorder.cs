@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.Timers;
 using MessagePack;
+using Microsoft.Extensions.Logging;
 
 namespace MidiTools
 {
@@ -48,7 +49,7 @@ namespace MidiTools
         [IgnoreMember]
         private DateTime RecorderStart;
 
-        [IgnoreMember] 
+        [IgnoreMember]
         private System.Timers.Timer Player;
 
         [IgnoreMember]
@@ -98,12 +99,12 @@ namespace MidiTools
             return sbInfo.ToString();
         }
 
-        public void StartRecording(bool bIn, bool bOut, MidiRouting routing)
+        public async Task StartRecording(bool bIn, bool bOut, MidiRouting routing)
         {
             if (routing.HasOutDevices > 0)
             {
                 //on doit absolument garder les valeurs actuelles des données pour figer tous les paramètres MIDI pour pouvoir reproduire la séquence fidèlement
-                SequencerDefault = routing.GetLiveCCData();
+                SequencerDefault = await routing.GetLiveCCData();
 
                 if (bIn)
                 {
@@ -214,38 +215,29 @@ namespace MidiTools
             _eventsOUT.Clear();
         }
 
-        public async void PlaySequenceAsync(MidiRouting routing)
+        public void PlayRecordingAsync(MidiRouting routing)
         {
-            StopSequenceRequested = false;
-
-            StartStopPlayerCounter(true);
-
-            await PlaySequence(_eventsOUT, routing);
-            routing.Panic(false);
-
-            StartStopPlayerCounter(false);
-
-            SequenceFinished?.Invoke(_eventsOUT.Count.ToString() + " event(s) have been played.");
-        }
-
-        private async Task PlaySequence(List<MidiEvent> events, MidiRouting routing)
-        {
-            await Tasks.AddTask(() =>
+            _ = Tasks.AddTask(() =>
             {
+                StopSequenceRequested = false;
+
                 Stopwatch stopwatch = new Stopwatch(); // Créer un chronomètre
 
                 routing.InitDevicesForSequencePlay(SequencerDefault);
 
-                for (int i = 0; i < events.Count; i++)
+                StartStopPlayerCounter(true);
+                Thread.Sleep(1000);
+
+                for (int i = 0; i < _eventsOUT.Count; i++)
                 {
-                    MidiEvent eventtoplay = new MidiEvent(events[i].Type, events[i].Values, events[i].Channel, events[i].Device);
+                    MidiEvent eventtoplay = new MidiEvent(_eventsOUT[i].Type, _eventsOUT[i].Values, _eventsOUT[i].Channel, _eventsOUT[i].Device);
 
                     long elapsedTicks = 0;
                     double waitingTime = 0;
 
                     if (i > 0)
                     {
-                        elapsedTicks = events[i].EventDate.Ticks - events[i - 1].EventDate.Ticks;
+                        elapsedTicks = _eventsOUT[i].EventDate.Ticks - _eventsOUT[i - 1].EventDate.Ticks;
                         waitingTime = elapsedTicks / (double)TimeSpan.TicksPerMillisecond;
                     }
 
@@ -260,13 +252,19 @@ namespace MidiTools
                         stopwatch.Stop(); // Arrêter le chronomètre
                     }
 
-                    routing.SendSequencedEvent(eventtoplay);
+                    routing.SendRecordedEvent(eventtoplay);
 
                     if (StopSequenceRequested)
                     {
                         break;
                     }
                 }
+
+                StartStopPlayerCounter(false);
+
+                routing.Panic(false);
+
+                SequenceFinished?.Invoke(_eventsOUT.Count.ToString() + " event(s) have been played.");
             });
         }
 

@@ -299,6 +299,7 @@ namespace VSTHost
         }
     }
 
+
     internal class VSTMidi
     {
         internal VstPluginContext PluginContext = null;
@@ -443,9 +444,10 @@ namespace VSTHost
                 try
                 {
                     VSTEvent?.Invoke("Loading VST instrument " + Path.GetFileName(VSTHostInfo.VSTPath));
-
                     VSTSynth.PluginContext = VstPluginContext.Create(VSTHostInfo.VSTPath, hcs);
+                    //var pcs = new PluginCommandStub(new Jacobi.Vst.Plugin.Framework.Plugin.VstPluginContext());
                     VSTSynth.PluginContext.PluginCommandStub.Commands.Open();
+                    //VSTSynth.PluginContext.PluginCommandStub.Commands.ProcessEvents(null);
                     //VSTSynth.PluginContext.PluginCommandStub.Commands.SetBlockSize(1024);
                     //VSTSynth.PluginContext.AcceptPluginInfoData(true);
                     //VSTSynth.PluginContext.PluginCommandStub.Commands.MainsChanged(true);
@@ -487,23 +489,13 @@ namespace VSTHost
 
                     LoadVSTParameters();
 
-                    if (VSTHostInfo.Program > -1)
-                    {
-                        try
-                        {
-                            VSTSynth.PluginContext.PluginCommandStub.Commands.SetProgram(VSTHostInfo.Program);
-                        }
-                        catch (Exception ex)
-                        {
-                            sInfo = "VST Program can't be set : " + ex.Message;
-                        }
-                    }
+                    sInfo = LoadVSTProgram();                   
 
                     VSTEvent?.Invoke("VST Loaded");
                 }
                 catch (Exception ex)
                 {
-                    sInfo = "Unable to init VST : " + ex.Message;
+                    sInfo += "Unable to init VST : " + ex.Message;
                 }
             }
             else { return "Unable to remove last VST"; }
@@ -511,17 +503,27 @@ namespace VSTHost
             return sInfo;
         }
 
+        public string LoadVSTProgram()
+        {
+            if (VSTHostInfo.Program > -1)
+            {
+                try
+                {
+                    VSTSynth.PluginContext.PluginCommandStub.Commands.SetProgram(VSTHostInfo.Program);
+                    return "Program Set.";
+                }
+                catch (Exception ex)
+                {
+                    return "VST Program can't be set : " + ex.Message;
+                }
+            }
+            else return "No Program";
+        }
+
         public void LoadVSTParameters()
         {
-            VSTEvent?.Invoke("Loading Memory Dump (" + (VSTHostInfo.Dump != null ? VSTHostInfo.Dump.Length : 0) + " byte(s))");
-
-            if (VSTHostInfo.Dump != null)
-            {
-                int iDump = VSTSynth.PluginContext.PluginCommandStub.Commands.SetChunk(VSTHostInfo.Dump, true);
-            }
 
             VSTEvent?.Invoke("Loading VST parameters (" + VSTHostInfo.Parameters.Count + ")");
-
             if (VSTHostInfo.Parameters.Count > 0)
             {
                 try
@@ -537,6 +539,12 @@ namespace VSTHost
                     VSTHostInfo.Error = "VST Parameters can't be set : " + ex.Message;
                 }
             }
+
+            VSTEvent?.Invoke("Loading Memory Dump (" + (VSTHostInfo.Dump != null ? VSTHostInfo.Dump.Length : 0) + " byte(s))");
+            if (VSTHostInfo.Dump != null)
+            {
+                int iDump = VSTSynth.PluginContext.PluginCommandStub.Commands.SetChunk(VSTHostInfo.Dump, true);
+            }       
         }
 
         //private void HostCmdStub_PluginCalled(object sender, PluginCalledEventArgs e)
