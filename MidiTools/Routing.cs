@@ -2720,41 +2720,41 @@ namespace MidiTools
 
         private async Task PresetMorphing(MatrixItem newrouting, MatrixItem oldrouting, int valPresetMorphing, int newVolumeValue, string newDeviceOutName, int newChannelOut, VSTPlugin vst)
         {
-            oldrouting.DropMode = 0;
-
-            //MidiMatrix.Add(oldrouting);
             if (oldrouting.DeviceInSequencer != null)
             {
                 oldrouting.AddSequencer(oldrouting.DeviceInSequencer);
                 //    //oldrouting.OnSequencerPlayNote += MatrixItem_OnSequencerPlayNote;
             }
 
-            //var newDeviceOut = AddNewOutDevice(newDeviceOutName, vst);
             var newDeviceOut = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(newDeviceOutName));
 
             if (newDeviceOut != null && oldrouting.DeviceOut != null)
             {
                 if (!newDeviceOut.Name.Equals(oldrouting.DeviceOut.Name) || oldrouting.ChannelOut != newChannelOut)
                 {
-                    int iVolumeOld = oldrouting.DeviceOut.GetLiveCCValue(oldrouting.ChannelOut, 7);
-                    int iRateFadeOut = valPresetMorphing / iVolumeOld; //le temps pour chaque pallier de 1
-                    int iRateFadeIn = valPresetMorphing / newVolumeValue; //le temps pour chaque pallier de 1
+                    oldrouting.DropMode = 0;
 
-                    List<Task> tasks = new List<Task>();
+                    //int iVolumeOld = oldrouting.DeviceOut.GetLiveCCValue(oldrouting.ChannelOut, 7);
+                    //int iRateFadeOut = (valPresetMorphing / iVolumeOld) * 2; //le temps pour chaque pallier de 2 (je sais que le smooth CC opère de 2 en 2)
+                    //int iRateFadeIn = (valPresetMorphing / newVolumeValue) * 2; //le temps pour chaque pallier de 2 (je sais que le smooth CC opère de 2 en 2)
 
-                    //dans le précédent routing, j'envoie un smooth CC de volume à 0 qui devrait normalement se synchroniser avec celui qui est fait dans l'autre sens dans le nouveau routing
-                    tasks.Add(newrouting.Tasks.AddTask(() =>
+                    oldrouting.Options.SmoothCCLength = (int)Math.Ceiling(valPresetMorphing * 1.25);
+                    _ = oldrouting.Tasks.AddTask(async() =>
                     {
-                        oldrouting.DeviceOut.BlockCC(7, oldrouting.ChannelOut); //pour empêcher l'arrivée d'informations contradictoires
-                        for (int iFadeOut = iVolumeOld; iFadeOut > 0; iFadeOut -= 1)
+                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { 7, 0 }, Tools.GetChannel(oldrouting.ChannelOut), oldrouting.DeviceOut.Name), oldrouting);
+
+                        if (oldrouting.DeviceInSequencer != null)
                         {
-                            oldrouting.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 7, iFadeOut }, Tools.GetChannel(oldrouting.ChannelOut), oldrouting.DeviceOut.Name));
-                            Thread.Sleep(iRateFadeOut);
+                            oldrouting.RemoveSequencer();
+                            //oldrouting.OnSequencerPlayNote -= MatrixItem_OnSequencerPlayNote;
                         }
-                    }));
+                        oldrouting.DropMode = 1;
+                    });
 
-                    tasks.Add(newrouting.Tasks.AddTask(() =>
+                    _ = newrouting.Tasks.AddTask(async() =>
                     {
+                        newDeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 7, 0 }, Tools.GetChannel(newChannelOut), newDeviceOut.Name));
+
                         if (oldrouting.DeviceOut.GetLiveCCValue(oldrouting.ChannelOut, 64) >= 64)
                         {
                             newDeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 64, 127 }, Tools.GetChannel(newChannelOut), newDeviceOut.Name));
@@ -2766,26 +2766,13 @@ namespace MidiTools
                             newDeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { note[0], note[1] }, Tools.GetChannel(newChannelOut), newDeviceOut.Name));
                         }
 
-                        for (int iFadeIn = 0; iFadeIn < newVolumeValue; iFadeIn += 2) //+2 car je veux éviter le trou du 50/50
-                        {
-                            newDeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 7, iFadeIn }, Tools.GetChannel(newChannelOut), newDeviceOut.Name));
-                            Thread.Sleep(iRateFadeIn);
-                        }
-                    }));
-
-                    await Task.WhenAll(tasks);
+                        int memSmooth = newrouting.Options.SmoothCCLength;
+                        newrouting.Options.SmoothCCLength = (int)Math.Ceiling(valPresetMorphing * 0.75);
+                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { 7, newVolumeValue }, Tools.GetChannel(newrouting.ChannelOut), newrouting.DeviceOut.Name), newrouting);
+                        newrouting.Options.SmoothCCLength = memSmooth;
+                    });
                 }
             }
-
-            if (oldrouting.DeviceInSequencer != null)
-            {
-                oldrouting.RemoveSequencer();
-                //oldrouting.OnSequencerPlayNote -= MatrixItem_OnSequencerPlayNote;
-            }
-
-            oldrouting.DropMode = 1;
-
-            //MidiMatrix.Remove(oldrouting);
         }
 
         public async Task UpdateUsedDevices(List<string> devices)
