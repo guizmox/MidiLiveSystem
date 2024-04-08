@@ -74,7 +74,9 @@ namespace MidiTools
         internal bool TempActive = false; //utilisé pour muter provisoirement le routing à partir de l'UI
         internal bool ChangeLocked = false; //utilisé pour empêcher de boucler dans le même ModifyRouting si il y a des actions en cours
 
-        internal int DropMode = 0; //permet de créer une instance temporaire de ce routing pour la dropper dès que toutes les notes + sustain sont relâchés
+        private int _dropmode = 0;
+        internal int DropMode { get { return _dropmode; } set { _dropmode = value; DropModeDateTime = DateTime.Now; } } //permet de créer une instance temporaire de ce routing pour la dropper dès que toutes les notes + sustain sont relâchés
+        internal DateTime DropModeDateTime;
         //0 = rien, 1 = en attente (reçoit que les note off), 2 = à supprimer
 
         internal MidiPreset Preset { get; set; }
@@ -1187,12 +1189,31 @@ namespace MidiTools
             {
                 lock (MidiMatrix)
                 {
-                    var todrop = MidiMatrix.Where(mm => mm.DropMode == 2).ToList();
+                    List<MatrixItem> todrop = MidiMatrix.Where(mm => mm.DropMode == 2).ToList();
                     int qte = todrop.Count();
                     for (int i = 0; i < qte; i++)
                     {
                         MidiMatrix.Remove(todrop[i]);
                     }
+
+                    todrop = MidiMatrix.Where(mm => mm.DropMode == 1 && (DateTime.Now - mm.DropModeDateTime).TotalSeconds > 10).ToList();
+                    {
+                        int qte2 = todrop.Count();
+                        for (int i = 0; i < qte2; i++)
+                        {
+                            todrop[i].DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 123, 127 }, Tools.GetChannel(todrop[i].ChannelOut), todrop[i].DeviceOut.Name));
+                            todrop[i].DeviceOut.ClearNotes();
+                            //for (int iKey = 0; iKey < 128; iKey++)
+                            //{
+                            //    while (todrop[i].DeviceOut.GetLiveNOTEValue(todrop[i].ChannelOut, iKey))
+                            //    {
+                            //        todrop[i].DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKey, 0 }, Tools.GetChannel(todrop[i].ChannelOut), todrop[i].DeviceOut.Name));
+                            //    }
+                            //    MidiMatrix.Remove(todrop[i]);
+                            //}
+                        }
+                    }
+                    todrop.Clear();
                 }
             });
         }
@@ -1563,10 +1584,12 @@ namespace MidiTools
                     {
                         if (routingCopy == null)
                         {
+                            await SetDeviceMonoMode(routing, routing.DeviceOut, routing.ChannelOut, newop.PlayMode);
                             await RoutingTransition(routing, routing.DeviceOut, routing.ChannelOut, bInit);
                         }
                         else
                         {
+                            await SetDeviceMonoMode(routing, routingCopy.DeviceOut, routingCopy.ChannelOut, newop.PlayMode);
                             await RoutingTransition(routingCopy, routingCopy.DeviceOut, routingCopy.ChannelOut, bInit);
                         }
                     }
@@ -2344,26 +2367,52 @@ namespace MidiTools
                 for (int iCh = 1; iCh <= 16; iCh++)
                 {
                     UsedDevicesOUT[iD].SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 64, 0 }, Tools.GetChannel(iCh), UsedDevicesOUT[iD].Name));
-
-                    if (!bAll)
-                    {
-                        for (int iKey = 0; iKey < 128; iKey++)
-                        {
-                            while (UsedDevicesOUT[iD].GetLiveNOTEValue(iCh, iKey))
-                            {
-                                UsedDevicesOUT[iD].SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKey, 0 }, Tools.GetChannel(iCh), UsedDevicesOUT[iD].Name));
-                            }
-                        }
-                    }
-                    else
-                    {
-                        for (int iKey = 0; iKey < 128; iKey++)
-                        {
-                            UsedDevicesOUT[iD].SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKey, 0 }, Tools.GetChannel(iCh), UsedDevicesOUT[iD].Name));
-                        }
-                    }
+                    UsedDevicesOUT[iD].SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 123, 127 }, Tools.GetChannel(iCh), UsedDevicesOUT[iD].Name));
+                    UsedDevicesOUT[iD].ClearNotes();
+                    //if (!bAll)
+                    //{
+                    //    for (int iKey = 0; iKey < 128; iKey++)
+                    //    {
+                    //        while (UsedDevicesOUT[iD].GetLiveNOTEValue(iCh, iKey))
+                    //        {
+                    //            UsedDevicesOUT[iD].SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKey, 0 }, Tools.GetChannel(iCh), UsedDevicesOUT[iD].Name));
+                    //        }
+                    //    }
+                    //}
+                    //else
+                    //{
+                    //    for (int iKey = 0; iKey < 128; iKey++)
+                    //    {
+                    //        UsedDevicesOUT[iD].SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKey, 0 }, Tools.GetChannel(iCh), UsedDevicesOUT[iD].Name));
+                    //    }
+                    //}
                 }
             }
+        }
+
+        private async Task SetDeviceMonoMode(MatrixItem routing, MidiDevice device, int channelout, PlayModes playmode)
+        {
+            await routing.Tasks.AddTask(() =>
+            {
+                if (device != null && channelout > 0)
+                {
+                    switch (playmode)
+                    {
+                        case PlayModes.MONO_LOW:
+                        case PlayModes.MONO_HIGH:
+                        case PlayModes.MONO_INTERMEDIATE_HIGH:
+                        case PlayModes.MONO_INTERMEDIATE_LOW:
+                        case PlayModes.MONO_IN_BETWEEN:
+                        case PlayModes.HARMONY:
+                            device.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 126, 127 }, Tools.GetChannel(channelout), device.Name));
+                            break;
+                        default:
+                            device.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 127, 127 }, Tools.GetChannel(channelout), device.Name));
+                            break;
+                    }
+                }
+            });
+
         }
 
         private async Task RoutingTransition(MatrixItem routingCopy, MidiDevice device, int channelOut, bool bCreateTransitionRouting)
@@ -2397,13 +2446,15 @@ namespace MidiTools
                 {
                     await routingCopy.Tasks.AddTask(() =>
                     {
-                        for (int iKey = 0; iKey < 128; iKey++)
-                        {
-                            while (device.GetLiveNOTEValue(channelOut, iKey))
-                            {
-                                device.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKey, 0 }, Tools.GetChannel(channelOut), device.Name));
-                            }
-                        }
+                        device.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 123, 127 }, Tools.GetChannel(channelOut), device.Name));
+                        device.ClearNotes();
+                        //for (int iKey = 0; iKey < 128; iKey++)
+                        //{
+                        //    while (device.GetLiveNOTEValue(channelOut, iKey))
+                        //    {
+                        //        device.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKey, 0 }, Tools.GetChannel(channelOut), device.Name));
+                        //    }
+                        //}
                     });
                 }
             }

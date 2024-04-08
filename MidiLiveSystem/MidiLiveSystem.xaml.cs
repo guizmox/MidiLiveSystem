@@ -635,19 +635,16 @@ namespace MidiLiveSystem
 
         private async void UIRefreshRate_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            await Dispatcher.InvokeAsync(() =>
-            {
-                tbNoteName.Text = "";
+            await tbNoteName.Dispatcher.InvokeAsync(() => tbNoteName.Text = "");
 
-                if (Routing.Events <= 32) //pour éviter de saturer les process avec des appels UI inutiles
-                {
-                    Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, "]");
-                }
-                else
-                {
-                    Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, ". UI events disabled]");
-                }
-            });
+            if (Routing.Events <= 32) //pour éviter de saturer les process avec des appels UI inutiles
+            {
+                await Dispatcher.InvokeAsync(() => Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, "]"));
+            }
+            else
+            {
+                await Dispatcher.InvokeAsync(() => Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, ". UI events disabled]"));
+            }
 
             if (Routing.Events <= 32) //pour éviter de saturer les process avec des appels UI inutiles
             {
@@ -828,9 +825,8 @@ namespace MidiLiveSystem
                 {
                     foreach (var box in Boxes)
                     {
-                        await Dispatcher.InvokeAsync(() =>
+                        await box.Dispatcher.InvokeAsync(() =>
                         {
-
                             box.tabSwitch.SelectedIndex = 0;
                         });
                     }
@@ -840,9 +836,8 @@ namespace MidiLiveSystem
                 {
                     foreach (var box in Boxes)
                     {
-                        await Dispatcher.InvokeAsync(() =>
+                        await box.Dispatcher.InvokeAsync(() =>
                         {
-
                             box.tabSwitch.SelectedIndex = 1;
                         });
                     }
@@ -1108,38 +1103,51 @@ namespace MidiLiveSystem
 
         private async Task InitFrames(int iRows, int iCols)
         {
-            await Dispatcher.InvokeAsync(() =>
+            GridFrames.Clear();
+
+            await gridBoxes.Dispatcher.InvokeAsync(() =>
             {
-                GridFrames.Clear();
                 gridBoxes.Children.Clear();
                 gridBoxes.RowDefinitions.Clear();
                 gridBoxes.ColumnDefinitions.Clear();
+            });
 
-                if (iRows == 1 && iCols == 1) //option de maximisation
+            if (iRows == 1 && iCols == 1) //option de maximisation
+            {
+                await gridBoxes.Dispatcher.InvokeAsync(() =>
                 {
                     gridBoxes.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(100, GridUnitType.Star) });
                     gridBoxes.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(100, GridUnitType.Star) });
-                }
-                else
-                {
-                    for (int row = 0; row < iRows; row++)
-                    {
-                        gridBoxes.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(iCols, GridUnitType.Star) });
-                    }
-                    for (int col = 0; col < iCols; col++)
-                    {
-                        gridBoxes.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(iRows, GridUnitType.Star) });
-                    }
-                }
-
+                });
+            }
+            else
+            {
                 for (int row = 0; row < iRows; row++)
                 {
-                    for (int col = 0; col < iCols; col++)
+                    await gridBoxes.Dispatcher.InvokeAsync(() =>
                     {
-                        Border border = new Border();
-                        border.BorderBrush = Brushes.Gray;
-                        border.BorderThickness = new Thickness(1);
+                        gridBoxes.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(iCols, GridUnitType.Star) });
+                    });
+                }
+                for (int col = 0; col < iCols; col++)
+                {
+                    await gridBoxes.Dispatcher.InvokeAsync(() =>
+                    {
+                        gridBoxes.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(iRows, GridUnitType.Star) });
+                    });
+                }
+            }
 
+            for (int row = 0; row < iRows; row++)
+            {
+                for (int col = 0; col < iCols; col++)
+                {
+                    Border border = new Border();
+                    border.BorderBrush = Brushes.Gray;
+                    border.BorderThickness = new Thickness(1);
+
+                    await Dispatcher.InvokeAsync(() =>
+                    {
                         Grid.SetRow(border, row);
                         Grid.SetColumn(border, col);
                         gridBoxes.Children.Add(border);
@@ -1154,9 +1162,9 @@ namespace MidiLiveSystem
                         gridBoxes.Children.Add(frame);
                         Grid.SetRow(frame, row);
                         Grid.SetColumn(frame, col);
-                    };
-                }
-            });
+                    });
+                };
+            }
         }
 
         private async Task RemoveAllBoxes(int iRows, int iCols)

@@ -254,14 +254,12 @@ namespace MidiLiveSystem
                 allpresets.AddRange(box.GetRoutingBoxMemory());
             }
 
-            //MessagePackSerializer.DefaultOptions = MessagePackSerializer.DefaultOptions
-            //.WithResolver(MessagePack.Resolvers.StandardResolver.Instance)
-            //.WithCustomFormatter(new GZipMessagePackFormatter<Project>());
+            var lz4Options = MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4BlockArray);
 
-            byte[] binaryProject = MessagePackSerializer.Serialize(Project);
-            byte[] binaryRouting = MessagePackSerializer.Serialize(new RoutingBoxes() { AllPresets = allpresets.ToArray() });
-            byte[] binaryRecording = MessagePackSerializer.Serialize(RecordedSequence);
-            byte[] binarySequencer = MessagePackSerializer.Serialize(SeqData);
+            byte[] binaryProject = MessagePackSerializer.Serialize(Project, lz4Options);
+            byte[] binaryRouting = MessagePackSerializer.Serialize(new RoutingBoxes() { AllPresets = allpresets.ToArray() }, lz4Options);
+            byte[] binaryRecording = MessagePackSerializer.Serialize(RecordedSequence, lz4Options);
+            byte[] binarySequencer = MessagePackSerializer.Serialize(SeqData, lz4Options);
 
             List<string> sVersionsToDelete = GetOldProjectVersion(sId);
 
@@ -545,11 +543,21 @@ namespace MidiLiveSystem
             MidiSequence recording = null;
             SequencerData sequencer = null;
 
+            var lz4Options = MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4BlockArray);
+
             if (sId.Length > 0 && bConfig != null && bRouting != null)
             {
                 try
                 {
-                    project = MessagePackSerializer.Deserialize<ProjectConfiguration>(StreamToByteArray(bConfig));
+                    try
+                    {
+                        project = MessagePackSerializer.Deserialize<ProjectConfiguration>(StreamToByteArray(bConfig), lz4Options);
+                    }
+                    catch
+                    {
+                        //avant la compression
+                        project = MessagePackSerializer.Deserialize<ProjectConfiguration>(StreamToByteArray(bConfig));
+                    }
                 }
                 catch
                 {
@@ -562,7 +570,14 @@ namespace MidiLiveSystem
 
                 try
                 {
-                    routing = MessagePackSerializer.Deserialize<RoutingBoxes>(StreamToByteArray(bRouting));
+                    try
+                    {
+                        routing = MessagePackSerializer.Deserialize<RoutingBoxes>(StreamToByteArray(bRouting), lz4Options);
+                    }
+                    catch
+                    {
+                        routing = MessagePackSerializer.Deserialize<RoutingBoxes>(StreamToByteArray(bRouting));
+                    }
                 }
                 catch
                 {
@@ -575,7 +590,14 @@ namespace MidiLiveSystem
 
                 try
                 {
-                    recording = bRecording.Length > 0 ? MessagePackSerializer.Deserialize<MidiSequence>(StreamToByteArray(bRecording)) : null;
+                    try
+                    {
+                        recording = bRecording.Length > 0 ? MessagePackSerializer.Deserialize<MidiSequence>(StreamToByteArray(bRecording), lz4Options) : null;
+                    }
+                    catch
+                    {
+                        recording = bRecording.Length > 0 ? MessagePackSerializer.Deserialize<MidiSequence>(StreamToByteArray(bRecording)) : null;
+                    }
                 }
                 catch
                 {
@@ -591,7 +613,14 @@ namespace MidiLiveSystem
 
                 try
                 {
-                    sequencer = bSequencer.Length > 0 ? MessagePackSerializer.Deserialize<SequencerData>(StreamToByteArray(bSequencer)) : null;
+                    try
+                    {
+                        sequencer = bSequencer.Length > 0 ? MessagePackSerializer.Deserialize<SequencerData>(StreamToByteArray(bSequencer), lz4Options) : null;
+                    }
+                    catch
+                    {
+                        sequencer = bSequencer.Length > 0 ? MessagePackSerializer.Deserialize<SequencerData>(StreamToByteArray(bSequencer)) : null;
+                    }
                 }
                 catch
                 {

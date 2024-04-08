@@ -150,7 +150,7 @@ namespace MidiLiveSystem
         {
             if (RoutingGuid == routingGuid)
             {
-                await Dispatcher.InvokeAsync(() =>
+                await tbRoutingPlay.Dispatcher.InvokeAsync(() =>
                 {
                     if (b)
                     {

@@ -748,6 +748,24 @@ namespace MidiTools
                 VST_OutputEvents.SaveParameters();
             }
         }
+
+        internal void ClearNotes()
+        {
+            if (IsOutVST)
+            {
+                if (VST_OutputEvents != null)
+                {
+                    VST_OutputEvents.NOTEmemory = new int[16, 128];
+                }
+            }
+            else
+            {
+                if (MIDI_OutputEvents != null)
+                {
+                    MIDI_OutputEvents.NOTEmemory = new int[16, 128];
+                }
+            }
+        }
     }
 
     internal class VSTOutputDeviceEvents
