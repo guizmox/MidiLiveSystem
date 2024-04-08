@@ -221,10 +221,9 @@ namespace VSTHost
 
         private void VSTParametersCheck_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
         {
-            //Plugin.GetParameters();
-
             Dispatcher.Invoke(() =>
             {
+                OnVSTHostEvent?.Invoke(BoxPreset, 2);
                 string sInfo = Plugin.GetInfo();
 
                 int iLast = Title.LastIndexOf("[");

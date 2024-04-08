@@ -105,13 +105,13 @@ namespace MidiLiveSystem
             var offsetX = (_currentTT == null ? _buttonPosition[iIndex].X : _buttonPosition[iIndex].X - _currentTT[iIndex].X) + deltaX[iIndex] - mousePoint.X;
             var offsetY = (_currentTT == null ? _buttonPosition[iIndex].Y : _buttonPosition[iIndex].Y - _currentTT[iIndex].Y) + deltaY[iIndex] - mousePoint.Y;
 
-            if (offsetX > 430)
+            if (offsetX > 425)
             {
-                offsetX = 430;
+                offsetX = 425;
             }
-            if (offsetX < -430)
+            if (offsetX < -425)
             {
-                offsetX = -430;
+                offsetX = -425;
             }
             if (offsetY < -180)
             {

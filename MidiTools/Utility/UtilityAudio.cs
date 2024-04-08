@@ -4,6 +4,7 @@ using Jacobi.Vst.Plugin.Framework;
 using Jacobi.Vst.Samples.Host;
 using MessagePack;
 using MidiTools;
+using NAudio.CoreAudioApi;
 using NAudio.Midi;
 using NAudio.Wave;
 using RtMidi.Core.Enums;
@@ -41,6 +42,9 @@ namespace VSTHost
     [Serializable]
     public class VSTHostInfo
     {
+        [Key("ChannelPrograms")]
+        public string[] ChannelPrograms = new string[16] { "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "" };
+
         [Key("VSTHostGuid")]
         public Guid VSTHostGuid { get; set; } = Guid.Empty;
 
@@ -394,6 +398,8 @@ namespace VSTHost
 
     public class VSTPlugin
     {
+        private System.Timers.Timer TimerProgramName;
+
         public delegate void VSTEventHandler(string sMessage);
         public event VSTEventHandler VSTEvent;
 
@@ -402,6 +408,7 @@ namespace VSTHost
         private VSTStream vstStream;
         public bool Loaded = false;
         public int Slot = 0;
+
         private bool EditorOpen = false;
 
         public VSTPlugin(int slot)
@@ -462,14 +469,14 @@ namespace VSTHost
                     VSTHostInfo.AudioOutputs = VSTSynth.PluginContext.PluginInfo.AudioOutputCount;
                     VSTHostInfo.MidiInputs = VSTSynth.PluginContext.PluginCommandStub.Commands.GetNumberOfMidiInputChannels();
                     if (VSTHostInfo.MidiInputs == 0) { VSTHostInfo.MidiInputs = 1; } //mono channel
-                    
+
                     Slot = VSTHostInfo.Slot;
 
                     vstStream = new VSTStream(VSTSynth);
                     //vstStream.ProcessCalled += VSTSynth.Stream_ProcessCalled;
                     vstStream.pluginContext = VSTSynth.PluginContext;
                     vstStream.SetWaveFormat(VSTHostInfo.SampleRate, 2);
-                    
+
                     UtilityAudio.AudioMixer.AddInputStream(vstStream);
 
                     Loaded = true;
@@ -489,7 +496,13 @@ namespace VSTHost
 
                     LoadVSTParameters();
 
-                    sInfo = LoadVSTProgram();                   
+                    sInfo = LoadVSTProgram();
+
+                    TimerProgramName = new System.Timers.Timer();
+                    TimerProgramName.Interval = 5000;
+                    TimerProgramName.Enabled = true;
+                    TimerProgramName.Elapsed += TimerProgramName_Elapsed;
+                    TimerProgramName.Start();
 
                     VSTEvent?.Invoke("VST Loaded");
                 }
@@ -503,13 +516,20 @@ namespace VSTHost
             return sInfo;
         }
 
+        private void TimerProgramName_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            GetProgramName();
+        }
+
         public string LoadVSTProgram()
         {
             if (VSTHostInfo.Program > -1)
             {
                 try
                 {
+                    VSTSynth.PluginContext.PluginCommandStub.Commands.BeginSetProgram();
                     VSTSynth.PluginContext.PluginCommandStub.Commands.SetProgram(VSTHostInfo.Program);
+                    VSTSynth.PluginContext.PluginCommandStub.Commands.EndSetProgram();
                     return "Program Set.";
                 }
                 catch (Exception ex)
@@ -544,7 +564,7 @@ namespace VSTHost
             if (VSTHostInfo.Dump != null)
             {
                 int iDump = VSTSynth.PluginContext.PluginCommandStub.Commands.SetChunk(VSTHostInfo.Dump, true);
-            }       
+            }
         }
 
         //private void HostCmdStub_PluginCalled(object sender, PluginCalledEventArgs e)
@@ -571,6 +591,14 @@ namespace VSTHost
         {
             try
             {
+                if (TimerProgramName != null)
+                {
+                    TimerProgramName.Elapsed -= TimerProgramName_Elapsed;
+                    TimerProgramName.Stop();
+                    TimerProgramName.Enabled = false;
+                    TimerProgramName = null;
+                }
+
                 if (VSTSynth != null && VSTSynth.PluginContext != null)
                 {
                     VSTSynth.PluginContext.PluginCommandStub.Commands.MainsChanged(false);
@@ -594,7 +622,7 @@ namespace VSTHost
 
                 if (VSTSynth != null && VSTSynth.PluginContext != null)
                 {
-                    GetParameters();            
+                    GetParameters();
                     VSTSynth.PluginContext.PluginCommandStub.Commands.Close();
                     VSTSynth = null;
                 }
@@ -703,6 +731,40 @@ namespace VSTHost
         {
             Slot = iSlot;
             if (VSTHostInfo != null) { VSTHostInfo.Slot = iSlot; }
+        }
+
+        public void GetProgramName()
+        {
+            if (VSTSynth != null && VSTSynth.PluginContext != null && VSTHostInfo != null)
+            {
+                try
+                {
+                    int iChannels = VSTSynth.PluginContext.PluginCommandStub.Commands.GetNumberOfMidiInputChannels();
+                    if (iChannels == 0)
+                    {
+                        VSTHostInfo.ChannelPrograms[0] = VSTSynth.PluginContext.PluginCommandStub.Commands.GetProgramName();
+                    }
+                    else
+                    {
+                        for (int i = 0; i < iChannels; i++)
+                        {
+                            VstMidiProgramName name = new VstMidiProgramName();
+                            int index = VSTSynth.PluginContext.PluginCommandStub.Commands.GetMidiProgramName(name, i);
+                            if (name.Name.Length == 0)
+                            {
+                                VSTHostInfo.ChannelPrograms[i] = VSTSynth.PluginContext.PluginCommandStub.Commands.GetProgramNameIndexed(i);
+                            }
+                            else
+                            {
+                                VSTHostInfo.ChannelPrograms[i] = name.Name;
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                }
+            }
         }
     }
 

@@ -1,29 +1,16 @@
 ﻿using MessagePack;
-using Microsoft.Extensions.Options;
 using MidiTools;
-using NAudio.SoundFont;
 using RtMidi.Core.Devices.Infos;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using VSTHost;
 
 namespace MidiLiveSystem
@@ -141,8 +128,23 @@ namespace MidiLiveSystem
             else if (iAction == 1) //chargement initial du VST
             {
                 //TempMemory[iPreset].VSTData = TempVST[CurrentPreset].VSTHostInfo; //pas certain
-                OnUIEvent?.Invoke(BoxGuid, "INITIALIZE_AUDIO", TempVST[CurrentPreset]); //pour initialiser l'audio
+                OnUIEvent?.Invoke(BoxGuid, "INITIALIZE_AUDIO", TempVST[iPreset]); //pour initialiser l'audio
                 await VSTWindow.LoadPlugin();
+            }
+            else if (iAction == 2)
+            {
+                int iCh = await cbChannelMidiOut.Dispatcher.InvokeAsync(() => Convert.ToInt32(cbChannelMidiOut.SelectedValue));
+                await tbPresetName.Dispatcher.InvokeAsync(() =>
+                {
+                    if (!tbPresetName.IsFocused && (tbPresetName.Text.Length == 0 || tbPresetName.Text.StartsWith("Preset ")))
+                    {
+                        if (iCh > 0)
+                        {
+                            string sPrg = TempVST[iPreset].VSTHostInfo.ChannelPrograms[iCh - 1];
+                            if (sPrg.Length > 0) { tbPresetName.Text = sPrg; }
+                        }
+                    }
+                });
             }
         }
 
@@ -953,7 +955,11 @@ namespace MidiLiveSystem
                 tbMute.Background = bp.MidiOptions.Active ? Brushes.DarkGray : Brushes.IndianRed;
 
                 //remplissage des champs
-                if (!tbPresetName.IsFocused) { tbPresetName.Text = bp.PresetName; }
+                if (!tbPresetName.IsFocused)
+                {
+                    tbPresetName.Text = bp.PresetName;
+                }
+
                 if (!tbRoutingName.IsFocused && bIsFirst) { tbRoutingName.Text = bp.BoxName; }
 
                 if (bp.MidiOptions.PlayNote != null)
@@ -1449,7 +1455,7 @@ namespace MidiLiveSystem
             });
         }
 
-        internal async Task SetVST(VSTPlugin vst, int iSlot)
+        internal async Task SetVST(VSTPlugin vst, int iSlot, int iChannel)
         {
             await Dispatcher.InvokeAsync(() =>
             {
@@ -1520,7 +1526,7 @@ namespace MidiLiveSystem
         public string BoxName { get; set; } = "Routing Name";
 
         [Key("PresetName")]
-        public string PresetName { get; set; } = "My Preset";
+        public string PresetName { get; set; } = "";
 
         [Key("MidiOptions")]
         public MidiOptions MidiOptions { get; set; } = new MidiOptions();

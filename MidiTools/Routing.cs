@@ -1212,6 +1212,10 @@ namespace MidiTools
                             //    MidiMatrix.Remove(todrop[i]);
                             //}
                         }
+                        for (int i = 0; i < qte2; i++)
+                        {
+                            MidiMatrix.Remove(todrop[i]);
+                        }
                     }
                     todrop.Clear();
                 }
@@ -1564,48 +1568,69 @@ namespace MidiTools
             return EventsToProcess.OrderBy(ev => ev.Type).ToList();
         }
 
-        private async Task ChangeOptions(MatrixItem routing, MatrixItem routingCopy, MidiOptions newop, bool bInit)
+        private async Task ChangeOptions(MatrixItem newrouting, MatrixItem oldrouting, MidiOptions newop, bool bInit)
         {
-            if (routing.DeviceOut != null)
+            if (newrouting.DeviceOut != null)
             {
                 if (newop == null) //tout charger
                 {
                     for (int iCC = 0; iCC < 128; iCC++)
                     {
-                        if (routing.Options.DefaultRoutingCC[iCC] > -1 || (bInit && routing.Options.DefaultRoutingCC[iCC] > -1))
+                        if (newrouting.Options.DefaultRoutingCC[iCC] > -1 || (bInit && newrouting.Options.DefaultRoutingCC[iCC] > -1))
                         {
-                            await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { iCC, routing.Options.DefaultRoutingCC[iCC] }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
+                            await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { iCC, newrouting.Options.DefaultRoutingCC[iCC] }, Tools.GetChannel(newrouting.ChannelOut), newrouting.DeviceOut.Name), newrouting);
                         }
                     }
                 }
                 else
                 {
-                    if (newop.TranspositionOffset != routing.Options.TranspositionOffset || newop.PlayMode != routing.Options.PlayMode) //midi panic
+                    if (newop.TranspositionOffset != newrouting.Options.TranspositionOffset || newop.PlayMode != newrouting.Options.PlayMode) //midi panic
                     {
-                        if (routingCopy == null)
+                        await SetDeviceMonoMode(newrouting, newrouting.DeviceOut, newrouting.ChannelOut, newop.PlayMode);
+
+                        if (oldrouting == null)
                         {
-                            await SetDeviceMonoMode(routing, routing.DeviceOut, routing.ChannelOut, newop.PlayMode);
-                            await RoutingTransition(routing, routing.DeviceOut, routing.ChannelOut, bInit);
+                            bool bCreateTransition = bInit; // CheckIfRoutingCanMakeSmoothTransition(oldrouting.ChannelOut, newrouting.ChannelOut, oldrouting.Options, newop, bInit);
+                            await RoutingTransition(newrouting, newrouting.DeviceOut, newrouting.ChannelOut, bCreateTransition);
                         }
                         else
                         {
-                            await SetDeviceMonoMode(routing, routingCopy.DeviceOut, routingCopy.ChannelOut, newop.PlayMode);
-                            await RoutingTransition(routingCopy, routingCopy.DeviceOut, routingCopy.ChannelOut, bInit);
+                            bool bCreateTransition = CheckIfRoutingCanMakeSmoothTransition(oldrouting.ChannelOut, newrouting.ChannelOut, oldrouting.Options, newop, bInit);
+                            await RoutingTransition(oldrouting, oldrouting.DeviceOut, oldrouting.ChannelOut, bCreateTransition);
                         }
                     }
 
                     for (int iCC = 0; iCC < 128; iCC++)
                     {
-                        if (newop.DefaultRoutingCC[iCC] != routing.Options.DefaultRoutingCC[iCC] || (bInit && routing.Options.DefaultRoutingCC[iCC] > -1))
+                        if (newop.DefaultRoutingCC[iCC] != newrouting.Options.DefaultRoutingCC[iCC] || (bInit && newrouting.Options.DefaultRoutingCC[iCC] > -1))
                         {
-                            await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { iCC, newop.DefaultRoutingCC[iCC] }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
+                            await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { iCC, newop.DefaultRoutingCC[iCC] }, Tools.GetChannel(newrouting.ChannelOut), newrouting.DeviceOut.Name), newrouting);
                         }
                     }
                 }
                 //if (bChanges) { routing.UnblockAllCC(); }
             }
 
-            if (newop != null) { routing.Options = newop; }
+            if (newop != null) { newrouting.Options = newop; }
+        }
+
+        private bool CheckIfRoutingCanMakeSmoothTransition(int ichannel, int inewchannel, MidiOptions options, MidiOptions newoptions, bool bInit)
+        {
+            if (ichannel == inewchannel)
+            {
+                return false;
+            }
+            else if (options.TranspositionOffset == newoptions.TranspositionOffset &&
+                        (options.PlayMode == PlayModes.NORMAL ||
+                         options.PlayMode == PlayModes.AFTERTOUCH ||
+                         options.PlayMode == PlayModes.PIZZICATO_FAST ||
+                         options.PlayMode == PlayModes.PIZZICATO_SLOW ||
+                         options.PlayMode == PlayModes.REPEAT_NOTE_OFF_FAST ||
+                         options.PlayMode == PlayModes.REPEAT_NOTE_OFF_SLOW))
+            { 
+                return true; 
+            }
+            else { return false; }
         }
 
         internal void ChangeDefaultCC(MatrixItem routing, List<InstrumentData> instruments)
@@ -2442,7 +2467,7 @@ namespace MidiTools
                 //    //    }
                 //    //});
 
-                if (channelOut > 0)
+                if (device != null && channelOut > 0)
                 {
                     await routingCopy.Tasks.AddTask(() =>
                     {
@@ -2815,7 +2840,11 @@ namespace MidiTools
 
                 return newdev;
             }
-            else { dev.UsedForRouting = true; return dev; }
+            else 
+            { 
+                dev.UsedForRouting = true; 
+                return dev; 
+            }
         }
 
         private MidiDevice AddNewInDevice(List<string> sDevicesIn, bool bAllInputs)

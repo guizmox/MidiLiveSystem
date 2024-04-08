@@ -62,6 +62,13 @@ namespace MidiTools
                 else if (values[0] < 0)
                 { values[0] = 0; }
             }
+            else if (evType == TypeEvent.CC)
+            {
+                if (values[1] > 127)
+                { values[1] = 127; }
+                else if (values[1] < 0)
+                { values[1] = 0; }
+            }
             return values;
         }
 
