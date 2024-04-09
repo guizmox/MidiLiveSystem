@@ -162,7 +162,7 @@
                     </StackPanel>
                 </Button>
 
-                <TextBlock Name="tbNoteName2" Text="V1.0" Foreground="IndianRed" Width="40" Grid.Column="11" FontSize="16" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                <TextBlock Name="tbNoteName2" Text="V1.17" Foreground="IndianRed" Width="40" Grid.Column="11" FontSize="12" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center"/>
 
                 <Button Name="btnRecordSequence" ToolTip="Simple performance recorder. It's a one click operation. Click to record. Click to stop. The performance will be saved with the project." Background="DarkGray" Width="80" Height="60" Grid.Column="12" Click="btnRecordSequence_Click" >
                     <StackPanel>
