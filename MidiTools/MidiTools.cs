@@ -18,6 +18,48 @@ using static MidiTools.MidiDevice;
 
 namespace MidiTools
 {
+    public class TrackerGuid
+    {
+        public ulong Part1 { get; private set; }
+        public ulong Part2 { get; private set; }
+
+        public TrackerGuid()
+        {
+            GenerateNewGuid();
+        }
+
+        private void GenerateNewGuid()
+        {
+            string guidString = Guid.NewGuid().ToString("N");
+
+            guidString = guidString.Replace("-", "");
+            if (guidString.Length != 32)
+                throw new ArgumentException("Invalid GUID format", nameof(guidString));
+
+            Part1 = ulong.Parse(guidString.Substring(0, 16), System.Globalization.NumberStyles.HexNumber);
+            Part2 = ulong.Parse(guidString.Substring(16), System.Globalization.NumberStyles.HexNumber);
+        }
+
+        public void Clear()
+        {
+            Part1 = 0;
+            Part2 = 0;
+        }
+
+        public override string ToString()
+        {
+            if (Part1 == 0 && Part2 == 0)
+            {
+                return "";
+            }
+            else
+            {
+                return $"{Part1:X16}-{Part2:X16}";
+            }
+        }
+    }
+
+
     public static class Tools
     {
         public readonly static int[] CCToNotBlock = new int[16] { 0, 6, 32, 64, 65, 66, 67, 68, 120, 121, 122, 123, 124, 125, 126, 127 };

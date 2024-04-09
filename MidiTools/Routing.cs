@@ -940,12 +940,12 @@ namespace MidiTools
 
             foreach (var item in eventsON)
             {
-                tasks.Add(matrix.Tasks.AddTask(async () => await GenerateOUTEvent(item, matrix)));
+                tasks.Add(matrix.Tasks.AddTask(async () => await GenerateOUTEvent(item, matrix, new TrackerGuid())));
             }
 
             foreach (var item in eventsOFF)
             {
-                tasks.Add(matrix.Tasks.AddTask(async () => await GenerateOUTEvent(item, matrix)));
+                tasks.Add(matrix.Tasks.AddTask(async () => await GenerateOUTEvent(item, matrix, new TrackerGuid())));
             }
 
             await Task.WhenAll(tasks);
@@ -1043,7 +1043,7 @@ namespace MidiTools
             NewLog?.Invoke(sDevice, bIn, sLog);
         }
 
-        private async Task GenerateOUTEvent(MidiEvent ev, MatrixItem routingOUT)
+        private async Task GenerateOUTEvent(MidiEvent ev, MatrixItem routingOUT, TrackerGuid routingTracker)
         {
             MidiDevice deviceOut = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(routingOUT.DeviceOut.Name));
             int iChannelOut = routingOUT.ChannelOut;
@@ -1097,6 +1097,7 @@ namespace MidiTools
                     //}
                 }
             }
+            routingTracker.Clear();
         }
 
         private async Task CreateOUTEventFromInput(MidiEvent ev)
@@ -1578,7 +1579,7 @@ namespace MidiTools
                     {
                         if (newrouting.Options.DefaultRoutingCC[iCC] > -1 || (bInit && newrouting.Options.DefaultRoutingCC[iCC] > -1))
                         {
-                            await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { iCC, newrouting.Options.DefaultRoutingCC[iCC] }, Tools.GetChannel(newrouting.ChannelOut), newrouting.DeviceOut.Name), newrouting);
+                            await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { iCC, newrouting.Options.DefaultRoutingCC[iCC] }, Tools.GetChannel(newrouting.ChannelOut), newrouting.DeviceOut.Name), newrouting, new TrackerGuid());
                         }
                     }
                 }
@@ -1604,7 +1605,7 @@ namespace MidiTools
                     {
                         if (newop.DefaultRoutingCC[iCC] != newrouting.Options.DefaultRoutingCC[iCC] || (bInit && newrouting.Options.DefaultRoutingCC[iCC] > -1))
                         {
-                            await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { iCC, newop.DefaultRoutingCC[iCC] }, Tools.GetChannel(newrouting.ChannelOut), newrouting.DeviceOut.Name), newrouting);
+                            await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { iCC, newop.DefaultRoutingCC[iCC] }, Tools.GetChannel(newrouting.ChannelOut), newrouting.DeviceOut.Name), newrouting, new TrackerGuid());
                         }
                     }
                 }
@@ -1663,9 +1664,9 @@ namespace MidiTools
 
                 if (routing.DeviceOut != null)
                 {
-                    await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { pc00.Control, pc00.Value }, pc00.Channel, routing.DeviceOut.Name), routing);
-                    await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { pc32.Control, pc32.Value }, pc32.Channel, routing.DeviceOut.Name), routing);
-                    await GenerateOUTEvent(new MidiEvent(TypeEvent.PC, new List<int> { prg.Program }, prg.Channel, routing.DeviceOut.Name), routing);
+                    await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { pc00.Control, pc00.Value }, pc00.Channel, routing.DeviceOut.Name), routing, new TrackerGuid());
+                    await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { pc32.Control, pc32.Value }, pc32.Channel, routing.DeviceOut.Name), routing, new TrackerGuid());
+                    await GenerateOUTEvent(new MidiEvent(TypeEvent.PC, new List<int> { prg.Program }, prg.Channel, routing.DeviceOut.Name), routing, new TrackerGuid());
                 }
             }
         }
@@ -2120,7 +2121,7 @@ namespace MidiTools
 
         private async Task SendGenericMidiEvent(MidiEvent ev, MatrixItem routing)
         {
-            await GenerateOUTEvent(ev, routing);
+            await GenerateOUTEvent(ev, routing, new TrackerGuid());
         }
 
         private int RandomizeCCValue(int iCC, int iMax, MatrixItem routing)
@@ -2720,6 +2721,9 @@ namespace MidiTools
 
         private async Task PresetMorphing(MatrixItem newrouting, MatrixItem oldrouting, int valPresetMorphing, int newVolumeValue, string newDeviceOutName, int newChannelOut, VSTPlugin vst)
         {
+            TrackerGuid trackerOld = new TrackerGuid();
+            TrackerGuid trackerNew = new TrackerGuid();
+
             if (oldrouting.DeviceInSequencer != null)
             {
                 oldrouting.AddSequencer(oldrouting.DeviceInSequencer);
@@ -2738,10 +2742,12 @@ namespace MidiTools
                     //int iRateFadeOut = (valPresetMorphing / iVolumeOld) * 2; //le temps pour chaque pallier de 2 (je sais que le smooth CC opère de 2 en 2)
                     //int iRateFadeIn = (valPresetMorphing / newVolumeValue) * 2; //le temps pour chaque pallier de 2 (je sais que le smooth CC opère de 2 en 2)
 
+                    List<Task> tasks = new List<Task>();
+
                     oldrouting.Options.SmoothCCLength = (int)Math.Ceiling(valPresetMorphing * 1.25);
-                    _ = oldrouting.Tasks.AddTask(async() =>
+                    tasks.Add(oldrouting.Tasks.AddTask(async() =>
                     {
-                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { 7, 0 }, Tools.GetChannel(oldrouting.ChannelOut), oldrouting.DeviceOut.Name), oldrouting);
+                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { 7, 0 }, Tools.GetChannel(oldrouting.ChannelOut), oldrouting.DeviceOut.Name), oldrouting, trackerOld);
 
                         if (oldrouting.DeviceInSequencer != null)
                         {
@@ -2749,9 +2755,9 @@ namespace MidiTools
                             //oldrouting.OnSequencerPlayNote -= MatrixItem_OnSequencerPlayNote;
                         }
                         oldrouting.DropMode = 1;
-                    });
+                    }));
 
-                    _ = newrouting.Tasks.AddTask(async() =>
+                    tasks.Add(newrouting.Tasks.AddTask(async() =>
                     {
                         newDeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 7, 0 }, Tools.GetChannel(newChannelOut), newDeviceOut.Name));
 
@@ -2768,9 +2774,16 @@ namespace MidiTools
 
                         int memSmooth = newrouting.Options.SmoothCCLength;
                         newrouting.Options.SmoothCCLength = (int)Math.Ceiling(valPresetMorphing * 0.75);
-                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { 7, newVolumeValue }, Tools.GetChannel(newrouting.ChannelOut), newrouting.DeviceOut.Name), newrouting);
+                        await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { 7, newVolumeValue }, Tools.GetChannel(newrouting.ChannelOut), newrouting.DeviceOut.Name), newrouting, trackerNew);
                         newrouting.Options.SmoothCCLength = memSmooth;
-                    });
+                    }));
+
+                    await Task.WhenAll(tasks);
+
+                    while (trackerNew.ToString().Length > 0 && trackerOld.ToString().Length > 0)
+                    {
+                        await Task.Delay(10);
+                    }
                 }
             }
         }
@@ -2972,6 +2985,15 @@ namespace MidiTools
             CloseDevicesTimer.Stop();
             CloseDevicesTimer.Enabled = false;
 
+            List<Task> cancel = new List<Task>();
+            
+            foreach (var routing in MidiMatrix)
+            {
+                cancel.Add(routing.CancelTask());
+            }
+
+            await Task.WhenAll(cancel);
+
             foreach (var device in UsedDevicesIN)
             {
                 try
@@ -3019,7 +3041,7 @@ namespace MidiTools
             var routing = MidiMatrix.FirstOrDefault(d => d.RoutingGuid == routingGuid && d.DeviceOut != null);
             if (routing != null)
             {
-                await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { iCC, iValue }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing);
+                await GenerateOUTEvent(new MidiEvent(TypeEvent.CC, new List<int> { iCC, iValue }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name), routing, new TrackerGuid());
             }
         }
 
@@ -3307,7 +3329,7 @@ namespace MidiTools
                 var items = MidiMatrix.Where(mm => mm.DeviceInSequencer != null && mm.DropMode == 0 && mm.ChannelIn == iChannel);
                 foreach (var matrix in items)
                 {
-                    await GenerateOUTEvent(ev, matrix);
+                    await GenerateOUTEvent(ev, matrix, new TrackerGuid());
                 }
             });
         }

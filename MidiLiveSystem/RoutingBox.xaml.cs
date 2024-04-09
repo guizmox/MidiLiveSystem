@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -46,6 +47,8 @@ namespace MidiLiveSystem
 
     public partial class RoutingBox : Page
     {
+        private System.Timers.Timer UIBlink;
+
         public VSTHost.MainWindow VSTWindow;
 
         public Guid RoutingGuid { get; private set; }
@@ -58,6 +61,8 @@ namespace MidiLiveSystem
         public Guid BoxGuid { get; private set; } = Guid.NewGuid();
         public string BoxName { get; private set; } = "Routing Box";
         public string PresetName { get { return Dispatcher.Invoke(() => tbPresetName.Text.Trim()); } }
+
+        public bool ChangingPreset { get { return UIBlink != null ? true : false; } }
 
         private ProjectConfiguration Project;
 
@@ -1506,6 +1511,109 @@ namespace MidiLiveSystem
         {
             return TempCCMix[CurrentPreset, cc];
             //return TempMemory[CurrentPreset].MidiOptions.DefaultRoutingCC[cc];
+        }
+
+        internal async Task BlinkPreset(bool bBlink)
+        {
+            if (bBlink)
+            {
+                if (UIBlink != null) { UIBlink.Enabled = false; UIBlink = null; }
+                UIBlink = new System.Timers.Timer();
+                UIBlink.Interval = 100;
+                UIBlink.Elapsed += UIBlink_Elapsed;
+                UIBlink.Enabled = true;
+                UIBlink.Start();
+            }
+            else
+            {
+                if (UIBlink != null)
+                {
+                    UIBlink.Elapsed -= UIBlink_Elapsed;
+                    UIBlink.Enabled = false;
+                    UIBlink.Stop();
+                    UIBlink = null;
+
+                    Button btn = null;
+                    switch (CurrentPreset)
+                    {
+                        case 0:
+                            btn = btnPreset1;
+                            break;
+                        case 1:
+                            btn = btnPreset2;
+                            break;
+                        case 2:
+                            btn = btnPreset3;
+                            break;
+                        case 3:
+                            btn = btnPreset4;
+                            break;
+                        case 4:
+                            btn = btnPreset5;
+                            break;
+                        case 5:
+                            btn = btnPreset6;
+                            break;
+                        case 6:
+                            btn = btnPreset7;
+                            break;
+                        case 7:
+                            btn = btnPreset8;
+                            break;
+                    }
+                    await btn.Dispatcher.InvokeAsync(() => btn.Background = Brushes.IndianRed);
+                }
+            }
+        }
+
+        private async void UIBlink_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            try
+            {
+                Button btn = null;
+                switch (CurrentPreset)
+                {
+                    case 0:
+                        btn = btnPreset1;
+                        break;
+                    case 1:
+                        btn = btnPreset2;
+                        break;
+                    case 2:
+                        btn = btnPreset3;
+                        break;
+                    case 3:
+                        btn = btnPreset4;
+                        break;
+                    case 4:
+                        btn = btnPreset5;
+                        break;
+                    case 5:
+                        btn = btnPreset6;
+                        break;
+                    case 6:
+                        btn = btnPreset7;
+                        break;
+                    case 7:
+                        btn = btnPreset8;
+                        break;
+                }
+                await btn.Dispatcher.InvokeAsync(() =>
+                {
+                    if (btn.Background == Brushes.MediumPurple)
+                    {
+                        btn.Background = Brushes.IndianRed;
+                    }
+                    else
+                    {
+                        btn.Background = Brushes.MediumPurple;
+                    }
+                });
+            }
+            catch (OperationCanceledException)
+            {
+
+            }
         }
     }
 

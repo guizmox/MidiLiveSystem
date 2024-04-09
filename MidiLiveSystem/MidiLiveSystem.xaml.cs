@@ -536,12 +536,19 @@ namespace MidiLiveSystem
 
                     case "PRESET_CHANGE":
 
+                        while (box.ChangingPreset)
+                        {
+                            await Task.Delay(10);
+                        }
+
                         BoxPreset bp2 = (BoxPreset)sValue;
 
                         string sDevIn2 = bp2.DeviceIn;
                         string sDevOut2 = bp2.DeviceOut;
                         int iChIn2 = bp2.ChannelIn;
                         int iChOut2 = bp2.ChannelOut;
+
+                        await box.BlinkPreset(true);
 
                         if (bp2.RoutingGuid != Guid.Empty)
                         {
@@ -559,6 +566,8 @@ namespace MidiLiveSystem
                             MidiOptions presetopt = await box.GetOptions();
                             await ControlChangeMixer.InitMixer();
                         }
+
+                        await box.BlinkPreset(false);
 
                         break;
 
@@ -634,20 +643,27 @@ namespace MidiLiveSystem
 
         private async void UIRefreshRate_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            await tbNoteName.Dispatcher.InvokeAsync(() => tbNoteName.Text = "");
+            try
+            {
+                await tbNoteName.Dispatcher.InvokeAsync(() => tbNoteName.Text = "");
 
-            if (Routing.Events <= 32) //pour éviter de saturer les process avec des appels UI inutiles
-            {
-                await Dispatcher.InvokeAsync(() => Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, "]"));
-            }
-            else
-            {
-                await Dispatcher.InvokeAsync(() => Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, ". UI events disabled]"));
-            }
+                if (Routing.Events <= 32) //pour éviter de saturer les process avec des appels UI inutiles
+                {
+                    await Dispatcher.InvokeAsync(() => Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, "]"));
+                }
+                else
+                {
+                    await Dispatcher.InvokeAsync(() => Title = string.Concat(APP_NAME + " [", Routing.CyclesInfo, ". UI events disabled]"));
+                }
 
-            if (Routing.Events <= 32) //pour éviter de saturer les process avec des appels UI inutiles
+                if (Routing.Events <= 32) //pour éviter de saturer les process avec des appels UI inutiles
+                {
+                    await SaveTemplate();
+                }
+            }
+            catch (OperationCanceledException)
             {
-                await SaveTemplate();
+
             }
         }
 
