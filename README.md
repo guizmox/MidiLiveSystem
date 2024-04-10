@@ -28,6 +28,7 @@ This software is heavily inspired by Vangelis System I but includes additional f
 - **Save & Open Projects**: Convenient project management.
 
 ## Demos:
+- [Quick Walkthrough](https://www.youtube.com/watch?v=-oNShHc2WL4)
 - [Demo Video 1 - Baroque](https://www.youtube.com/watch?v=pwLsHsf5Pt4)
 - [Demo Video 2 - Chariots of Fire](https://www.youtube.com/watch?v=MOZJ4vDwuRk)
 - [Demo Video 3 - Vangelis Inspiration](https://www.youtube.com/watch?v=ciOBDNWudrY)
