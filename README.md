@@ -15,9 +15,12 @@ This software is heavily inspired by Vangelis System I but includes additional f
 - **Sequencer**: 32-step, 4-channel sequencer with transposition.
 - **VST Host** : you can use your favourite VST synths using the 16 slots. Each of them is multichannel. 
 - **Scene Editor**: Arrange boxes on a scene to adjust Pan and Volume.
+- **CC Mixer**: Realtime change CC parameters.
 - **Cubase Instrument Files**: Load and select presets from your instruments.
 - **MIDI Translation**: Translate MIDI messages for creative effects.
 - **MIDI Converters & Filters**: Customize MIDI signals.
+- **Play Modes** : Add realtime harmony, intermediate notes, octaves, pizzicato, note repeater... and a few other useful effects
+- **Preset Morphing** : Smooth preset change : the sound morphs from one sound to another
 - **Smooth CC**: Smooth out fast incoming CC switching for better performance control.
 - **Delay**: Add delay to routing box outputs for enhanced performance.
 - **Harmonizer**: Real-time harmonization capabilities.
