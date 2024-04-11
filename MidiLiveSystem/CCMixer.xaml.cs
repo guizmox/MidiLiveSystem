@@ -25,11 +25,11 @@ namespace MidiLiveSystem
         public delegate void RoutingBoxEventHandler(Guid gBox, string sControl, object sValue);
         public event RoutingBoxEventHandler OnUIEvent;
 
-        private List<ComboBox> ComboBoxes = new List<ComboBox>();
-        private List<Slider> Sliders = new List<Slider>();
+        private readonly List<ComboBox> ComboBoxes = new();
+        private readonly List<Slider> Sliders = new();
 
-        private Guid RoutingGuid;
-        private Guid BoxGuid;
+        private readonly Guid RoutingGuid;
+        private readonly Guid BoxGuid;
         internal int[] BoxMixers = new int[8] { 1, 7, 10, 11, 70, 71, 91, 93 };
         internal int[] BoxMixersValues = new int[8] { 0, 0, 0, 0, 0, 0, 0, 0 };
 
@@ -73,13 +73,15 @@ namespace MidiLiveSystem
 
                 for (int i = 0; i < BoxMixers.Length; i++)
                 {
-                    ComboBox comboBox = new ComboBox();
-                    comboBox.Name = "cbCC" + (i + 1);
-                    comboBox.HorizontalAlignment = HorizontalAlignment.Center;
-                    comboBox.VerticalAlignment = VerticalAlignment.Center;
-                    comboBox.MinWidth = 100;
-                    comboBox.SelectedValuePath = "Tag";
-                    comboBox.Tag = (i + 1);
+                    ComboBox comboBox = new()
+                    {
+                        Name = "cbCC" + (i + 1),
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center,
+                        MinWidth = 100,
+                        SelectedValuePath = "Tag",
+                        Tag = (i + 1)
+                    };
                     comboBox.SelectionChanged += ComboBox_SelectionChanged;
                     Grid.SetColumn(comboBox, i);
                     Grid.SetRow(comboBox, 0);
@@ -87,17 +89,19 @@ namespace MidiLiveSystem
                     ComboBoxes.Add(comboBox);
                     FillComboBox(CC, ComboBoxes.Last());
 
-                    Slider slider = new Slider();
-                    slider.Name = "slCC" + (i + 1);
-                    slider.Minimum = -1;
-                    slider.Maximum = 127;
-                    slider.SmallChange = 1;
-                    slider.Tag = (i + 1);
-                    slider.Value = -1;
-                    slider.Foreground = Brushes.IndianRed;
-                    //slider.Foreground = Brushes.White;
-                    slider.Orientation = Orientation.Vertical;
-                    slider.HorizontalAlignment = HorizontalAlignment.Center;
+                    Slider slider = new()
+                    {
+                        Name = "slCC" + (i + 1),
+                        Minimum = -1,
+                        Maximum = 127,
+                        SmallChange = 1,
+                        Tag = (i + 1),
+                        Value = -1,
+                        Foreground = Brushes.IndianRed,
+                        //slider.Foreground = Brushes.White;
+                        Orientation = Orientation.Vertical,
+                        HorizontalAlignment = HorizontalAlignment.Center
+                    };
                     slider.ValueChanged += slCC_ValueChanged;
                     Grid.SetColumn(slider, i);
                     Grid.SetRow(slider, 1);
@@ -199,8 +203,8 @@ namespace MidiLiveSystem
 
         private static List<string[]> CCList()
         {
-            List<string[]> midiControllers = new List<string[]>
-        {
+            List<string[]> midiControllers = new()
+            {
             new string[] {"1", "Modulation Wheel", "Generally this CC controls a vibrato effect (pitch, loudness, brightness). What is modulated is based on the patch."},
             new string[] {"2", "Breath Controller", "Oftentimes associated with aftertouch messages. It was originally intended for use with a breath MIDI controller in which blowing harder produced higher MIDI control values. It can be used for modulation as well."},
             new string[] {"4", "Foot Pedal", "Often used with aftertouch messages. It can send a continuous stream of values based on how the pedal is used."},

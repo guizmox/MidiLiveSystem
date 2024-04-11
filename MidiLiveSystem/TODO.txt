@@ -1,8 +1,3 @@
-﻿- CC limiters : pouvoir limiter la valeur maximum d'un CC (routing box)
+﻿- CC limiters : pouvoir limiter la valeur maximum d'un CC (routing box - CC mixer)
 - Ajout contrôle BDD au démarrage pour dire ou se trouve l'aide
 - pouvoir renommer en masse les devices dans la BDD si on a changé de matériel
-- A TESTER : Smooth CC : conflits
-- VST Host : les VST ne se rechargeront pas à l'ouverture du projet
-- change preset = change sound stage
-- ME80 program non sauvegardé ?
-- CC Mixer => pour remplacer l'init CC ??

@@ -21,14 +21,14 @@ namespace MidiLiveSystem
     /// </summary>
     public partial class Conductor : Window
     {
-        private List<RoutingBox> Boxes = new List<RoutingBox>();
-        private MidiRouting Routing = null;
+        private readonly List<RoutingBox> Boxes = new();
+        private readonly MidiRouting Routing = null;
 
-        private List<bool> _isMoving = new List<bool>();
-        private List<Point> _buttonPosition = new List<Point>();
-        private List<double> deltaX = new List<double>();
-        private List<double> deltaY = new List<double>();
-        private List<TranslateTransform> _currentTT = new List<TranslateTransform>();
+        private readonly List<bool> _isMoving = new();
+        private readonly List<Point> _buttonPosition = new();
+        private readonly List<double> deltaX = new();
+        private readonly List<double> deltaY = new();
+        private readonly List<TranslateTransform> _currentTT = new();
 
         public Conductor(List<RoutingBox> boxes, MidiRouting routing)
         {
@@ -156,7 +156,7 @@ namespace MidiLiveSystem
             });
         }
 
-        private string NameButtonBox(RoutingBox box, int iVol, int iPan)
+        private static string NameButtonBox(RoutingBox box, int iVol, int iPan)
         {
             return string.Concat(box.BoxName, Environment.NewLine, box.PresetName, Environment.NewLine, "VOL=", iVol, " - PAN=", iPan);
         }
@@ -231,7 +231,7 @@ namespace MidiLiveSystem
             gdButtons.Children.Add(rtbButton);
         }
 
-        private int[] TranscodePanVolumeToGrid(RoutingBox box)
+        private static int[] TranscodePanVolumeToGrid(RoutingBox box)
         {
             MidiOptions opt = box.GetCurrentPreset().MidiOptions;
 
@@ -256,7 +256,7 @@ namespace MidiLiveSystem
             return new int[2] { volPos, panPos };
         }
 
-        private int FromYToVolume(double dVertical)
+        private static int FromYToVolume(double dVertical)
         {
             double originalMax = 410.0;
             double destinationMax = 127.0;
@@ -265,7 +265,7 @@ namespace MidiLiveSystem
             return Convert.ToInt32((destinationMax - (dVertical * ratio)) - 56);
         }
 
-        private int FromXToPan(double dHorizontal)
+        private static int FromXToPan(double dHorizontal)
         {
             double originalMax = 430.0;
             double destinationMax = 64.0;

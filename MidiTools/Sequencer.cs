@@ -13,7 +13,7 @@ namespace MidiTools
     [Serializable]
     public class Sequencer
     {
-        EventPool Tasks = new EventPool("Sequencer");
+        readonly EventPool Tasks = new("Sequencer");
 
         public delegate void SequencerStepHandler(SequenceStep notes, SequenceStep lastnotes, double lengthInMs, int lastPositionInSequence, int positionInSequence);
         public event SequencerStepHandler OnInternalSequencerStep;
@@ -203,7 +203,7 @@ namespace MidiTools
         public int Step = 0;
 
         [Key("NotesAndVelocity")]
-        public List<int[]> NotesAndVelocity = new List<int[]>();
+        public List<int[]> NotesAndVelocity = new();
 
         [Key("GatePercent")]
         public double GatePercent = 50.0;

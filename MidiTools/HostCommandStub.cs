@@ -11,9 +11,17 @@ namespace Jacobi.Vst.Samples.Host;
 /// </summary>
 internal sealed class HostCommandStub : IVstHostCommandStub
 {
-    public HostCommandStub()
+    public int BPM { get; set; } = 120;
+    public double SampleRate { get; set; } = 48000.0;
+
+    public HostCommandStub(double samplerate)
     {
         Commands = new HostCommands(this);
+    }
+
+    public void ChangeTempo(int newBPM)
+    {
+        BPM = newBPM;
     }
 
     /// <summary>
@@ -37,6 +45,7 @@ internal sealed class HostCommandStub : IVstHostCommandStub
         SizeWindow?.Invoke(this, new SizeWindowEventArgs(width, height));
     }
 
+
     #region IVstHostCommandsStub Members
 
     /// <inheritdoc />
@@ -48,6 +57,8 @@ internal sealed class HostCommandStub : IVstHostCommandStub
 
     private sealed class HostCommands : IVstHostCommands20
     {
+        private VstTimeInfo VstTimeInfo { get; set; } = new VstTimeInfo();
+
         private readonly HostCommandStub _cmdStub;
 
         public HostCommands(HostCommandStub cmdStub)
@@ -154,7 +165,22 @@ internal sealed class HostCommandStub : IVstHostCommandStub
             _cmdStub.RaisePluginCalled("GetTimeInfo(" + filterFlags + ")");
             //Jacobi.Vst.Core.VstTimeInfoFlags.TransportPlaying | Jacobi.Vst.Core.VstTimeInfoFlags.PpqPositionValid | Jacobi.Vst.Core.VstTimeInfoFlags.TempoValid | Jacobi.Vst.Core.VstTimeInfoFlags.BarStartPositionValid | Jacobi.Vst.Core.VstTimeInfoFlags.CyclePositionValid | Jacobi.Vst.Core.VstTimeInfoFlags.TimeSignatureValid
 
-            return new VstTimeInfo() { BarStartPosition = 0, Flags = VstTimeInfoFlags.TempoValid, CycleStartPosition = 0, SampleRate = 48000, Tempo = 120 };
+            VstTimeInfo.SampleRate = _cmdStub.SampleRate;
+            VstTimeInfo.Tempo = (double)_cmdStub.BPM;
+            VstTimeInfo.PpqPosition = (VstTimeInfo.SamplePosition / VstTimeInfo.SampleRate) * (VstTimeInfo.Tempo / 60.0);
+            VstTimeInfo.NanoSeconds = 0.0;
+            VstTimeInfo.BarStartPosition = 0.0;
+            VstTimeInfo.CycleStartPosition = 0.0;
+            VstTimeInfo.CycleEndPosition = 0.0;
+            VstTimeInfo.TimeSignatureNumerator = 4;
+            VstTimeInfo.TimeSignatureDenominator = 4;
+            VstTimeInfo.SmpteOffset = 0;
+            VstTimeInfo.SmpteFrameRate = new Jacobi.Vst.Core.VstSmpteFrameRate();
+            VstTimeInfo.SamplesToNearestClock = 0;
+            VstTimeInfo.Flags = VstTimeInfoFlags.TempoValid |
+                                VstTimeInfoFlags.PpqPositionValid |
+                                VstTimeInfoFlags.TransportPlaying;
+            return VstTimeInfo;
         }
 
         /// <inheritdoc />

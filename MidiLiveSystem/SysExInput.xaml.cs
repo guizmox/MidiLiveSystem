@@ -27,7 +27,7 @@ namespace MidiLiveSystem
         public bool InvalidData = false;
         private bool DeviceAdded = false;
         private string DeviceListener = "";
-        private MidiRouting Routing;
+        private readonly MidiRouting Routing;
 
         public SysExInput(MidiRouting routing)
         {
@@ -56,7 +56,7 @@ namespace MidiLiveSystem
 
             if (sSysex.Length > 0)
             {
-                Paragraph paragraph = new Paragraph(new Run(sSysex));
+                Paragraph paragraph = new(new Run(sSysex));
                 rtbSysEx.Document.Blocks.Add(paragraph);
             }
 
@@ -98,7 +98,7 @@ namespace MidiLiveSystem
             {
                 Dispatcher.Invoke(() =>
                 {
-                    Paragraph paragraph = new Paragraph(new Run(ev.SysExData));
+                    Paragraph paragraph = new(new Run(ev.SysExData));
                     rtbSysEx.Document.Blocks.Add(paragraph);
                 });
             }
@@ -106,7 +106,7 @@ namespace MidiLiveSystem
 
         private void btnClose_Click(object sender, RoutedEventArgs e)
         {
-            TextRange textRange = new TextRange(rtbSysEx.Document.ContentStart, rtbSysEx.Document.ContentEnd);
+            TextRange textRange = new(rtbSysEx.Document.ContentStart, rtbSysEx.Document.ContentEnd);
             string sSys = textRange.Text.Replace("-", "").Trim();
 
             if (!Regex.IsMatch(sSys, Tools.SYSEX_CHECK, RegexOptions.IgnoreCase) && sSys.Length > 0)

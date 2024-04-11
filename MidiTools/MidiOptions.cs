@@ -186,10 +186,10 @@ namespace MidiTools
         [Key("Note_Converters")]
         public List<int[]> Note_Converters { get; set; } = new List<int[]>();
         [Key("Translators")]
-        public List<string[]> Translators { get; set; } = new List<string[]>();
+        public List<MessageTranslator> Translators { get; set; } = new List<MessageTranslator>();
 
         [Key("SmoothCC")]
-        public bool SmoothCC { get { return SmoothCCLength > 0 ? true : false; } }
+        public bool SmoothCC { get { return SmoothCCLength > 0; } }
         [Key("SmoothCCLength")]
         public int SmoothCCLength = 0;
         [Key("DelayNotesLength")]
@@ -217,10 +217,10 @@ namespace MidiTools
             else { return false; }
         }
 
-        public void AddTranslator(string sScript, string sName)
+        public void AddTranslator(MessageTranslator translator)
         {
             //TODO : réaliser un contrôle supplémentaire de l'UI ?
-            Translators.Add(new string[] { sScript, sName });
+            Translators.Add(translator);
         }
 
         internal MidiOptions Clone()

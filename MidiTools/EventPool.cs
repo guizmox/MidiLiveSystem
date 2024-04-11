@@ -25,8 +25,8 @@ namespace MidiTools
             }
         }
 
-        private List<Task> BackgroundTasks = new List<Task>();
-        private Timer timer;
+        private readonly List<Task> BackgroundTasks = new();
+        private readonly Timer timer;
 
         public EventPool(string from)
         {
@@ -65,8 +65,8 @@ namespace MidiTools
             }
         }
 
-        private static List<Task> BackgroundTasks = new List<Task>();
-        private static Timer timer;
+        private static readonly List<Task> BackgroundTasks = new();
+        private static readonly Timer timer;
 
         static UIEventPool()
         {

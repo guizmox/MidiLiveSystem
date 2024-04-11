@@ -13,8 +13,8 @@ namespace NAudio.Wave
 	public class Wave24To16Stream : WaveStream
 	{
 		private WaveStream sourceStream;
-		private WaveFormat waveFormat;
-		private long length;
+		private readonly WaveFormat waveFormat;
+		private readonly long length;
 		private long position;
 		private bool clip;
 		private float volume;

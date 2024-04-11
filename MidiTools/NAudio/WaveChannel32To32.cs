@@ -200,8 +200,8 @@ namespace NAudio.Wave
                 // implement better panning laws. 
                 float leftVolume = (pan <= 0) ? volume : (volume * (1 - pan) / 2.0f);
                 float rightVolume = (pan >= 0) ? volume : (volume * (pan + 1) / 2.0f);
-                leftVolume = leftVolume / 32768f;
-                rightVolume = rightVolume / 32768f;
+                leftVolume /= 32768f;
+                rightVolume /= 32768f;
                 int samplesRead = bytesRead / 2;
                 //BlockEffects(samplesRead);
                 for (int n = 0; n < samplesRead; n++)
@@ -228,8 +228,8 @@ namespace NAudio.Wave
                 float leftVolume = (pan <= 0) ? volume : (volume * (1 - pan) / 2.0f);
                 float rightVolume = (pan >= 0) ? volume : (volume * (pan + 1) / 2.0f);
 
-                leftVolume = leftVolume / (float)0xffffffff;;
-                rightVolume = rightVolume / (float)0xffffffff;;
+                leftVolume /= (float)0xffffffff;;
+                rightVolume /= (float)0xffffffff;;
                 //float leftVolume = (volume * (1 - pan) / 2.0f) / 32768f;
                 //float rightVolume = (volume * (pan + 1) / 2.0f) / 32768f;
 
@@ -346,7 +346,7 @@ namespace NAudio.Wave
         public event EventHandler<SampleEventArgs> Sample;
 
         // reuse the same object every time to avoid making lots of work for the garbage collector
-        private SampleEventArgs sampleEventArgs = new SampleEventArgs(0, 0);
+        private readonly SampleEventArgs sampleEventArgs = new(0, 0);
 
         /// <summary>
         /// Raise the sample event (no check for null because it has already been done)

@@ -9,7 +9,7 @@ namespace MidiTools
 {
     public static class CubaseInstrumentData
     {
-        public static List<InstrumentData> Instruments = new List<InstrumentData>();
+        public static List<InstrumentData> Instruments = new();
     }
 
     [MessagePackObject]
@@ -71,7 +71,7 @@ namespace MidiTools
             }
         }
         [Key("DefaultCC")]
-        public List<ParamToCC> DefaultCC = new List<ParamToCC>();
+        public List<ParamToCC> DefaultCC = new();
 
         private string _sysexinit = "";
 
@@ -129,8 +129,8 @@ namespace MidiTools
             {
                 if (!bTmpSort)
                 {
-                    List<MidiPreset> instrP = new List<MidiPreset>();
-                    List<PresetHierarchy> instrH = new List<PresetHierarchy>();
+                    List<MidiPreset> instrP = new();
+                    List<PresetHierarchy> instrH = new();
                     foreach (var cat in Categories)
                     {
                         instrP.AddRange(cat.Presets);
@@ -139,7 +139,7 @@ namespace MidiTools
                     int iMsb = instrP.Select(p => p.Msb).Distinct().Count();
                     int iLsb = instrP.Select(p => p.Lsb).Distinct().Count();
 
-                    bool bMsb = iMsb < iLsb ? true : false;
+                    bool bMsb = iMsb < iLsb;
 
                     if (bMsb)
                     {
@@ -153,7 +153,7 @@ namespace MidiTools
                     for (int iC = 0; iC < instrP.Count; iC++)
                     {
                         string sCat = bMsb ? instrP[iC].Msb.ToString("000") : instrP[iC].Lsb.ToString("000");
-                        if (instrH.Count(i => i.Category.Equals(sCat)) == 0)
+                        if (!instrH.Any(i => i.Category.Equals(sCat)))
                         {
                             instrH.Add(new PresetHierarchy(iC, sCat, sCat, 1));
                         }
@@ -161,7 +161,7 @@ namespace MidiTools
                     for (int iC = 0; iC < instrP.Count; iC++)
                     {
                         string sCat = bMsb ? string.Concat(instrP[iC].Msb.ToString("000"), "-", instrP[iC].Lsb.ToString("000")) : string.Concat(instrP[iC].Lsb.ToString("000"), "-", instrP[iC].Msb.ToString("000"));
-                        if (instrH.Count(i => i.Category.Equals(sCat) && i.Level == 2) == 0)
+                        if (!instrH.Any(i => i.Category.Equals(sCat) && i.Level == 2))
                         {
                             instrH.Add(new PresetHierarchy(iC, sCat, sCat, 2));
                         }

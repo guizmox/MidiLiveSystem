@@ -6,7 +6,7 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:MidiLiveSystem"
         mc:Ignorable="d"
-        Title="Midi Translator" Height="300" Width="400" Background="DimGray" WindowStartupLocation="CenterScreen">
+        Title="Midi Translator" Height="400" Width="400" Background="DimGray" WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
         <Style TargetType="TextBlock">
@@ -17,13 +17,14 @@
 
     <Grid Margin="10,10,10,10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="10*"/>
-            <RowDefinition Height="10*"/>
-            <RowDefinition Height="10*"/>
-            <RowDefinition Height="10*"/>
-            <RowDefinition Height="10*"/>
-            <RowDefinition Height="10*"/>
-            <RowDefinition Height="10*"/>
+            <RowDefinition Height="8*"/>
+            <RowDefinition Height="8*"/>
+            <RowDefinition Height="8*"/>
+            <RowDefinition Height="8*"/>
+            <RowDefinition Height="8*"/>
+            <RowDefinition Height="8*"/>
+            <RowDefinition Height="8*"/>
+            <RowDefinition Height="8*"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="20*"/>
@@ -162,9 +163,10 @@
             <RichTextBox Name="rtbINSys" Height="80" Background="Gray" />
         </StackPanel>
 
+        <CheckBox x:Name="ckAddsInEvent" Grid.Column="1" Grid.ColumnSpan="3" Grid.Row="3" Content="Also send the original event"/>
 
-        <TextBlock Grid.Column="0" Grid.Row="3" Text="EVENT OUT"/>
-        <ComboBox Name="cbEventOutType" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" SelectionChanged="cbEventOutType_SelectionChanged">
+        <TextBlock Grid.Column="0" Grid.Row="4" Text="EVENT OUT"/>
+        <ComboBox Name="cbEventOutType" Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" SelectionChanged="cbEventOutType_SelectionChanged">
             <ComboBoxItem Content="Note - Fixed Value" Tag="KEY"/>
             <ComboBoxItem Content="Note - Follows EVENT IN Value" Tag="KEY_RANGE"/>
             <ComboBoxItem Content="Control Change - Fixed Value" Tag="CC"/>
@@ -177,7 +179,7 @@
             <ComboBoxItem Content="Pitch Bend" Tag="PB"/>
         </ComboBox>
 
-        <StackPanel Name="pnlOUTKEY" Grid.Column="1" Grid.Row="4" Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
+        <StackPanel Name="pnlOUTKEY" Grid.Column="1" Grid.Row="5" Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="30*"/>
@@ -200,7 +202,7 @@
         </StackPanel>
 
 
-        <StackPanel Name="pnlOUTPB" Grid.Column="1" Grid.Row="4"  Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
+        <StackPanel Name="pnlOUTPB" Grid.Column="1" Grid.Row="5"  Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="30*"/>
@@ -226,7 +228,7 @@
             </Grid>
         </StackPanel>
             
-        <StackPanel Name="pnlOUTCC" Grid.Column="1" Grid.Row="4" Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
+        <StackPanel Name="pnlOUTCC" Grid.Column="1" Grid.Row="5" Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="30*"/>
@@ -246,7 +248,7 @@
             </Grid>
         </StackPanel>
 
-        <StackPanel Name="pnlOUTPC" Grid.Column="1" Grid.Row="4" Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
+        <StackPanel Name="pnlOUTPC" Grid.Column="1" Grid.Row="5" Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="30*"/>
@@ -268,11 +270,11 @@
             </Grid>
         </StackPanel>
 
-        <StackPanel Name="pnlOUTSYS" Grid.Column="1" Grid.Row="4" Grid.ColumnSpan="3" Grid.RowSpan="2" Visibility="Hidden">
+        <StackPanel Name="pnlOUTSYS" Grid.Column="1" Grid.Row="5" Grid.ColumnSpan="3" Grid.RowSpan="2" Visibility="Hidden">
             <RichTextBox Name="rtbOUTSys" Height="80" Background="Gray" />
         </StackPanel>
 
-        <StackPanel Name="pnlOUTAT" Grid.Column="1" Grid.Row="4" Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
+        <StackPanel Name="pnlOUTAT" Grid.Column="1" Grid.Row="5" Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Hidden">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="30*"/>
@@ -290,10 +292,10 @@
             </Grid>
         </StackPanel>
 
-        <TextBlock Grid.Column="0" Grid.Row="7" Text="NAME"/>
+        <TextBlock Grid.Column="0" Grid.Row="8" Text="NAME"/>
         <TextBox Name="tbTranslatorName" VerticalAlignment="Center" Grid.Row="7" Grid.Column="1" Grid.ColumnSpan="2" Text="My Translation" MaxLength="50" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
 
-        <Button Name="btnClose" Grid.Row="6" Grid.Column="3" Content="OK" Width="50" Margin="5,0,5,0" HorizontalAlignment="Right" Click="btnClose_Click" />
+        <Button Name="btnClose" Grid.Row="7" Grid.Column="3" Content="OK" Width="50" Margin="5,0,5,0" HorizontalAlignment="Right" Click="btnClose_Click" />
 
     </Grid>
 </Window>

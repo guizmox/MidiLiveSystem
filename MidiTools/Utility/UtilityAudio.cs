@@ -89,7 +89,7 @@ namespace VSTHost
 
         public string GetInfo()
         {
-            StringBuilder sbPlugin = new StringBuilder();
+            StringBuilder sbPlugin = new();
             sbPlugin.AppendLine("Plugin Name : " + VSTName);
             sbPlugin.AppendLine("Path : " + VSTPath);
             sbPlugin.AppendLine("Current Program : " + Program.ToString());
@@ -114,7 +114,7 @@ namespace VSTHost
 
     internal class VSTStream : WaveStream
     {
-        private VSTMidi VSTSynth;
+        private readonly VSTMidi VSTSynth;
 
         internal VstPluginContext pluginContext = null;
         internal event EventHandler<VSTStreamEventArgs> ProcessCalled;
@@ -140,12 +140,7 @@ namespace VSTHost
 
         private void RaiseProcessCalled(float maxL, float maxR)
         {
-            EventHandler<VSTStreamEventArgs> handler = ProcessCalled;
-
-            if (handler != null)
-            {
-                handler(this, new VSTStreamEventArgs(maxL, maxR));
-            }
+            ProcessCalled?.Invoke(this, new VSTStreamEventArgs(maxL, maxR));
         }
 
         private void UpdateBlockSize(int blockSize)
@@ -212,7 +207,7 @@ namespace VSTHost
                 //pluginContext.PluginCommandStub.Commands.MainsChanged(true);
                 pluginContext.PluginCommandStub.Commands.StartProcess();
 
-                ProcessVSTMidiEvents(VSTSynth.MidiStack);
+                ProcessVSTMidiEvents();
 
                 pluginContext.PluginCommandStub.Commands.ProcessReplacing(inputBuffers, outputBuffers);
                 pluginContext.PluginCommandStub.Commands.StopProcess();
@@ -241,7 +236,7 @@ namespace VSTHost
             return output;
         }
 
-        private bool ProcessVSTMidiEvents(List<VstEvent> midiStack)
+        private bool ProcessVSTMidiEvents()
         {
             lock (VSTSynth.MidiStack)
             {
@@ -307,37 +302,56 @@ namespace VSTHost
     internal class VSTMidi
     {
         internal VstPluginContext PluginContext = null;
-        internal List<VstEvent> MidiStack = new List<VstEvent>();
+        internal List<VstEvent> MidiStack = new();
         //internal event EventHandler<VSTStreamEventArgs> StreamCall = null;
 
         internal VSTMidi()
         {
         }
 
+        public void MIDI_Clock()
+        {           
+            const int midiClockMessage = 0xF8; // MIDI Clock message type
+
+            // Create MIDI Clock message
+            MemoryStream message = new();
+            BinaryWriter bw = new(message);
+            bw.Write((byte)midiClockMessage);
+
+            // Create VstMidiEvent
+            VstMidiEvent vstMEvent = new(0, 0, 0, message.ToArray(), 0, 0, true);
+
+            // Add MIDI event to stack or send directly to plugin
+            lock (MidiStack)
+            {
+                MidiStack.Add(vstMEvent);
+            }
+        }
+
         public void MIDI_NoteOn(int Note, int Velocity, int iChannel)
         {
-            MemoryStream message = new MemoryStream();
-            BinaryWriter bw = new BinaryWriter(message);
+            MemoryStream message = new();
+            BinaryWriter bw = new(message);
             bw.Write(MidiMessage.StartNote(Note, Velocity, iChannel).RawData);
-            VstMidiEvent vstMEvent = new VstMidiEvent(0, 0, 0, message.ToArray(), 0, 0, true);
+            VstMidiEvent vstMEvent = new(0, 0, 0, message.ToArray(), 0, 0, true);
             lock (MidiStack) { MidiStack.Add(vstMEvent); }
         }
 
         public void MIDI_NoteOff(int Note, int Velocity, int iChannel)
         {
-            MemoryStream message = new MemoryStream();
-            BinaryWriter bw = new BinaryWriter(message);
+            MemoryStream message = new();
+            BinaryWriter bw = new(message);
             bw.Write(MidiMessage.StopNote(Note, Velocity, iChannel).RawData);
-            VstMidiEvent vstMEvent = new VstMidiEvent(0, 0, 0, message.ToArray(), 0, 0, true);
+            VstMidiEvent vstMEvent = new(0, 0, 0, message.ToArray(), 0, 0, true);
             lock (MidiStack) { MidiStack.Add(vstMEvent); }
         }
 
         public void MIDI_ProgramChange(int programNumber, int iChannel)
         {
-            MemoryStream message = new MemoryStream();
-            BinaryWriter bw = new BinaryWriter(message);
+            MemoryStream message = new();
+            BinaryWriter bw = new(message);
             bw.Write(MidiMessage.ChangePatch(programNumber, iChannel).RawData);
-            VstMidiEvent vstMEvent = new VstMidiEvent(0, 0, 0, message.ToArray(), 0, 0, true);
+            VstMidiEvent vstMEvent = new(0, 0, 0, message.ToArray(), 0, 0, true);
             lock (MidiStack) { MidiStack.Add(vstMEvent); }
 
             //byte Cmd = 0xC0; // Code de commande MIDI pour le changement de programme
@@ -346,48 +360,97 @@ namespace VSTHost
 
         public void MIDI_PitchBend(int pitchValue, int iChannel)
         {
-            MemoryStream message = new MemoryStream();
-            BinaryWriter bw = new BinaryWriter(message);
+            MemoryStream message = new();
+            BinaryWriter bw = new(message);
             ushort pitchBendValue = (ushort)pitchValue;
             bw.Write((byte)(0xE0 | iChannel - 1)); // Status byte pour Pitch Bend (0xE0 est le status byte pour le message Pitch Bend)
             bw.Write((byte)(pitchBendValue & 0x7F)); // LSB (Least Significant Byte) du pitch bend value
             bw.Write((byte)((pitchBendValue >> 7) & 0x7F)); // MSB (Most Significant Byte) du pitch bend value
-            VstMidiEvent vstMEvent = new VstMidiEvent(0, 0, 0, message.ToArray(), 0, 0, true);
+            VstMidiEvent vstMEvent = new(0, 0, 0, message.ToArray(), 0, 0, true);
             lock (MidiStack) { MidiStack.Add(vstMEvent); }
         }
 
         public void MIDI_Aftertouch(byte pressureValue, int iChannel)
         {
-            MemoryStream message = new MemoryStream();
-            BinaryWriter bw = new BinaryWriter(message);
+            MemoryStream message = new();
+            BinaryWriter bw = new(message);
             bw.Write((byte)(0xD0 | (iChannel - 1)));
             bw.Write((byte)(pressureValue & 0x7F));
-            VstMidiEvent vstMEvent = new VstMidiEvent(0, 0, 0, message.ToArray(), 0, 0, true);
+            VstMidiEvent vstMEvent = new(0, 0, 0, message.ToArray(), 0, 0, true);
             lock (MidiStack) { MidiStack.Add(vstMEvent); }
         }
 
         public void MIDI_PolyphonicAftertouch(byte note, byte pressureValue, int iChannel)
         {
-            MemoryStream message = new MemoryStream();
-            BinaryWriter bw = new BinaryWriter(message);
+            MemoryStream message = new();
+            BinaryWriter bw = new(message);
             byte noteNumber = note;
             byte aftertouchValue = pressureValue;
             bw.Write((byte)(0xA0 | iChannel - 1)); // Status byte pour Polyphonic Aftertouch (0xA0 est le status byte pour le message Polyphonic Aftertouch)
             bw.Write(noteNumber); // Numéro de la note
             bw.Write(aftertouchValue); // Valeur de l'Aftertouch (Aftertouch Pressure)
-            VstMidiEvent vstMEvent = new VstMidiEvent(0, 0, 0, message.ToArray(), 0, 0, true);
+            VstMidiEvent vstMEvent = new(0, 0, 0, message.ToArray(), 0, 0, true);
             lock (MidiStack) { MidiStack.Add(vstMEvent); }
         }
 
         public void MIDI_CC(int Number, int Value, int iChannel)
         {
-            MemoryStream message = new MemoryStream();
-            BinaryWriter bw = new BinaryWriter(message);
+            MemoryStream message = new();
+            BinaryWriter bw = new(message);
             bw.Write(MidiMessage.ChangeControl(Number, Value, iChannel).RawData);
-            VstMidiEvent vstMEvent = new VstMidiEvent(0, 0, 0, message.ToArray(), 0, 0, true);
+            VstMidiEvent vstMEvent = new(0, 0, 0, message.ToArray(), 0, 0, true);
             lock (MidiStack) { MidiStack.Add(vstMEvent); }
             //byte Cmd = 0xB0;
             //MIDI(Cmd, Number, Value);
+        }
+
+        public void MIDI_NRPN(int parameterNumber, int value)
+        {
+            const byte nrpnControlChange = 0xB0; // Control Change message type with channel
+            const byte nrpnMSB = 0x63; // NRPN MSB (Most Significant Byte)
+            const byte nrpnLSB = 0x62; // NRPN LSB (Least Significant Byte)
+
+            // Create NRPN message
+            MemoryStream message = new();
+            BinaryWriter bw = new(message);
+            bw.Write(nrpnControlChange); // Control Change message type
+            bw.Write(nrpnMSB); // NRPN MSB
+            bw.Write(parameterNumber >> 7); // MSB of parameter number
+            bw.Write(nrpnLSB); // NRPN LSB
+            bw.Write(parameterNumber & 0x7F); // LSB of parameter number
+            bw.Write(value >> 7); // MSB of value
+            bw.Write(value & 0x7F); // LSB of value
+
+            // Create VstMidiEvent
+            VstMidiEvent vstMEvent = new(0, 0, 0, message.ToArray(), 0, 0, true);
+
+            // Add MIDI event to stack or send directly to plugin
+            lock (MidiStack)
+            {
+                MidiStack.Add(vstMEvent);
+            }
+        }
+
+        public void MIDI_Sysex(byte[] sysExData)
+        {
+            const byte sysExStart = 0xF0; // SysEx start byte
+            const byte sysExEnd = 0xF7; // SysEx end byte
+
+            // Create SysEx message
+            MemoryStream message = new();
+            BinaryWriter bw = new(message);
+            bw.Write(sysExStart); // Start of SysEx message
+            bw.Write(sysExData); // SysEx data
+            bw.Write(sysExEnd); // End of SysEx message
+
+            // Create VstMidiEvent
+            VstMidiEvent vstMEvent = new(0, 0, 0, message.ToArray(), 0, 0, true);
+
+            // Add MIDI event to stack or send directly to plugin
+            lock (MidiStack)
+            {
+                MidiStack.Add(vstMEvent);
+            }
         }
 
         //internal void Stream_ProcessCalled(object sender, VSTStreamEventArgs e)
@@ -443,7 +506,8 @@ namespace VSTHost
             {
                 VSTSynth = new VSTMidi();
 
-                var hcs = new HostCommandStub();
+                HostCommandStub hcs = new(VSTHostInfo.SampleRate);
+                hcs.ChangeTempo(120);
                 //hcs.PluginCalled += new EventHandler<PluginCalledEventArgs>(HostCmdStub_PluginCalled);
                 //var timeInfo = hcs.Commands.GetTimeInfo(VstTimeInfoFlags.ClockValid);
                 //timeInfo.
@@ -472,9 +536,11 @@ namespace VSTHost
 
                     Slot = VSTHostInfo.Slot;
 
-                    vstStream = new VSTStream(VSTSynth);
-                    //vstStream.ProcessCalled += VSTSynth.Stream_ProcessCalled;
-                    vstStream.pluginContext = VSTSynth.PluginContext;
+                    vstStream = new VSTStream(VSTSynth)
+                    {
+                        //vstStream.ProcessCalled += VSTSynth.Stream_ProcessCalled;
+                        pluginContext = VSTSynth.PluginContext
+                    };
                     vstStream.SetWaveFormat(VSTHostInfo.SampleRate, 2);
 
                     UtilityAudio.AudioMixer.AddInputStream(vstStream);
@@ -498,9 +564,11 @@ namespace VSTHost
 
                     sInfo = LoadVSTProgram();
 
-                    TimerProgramName = new System.Timers.Timer();
-                    TimerProgramName.Interval = 5000;
-                    TimerProgramName.Enabled = true;
+                    TimerProgramName = new System.Timers.Timer
+                    {
+                        Interval = 5000,
+                        Enabled = true
+                    };
                     TimerProgramName.Elapsed += TimerProgramName_Elapsed;
                     TimerProgramName.Start();
 
@@ -563,7 +631,7 @@ namespace VSTHost
             VSTEvent?.Invoke("Loading Memory Dump (" + (VSTHostInfo.Dump != null ? VSTHostInfo.Dump.Length : 0) + " byte(s))");
             if (VSTHostInfo.Dump != null)
             {
-                int iDump = VSTSynth.PluginContext.PluginCommandStub.Commands.SetChunk(VSTHostInfo.Dump, true);
+                VSTSynth.PluginContext.PluginCommandStub.Commands.SetChunk(VSTHostInfo.Dump, true);
             }
         }
 
@@ -604,15 +672,9 @@ namespace VSTHost
                     VSTSynth.PluginContext.PluginCommandStub.Commands.MainsChanged(false);
                     VSTSynth.PluginContext.PluginCommandStub.Commands.StopProcess();
                 }
-                if (vstStream != null)
-                {
-                    vstStream.Close();
-                }
+                vstStream?.Close();
 
-                if (UtilityAudio.AudioMixer != null)
-                {
-                    UtilityAudio.AudioMixer.RemoveInputStream(vstStream);
-                }
+                UtilityAudio.AudioMixer?.RemoveInputStream(vstStream);
 
                 if (vstStream != null)
                 {
@@ -644,10 +706,7 @@ namespace VSTHost
             if (VSTSynth.PluginContext.PluginCommandStub != null)
             {
                 var props = VSTSynth.PluginContext.PluginCommandStub.Commands.GetProgram();
-                if (props != null)
-                {
-                    VSTHostInfo.Program = props;
-                }
+                VSTHostInfo.Program = props;
 
                 VSTHostInfo.Parameters.Clear();
 
@@ -748,7 +807,7 @@ namespace VSTHost
                     {
                         for (int i = 0; i < iChannels; i++)
                         {
-                            VstMidiProgramName name = new VstMidiProgramName();
+                            VstMidiProgramName name = new();
                             int index = VSTSynth.PluginContext.PluginCommandStub.Commands.GetMidiProgramName(name, i);
                             if (name.Name.Length == 0)
                             {
@@ -806,7 +865,7 @@ namespace VSTHost
             }
             else { iOK = 1; }
 
-            return iOK == 1 ? true : false;
+            return iOK == 1;
         }
 
         private static void StartSTA(string asioDevice, int iSampleRate, ref int iOK)
@@ -820,8 +879,10 @@ namespace VSTHost
 
                 if (iOK == 0)
                 {
-                    AudioMixer = new RecordableMixerStream32(iSampleRate);
-                    AudioMixer.AutoStop = false;
+                    AudioMixer = new RecordableMixerStream32(iSampleRate)
+                    {
+                        AutoStop = false
+                    };
 
                     if (!string.IsNullOrEmpty(asioDevice))
                     {
@@ -869,7 +930,7 @@ namespace VSTHost
         public static void StopAudio()
         {
             AudioEvent?.Invoke("Stopping Audio Driver", DeviceName, DeviceSampleRate);
-            if (AudioDevice != null) { AudioDevice.Stop(); }
+            AudioDevice?.Stop();
             AudioThread = null;
         }
 

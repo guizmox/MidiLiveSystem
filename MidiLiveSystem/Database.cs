@@ -23,7 +23,7 @@ namespace MidiLiveSystem
     public class SQLiteDatabaseManager
     {
         public static string Database = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "MidiLiveSystem", "MidiLiveSystem.db");
-        private string connectionString = $"Data Source=";
+        private readonly string connectionString = $"Data Source=";
 
         public SQLiteDatabaseManager()
         {
@@ -41,22 +41,19 @@ namespace MidiLiveSystem
                     catch { throw new Exception("Unable to create Database path : " + path); }
                 }
                 SQLitePCL.Batteries.Init();
-                using (var connection = new SqliteConnection(connectionString))
-                {
-                    connection.Open();
-                    CreateDatabase();
-                }
+                using var connection = new SqliteConnection(connectionString);
+                connection.Open();
+                CreateDatabase();
             }
         }
 
         public void CreateDatabase()
         {
-            using (var connection = new SqliteConnection(connectionString))
-            {
-                connection.Open();
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
 
-                var createTableCommand = connection.CreateCommand();
-                createTableCommand.CommandText = @"
+            var createTableCommand = connection.CreateCommand();
+            createTableCommand.CommandText = @"
                 CREATE TABLE IF NOT EXISTS Projects (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
                     ProjectGuid TEXT NOT NULL,
@@ -68,16 +65,15 @@ namespace MidiLiveSystem
                     DateProject TEXT NOT NULL,
                     Author TEXT,
                     Active INT NOT NULL)";
-                createTableCommand.ExecuteNonQuery();
+            createTableCommand.ExecuteNonQuery();
 
-                createTableCommand = connection.CreateCommand();
-                createTableCommand.CommandText = @"
+            createTableCommand = connection.CreateCommand();
+            createTableCommand.CommandText = @"
                 CREATE TABLE IF NOT EXISTS Instruments (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
                     DeviceName TEXT NOT NULL,
                     InstrumentData TEXT NOT NULL)";
-                createTableCommand.ExecuteNonQuery();
-            }
+            createTableCommand.ExecuteNonQuery();
         }
 
         public async Task SaveInstruments(List<InstrumentData> instruments)
@@ -99,8 +95,8 @@ namespace MidiLiveSystem
                 {
                     string sData = "";
                     string sDevice = instr.Device;
-                    XmlSerializer serializerConfig = new XmlSerializer(typeof(InstrumentData));
-                    using (StringWriter textWriter = new StringWriter())
+                    XmlSerializer serializerConfig = new(typeof(InstrumentData));
+                    using (StringWriter textWriter = new())
                     {
                         serializerConfig.Serialize(textWriter, instr);
                         sData = textWriter.ToString();
@@ -117,7 +113,7 @@ namespace MidiLiveSystem
 
         public List<InstrumentData> LoadInstruments()
         {
-            List<InstrumentData> instruments = new List<InstrumentData>();
+            List<InstrumentData> instruments = new();
 
             using (var connection = new SqliteConnection(connectionString))
             {
@@ -126,17 +122,13 @@ namespace MidiLiveSystem
                 var selectCommand = connection.CreateCommand();
                 selectCommand.CommandText = "SELECT Id, DeviceName, InstrumentData FROM Instruments;";
 
-                using (var reader = selectCommand.ExecuteReader())
+                using var reader = selectCommand.ExecuteReader();
+                while (reader.Read())
                 {
-                    while (reader.Read())
-                    {
 
-                        XmlSerializer serializerConfig = new XmlSerializer(typeof(InstrumentData));
-                        using (StringReader stream = new StringReader(reader.GetString(2)))
-                        {
-                            instruments.Add((InstrumentData)serializerConfig.Deserialize(stream));
-                        }
-                    }
+                    XmlSerializer serializerConfig = new(typeof(InstrumentData));
+                    using StringReader stream = new(reader.GetString(2));
+                    instruments.Add((InstrumentData)serializerConfig.Deserialize(stream));
                 }
             }
 
@@ -160,37 +152,37 @@ namespace MidiLiveSystem
                 Project.BoxNames.Add(new string[] { box.BoxName, box.BoxGuid.ToString(), box.GridPosition.ToString() });
             }
 
-            XmlSerializer serializerConfig = new XmlSerializer(typeof(ProjectConfiguration));
-            using (StringWriter textWriter = new StringWriter())
+            XmlSerializer serializerConfig = new(typeof(ProjectConfiguration));
+            using (StringWriter textWriter = new())
             {
                 serializerConfig.Serialize(textWriter, Project);
                 sProjectConfig = textWriter.ToString();
             }
 
 
-            List<BoxPreset> allpresets = new List<BoxPreset>();
+            List<BoxPreset> allpresets = new();
             //sauvegarde des box
             foreach (RoutingBox box in Boxes)
             {
                 allpresets.AddRange(box.GetRoutingBoxMemory());
             }
 
-            XmlSerializer serializerRouting = new XmlSerializer(typeof(RoutingBoxes));
-            using (StringWriter textWriter = new StringWriter())
+            XmlSerializer serializerRouting = new(typeof(RoutingBoxes));
+            using (StringWriter textWriter = new())
             {
                 serializerRouting.Serialize(textWriter, new RoutingBoxes() { AllPresets = allpresets.ToArray() });
                 sRoutingConfig = textWriter.ToString();
             }
 
-            XmlSerializer serializerRecording = new XmlSerializer(typeof(MidiSequence));
-            using (StringWriter textWriter = new StringWriter())
+            XmlSerializer serializerRecording = new(typeof(MidiSequence));
+            using (StringWriter textWriter = new())
             {
                 serializerRecording.Serialize(textWriter, RecordedSequence);
                 sRecording = textWriter.ToString();
             }
 
-            XmlSerializer serializerSeqData = new XmlSerializer(typeof(SequencerData));
-            using (StringWriter textWriter = new StringWriter())
+            XmlSerializer serializerSeqData = new(typeof(SequencerData));
+            using (StringWriter textWriter = new())
             {
                 serializerSeqData.Serialize(textWriter, SeqData);
                 sSeqData = textWriter.ToString();
@@ -204,35 +196,33 @@ namespace MidiLiveSystem
                 sProjectName = string.Concat(sProjectName, " - ", (iExists + 1).ToString("00"), " (" + DateTime.Now.ToString("yyyy/MM/dd"), ")");
             }
 
-            using (var connection = new SqliteConnection(connectionString))
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+
+            if (sVersionsToDelete.Count > 0)
             {
-                connection.Open();
-
-                if (sVersionsToDelete.Count > 0)
-                {
-                    string sDelete = sVersionsToDelete.Count > 1 ? string.Concat(sVersionsToDelete, ",") : sVersionsToDelete[0];
-                    var deleteCommand = connection.CreateCommand();
-                    deleteCommand.CommandText = "DELETE FROM Projects WHERE ProjectGuid = '" + sId + "' AND Id IN (" + sDelete + ");";
-                    deleteCommand.ExecuteNonQuery();
-                }
-
-                var updateCommand = connection.CreateCommand();
-                updateCommand.CommandText = "UPDATE Projects SET Active = 0 WHERE ProjectGuid = '" + sId + "';";
-                updateCommand.ExecuteNonQuery();
-
-                var insertCommand = connection.CreateCommand();
-                insertCommand.CommandText = "INSERT INTO Projects (ProjectGuid, ProjectName, Config, Routing, Recording, Sequences, DateProject, Author, Active) VALUES (@projectid, @projectname, @config, @routing, @recording, @sequences, @dateproject, @author, @active)";
-                insertCommand.Parameters.AddWithValue("@projectid", sId);
-                insertCommand.Parameters.AddWithValue("@projectname", sProjectName);
-                insertCommand.Parameters.AddWithValue("@config", sProjectConfig);
-                insertCommand.Parameters.AddWithValue("@routing", sRoutingConfig);
-                insertCommand.Parameters.AddWithValue("@recording", sRecording);
-                insertCommand.Parameters.AddWithValue("@sequences", sSeqData);
-                insertCommand.Parameters.AddWithValue("@dateproject", DateTime.Now.ToString());
-                insertCommand.Parameters.AddWithValue("@author", Environment.UserName);
-                insertCommand.Parameters.AddWithValue("@active", "1");
-                insertCommand.ExecuteNonQuery();
+                string sDelete = sVersionsToDelete.Count > 1 ? string.Concat(sVersionsToDelete, ",") : sVersionsToDelete[0];
+                var deleteCommand = connection.CreateCommand();
+                deleteCommand.CommandText = "DELETE FROM Projects WHERE ProjectGuid = '" + sId + "' AND Id IN (" + sDelete + ");";
+                deleteCommand.ExecuteNonQuery();
             }
+
+            var updateCommand = connection.CreateCommand();
+            updateCommand.CommandText = "UPDATE Projects SET Active = 0 WHERE ProjectGuid = '" + sId + "';";
+            updateCommand.ExecuteNonQuery();
+
+            var insertCommand = connection.CreateCommand();
+            insertCommand.CommandText = "INSERT INTO Projects (ProjectGuid, ProjectName, Config, Routing, Recording, Sequences, DateProject, Author, Active) VALUES (@projectid, @projectname, @config, @routing, @recording, @sequences, @dateproject, @author, @active)";
+            insertCommand.Parameters.AddWithValue("@projectid", sId);
+            insertCommand.Parameters.AddWithValue("@projectname", sProjectName);
+            insertCommand.Parameters.AddWithValue("@config", sProjectConfig);
+            insertCommand.Parameters.AddWithValue("@routing", sRoutingConfig);
+            insertCommand.Parameters.AddWithValue("@recording", sRecording);
+            insertCommand.Parameters.AddWithValue("@sequences", sSeqData);
+            insertCommand.Parameters.AddWithValue("@dateproject", DateTime.Now.ToString());
+            insertCommand.Parameters.AddWithValue("@author", Environment.UserName);
+            insertCommand.Parameters.AddWithValue("@active", "1");
+            insertCommand.ExecuteNonQuery();
         }
 
         public async Task SaveProjectV2(List<RoutingBox> Boxes, ProjectConfiguration Project, MidiSequence RecordedSequence, SequencerData SeqData)
@@ -247,7 +237,7 @@ namespace MidiLiveSystem
                 Project.BoxNames.Add(new string[] { box.BoxName, box.BoxGuid.ToString(), box.GridPosition.ToString() });
             }
 
-            List<BoxPreset> allpresets = new List<BoxPreset>();
+            List<BoxPreset> allpresets = new();
             //sauvegarde des box
             foreach (RoutingBox box in Boxes)
             {
@@ -269,48 +259,54 @@ namespace MidiLiveSystem
                 sProjectName = string.Concat(sProjectName, " - ", (iExists + 1).ToString("00"), " (" + DateTime.Now.ToString("yyyy/MM/dd"), ")");
             }
 
-            using (var connection = new SqliteConnection(connectionString))
+            using var connection = new SqliteConnection(connectionString);
+            await connection.OpenAsync();
+
+            if (sVersionsToDelete.Count > 0)
             {
-                await connection.OpenAsync();
-
-                if (sVersionsToDelete.Count > 0)
-                {
-                    string sDelete = sVersionsToDelete.Count > 1 ? string.Concat(sVersionsToDelete, ",") : sVersionsToDelete[0];
-                    var deleteCommand = connection.CreateCommand();
-                    deleteCommand.CommandText = "DELETE FROM Projects WHERE ProjectGuid = '" + sId + "' AND Id IN (" + sDelete + ");";
-                    await deleteCommand.ExecuteNonQueryAsync();
-                }
-
-                var updateCommand = connection.CreateCommand();
-                updateCommand.CommandText = "UPDATE Projects SET Active = 0 WHERE ProjectGuid = '" + sId + "';";
-                await updateCommand.ExecuteNonQueryAsync();
-
-                var insertCommand = connection.CreateCommand();
-                insertCommand.CommandText = "INSERT INTO Projects (ProjectGuid, ProjectName, Config, Routing, Recording, Sequences, DateProject, Author, Active) VALUES (@projectid, @projectname, @config, @routing, @recording, @sequences, @dateproject, @author, @active)";
-                insertCommand.Parameters.AddWithValue("@projectid", sId);
-                insertCommand.Parameters.AddWithValue("@projectname", sProjectName);
-
-                SqliteParameter paramconfig = new SqliteParameter("@config", System.Data.DbType.Binary);
-                paramconfig.Value = binaryProject;
-                insertCommand.Parameters.Add(paramconfig);
-
-                SqliteParameter paramrouting = new SqliteParameter("@routing", System.Data.DbType.Binary);
-                paramrouting.Value = binaryRouting;
-                insertCommand.Parameters.Add(paramrouting);
-
-                SqliteParameter paramrecording = new SqliteParameter("@recording", System.Data.DbType.Binary);
-                paramrecording.Value = binaryRecording;
-                insertCommand.Parameters.Add(paramrecording);
-
-                SqliteParameter paramsequences = new SqliteParameter("@sequences", System.Data.DbType.Binary);
-                paramsequences.Value = binarySequencer;
-                insertCommand.Parameters.Add(paramsequences);
-
-                insertCommand.Parameters.AddWithValue("@dateproject", DateTime.Now.ToString());
-                insertCommand.Parameters.AddWithValue("@author", Environment.UserName);
-                insertCommand.Parameters.AddWithValue("@active", "1");
-                await insertCommand.ExecuteNonQueryAsync();
+                string sDelete = sVersionsToDelete.Count > 1 ? string.Concat(sVersionsToDelete, ",") : sVersionsToDelete[0];
+                var deleteCommand = connection.CreateCommand();
+                deleteCommand.CommandText = "DELETE FROM Projects WHERE ProjectGuid = '" + sId + "' AND Id IN (" + sDelete + ");";
+                await deleteCommand.ExecuteNonQueryAsync();
             }
+
+            var updateCommand = connection.CreateCommand();
+            updateCommand.CommandText = "UPDATE Projects SET Active = 0 WHERE ProjectGuid = '" + sId + "';";
+            await updateCommand.ExecuteNonQueryAsync();
+
+            var insertCommand = connection.CreateCommand();
+            insertCommand.CommandText = "INSERT INTO Projects (ProjectGuid, ProjectName, Config, Routing, Recording, Sequences, DateProject, Author, Active) VALUES (@projectid, @projectname, @config, @routing, @recording, @sequences, @dateproject, @author, @active)";
+            insertCommand.Parameters.AddWithValue("@projectid", sId);
+            insertCommand.Parameters.AddWithValue("@projectname", sProjectName);
+
+            SqliteParameter paramconfig = new("@config", System.Data.DbType.Binary)
+            {
+                Value = binaryProject
+            };
+            insertCommand.Parameters.Add(paramconfig);
+
+            SqliteParameter paramrouting = new("@routing", System.Data.DbType.Binary)
+            {
+                Value = binaryRouting
+            };
+            insertCommand.Parameters.Add(paramrouting);
+
+            SqliteParameter paramrecording = new("@recording", System.Data.DbType.Binary)
+            {
+                Value = binaryRecording
+            };
+            insertCommand.Parameters.Add(paramrecording);
+
+            SqliteParameter paramsequences = new("@sequences", System.Data.DbType.Binary)
+            {
+                Value = binarySequencer
+            };
+            insertCommand.Parameters.Add(paramsequences);
+
+            insertCommand.Parameters.AddWithValue("@dateproject", DateTime.Now.ToString());
+            insertCommand.Parameters.AddWithValue("@author", Environment.UserName);
+            insertCommand.Parameters.AddWithValue("@active", "1");
+            await insertCommand.ExecuteNonQueryAsync();
         }
 
         private int GetProjectName(string sName)
@@ -324,12 +320,10 @@ namespace MidiLiveSystem
                 var selectCommand = connection.CreateCommand();
                 selectCommand.CommandText = "SELECT COUNT(*) FROM Projects WHERE ProjectName LIKE '" + sName + "%';";
 
-                using (var reader = selectCommand.ExecuteReader())
+                using var reader = selectCommand.ExecuteReader();
+                while (reader.Read())
                 {
-                    while (reader.Read())
-                    {
-                        iQte = reader.GetInt32(0);
-                    }
+                    iQte = reader.GetInt32(0);
                 }
             }
 
@@ -338,7 +332,7 @@ namespace MidiLiveSystem
 
         private List<string> GetOldProjectVersion(string sProjectGuid)
         {
-            List<string> sVersions = new List<string>();
+            List<string> sVersions = new();
 
             using (var connection = new SqliteConnection(connectionString))
             {
@@ -347,12 +341,10 @@ namespace MidiLiveSystem
                 var selectCommand = connection.CreateCommand();
                 selectCommand.CommandText = "SELECT Id FROM Projects WHERE ProjectGuid = '" + sProjectGuid + "' ORDER BY DateProject DESC;";
 
-                using (var reader = selectCommand.ExecuteReader())
+                using var reader = selectCommand.ExecuteReader();
+                while (reader.Read())
                 {
-                    while (reader.Read())
-                    {
-                        sVersions.Add(reader.GetString(0));
-                    }
+                    sVersions.Add(reader.GetString(0));
                 }
             }
 
@@ -368,7 +360,7 @@ namespace MidiLiveSystem
 
         public List<string[]> GetProjects()
         {
-            List<string[]> projects = new List<string[]>();
+            List<string[]> projects = new();
 
             using (var connection = new SqliteConnection(connectionString))
             {
@@ -377,12 +369,10 @@ namespace MidiLiveSystem
                 var selectCommand = connection.CreateCommand();
                 selectCommand.CommandText = "SELECT Id, ProjectGuid, ProjectName, DateProject, Author, Active FROM Projects ORDER BY ProjectGuid ASC, Active DESC, DateProject DESC;";
 
-                using (var reader = selectCommand.ExecuteReader())
+                using var reader = selectCommand.ExecuteReader();
+                while (reader.Read())
                 {
-                    while (reader.Read())
-                    {
-                        projects.Add(new string[6] { reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetString(4), reader.GetString(5) });
-                    }
+                    projects.Add(new string[6] { reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetString(4), reader.GetString(5) });
                 }
             }
 
@@ -391,7 +381,7 @@ namespace MidiLiveSystem
 
         public void DeleteProject(string guid, bool bWholeproject)
         {
-            string sQuery = "";
+            string sQuery;
             if (bWholeproject)
             {
                 sQuery = "DELETE FROM Projects WHERE ProjectGuid = '" + guid + "';";
@@ -401,14 +391,12 @@ namespace MidiLiveSystem
                 sQuery = "DELETE FROM Projects WHERE ProjectGuid = '" + guid.Split('|')[0] + "' AND Id = " + guid.Split('|')[1] + ";";
             }
 
-            using (var connection = new SqliteConnection(connectionString))
-            {
-                connection.Open();
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
 
-                var deleteCommand = connection.CreateCommand();
-                deleteCommand.CommandText = sQuery;
-                deleteCommand.ExecuteNonQuery();
-            }
+            var deleteCommand = connection.CreateCommand();
+            deleteCommand.CommandText = sQuery;
+            deleteCommand.ExecuteNonQuery();
         }
 
         public Tuple<Guid, ProjectConfiguration, RoutingBoxes, MidiSequence, SequencerData> GetProject(string idDb)
@@ -417,9 +405,6 @@ namespace MidiLiveSystem
             string sProjectGuid = "";
             string sConfig = "";
             string sRouting = "";
-            string sName = "";
-            string sDate = "";
-            string sAuthor = "";
             string sRecording = "";
             string sSeqData = "";
 
@@ -432,20 +417,18 @@ namespace MidiLiveSystem
                 var selectCommand = connection.CreateCommand();
                 selectCommand.CommandText = "SELECT Id, ProjectGuid, ProjectName, Config, Routing, Recording, Sequences, DateProject, Author, Active FROM Projects WHERE Id = '" + sDbID + "' AND Active = 1;";
 
-                using (var reader = selectCommand.ExecuteReader())
+                using var reader = selectCommand.ExecuteReader();
+                while (reader.Read())
                 {
-                    while (reader.Read())
-                    {
-                        sId = reader.GetString(0);
-                        sProjectGuid = reader.GetString(1);
-                        sName = reader.GetString(2);
-                        sConfig = reader.GetString(3);
-                        sRouting = reader.GetString(4);
-                        sRecording = reader.IsDBNull(5) ? null : reader.GetString(5);
-                        sSeqData = reader.IsDBNull(6) ? null : reader.GetString(6);
-                        sDate = reader.GetString(7);
-                        sAuthor = reader.GetString(8);
-                    }
+                    sId = reader.GetString(0);
+                    sProjectGuid = reader.GetString(1);
+                    string sName = reader.GetString(2);
+                    sConfig = reader.GetString(3);
+                    sRouting = reader.GetString(4);
+                    sRecording = reader.IsDBNull(5) ? null : reader.GetString(5);
+                    sSeqData = reader.IsDBNull(6) ? null : reader.GetString(6);
+                    string sDate = reader.GetString(7);
+                    string sAuthor = reader.GetString(8);
                 }
             }
 
@@ -456,34 +439,30 @@ namespace MidiLiveSystem
                 MidiSequence sequence = null;
                 SequencerData seqs = null;
 
-                XmlSerializer serializerConfig = new XmlSerializer(typeof(ProjectConfiguration));
-                using (StringReader stream = new StringReader(sConfig))
+                XmlSerializer serializerConfig = new(typeof(ProjectConfiguration));
+                using (StringReader stream = new(sConfig))
                 {
                     project = (ProjectConfiguration)serializerConfig.Deserialize(stream);
                 }
 
-                XmlSerializer serializerRouting = new XmlSerializer(typeof(RoutingBoxes));
-                using (StringReader stream = new StringReader(sRouting))
+                XmlSerializer serializerRouting = new(typeof(RoutingBoxes));
+                using (StringReader stream = new(sRouting))
                 {
                     presets = (RoutingBoxes)serializerRouting.Deserialize(stream);
                 }
 
                 if (!string.IsNullOrEmpty(sRecording))
                 {
-                    XmlSerializer serializerRecording = new XmlSerializer(typeof(MidiSequence));
-                    using (StringReader stream = new StringReader(sRecording))
-                    {
-                        sequence = (MidiSequence)serializerRecording.Deserialize(stream);
-                    }
+                    XmlSerializer serializerRecording = new(typeof(MidiSequence));
+                    using StringReader stream = new(sRecording);
+                    sequence = (MidiSequence)serializerRecording.Deserialize(stream);
                 }
 
                 if (!string.IsNullOrEmpty(sSeqData))
                 {
-                    XmlSerializer serializerSeqData = new XmlSerializer(typeof(SequencerData));
-                    using (StringReader stream = new StringReader(sSeqData))
-                    {
-                        seqs = (SequencerData)serializerSeqData.Deserialize(stream);
-                    }
+                    XmlSerializer serializerSeqData = new(typeof(SequencerData));
+                    using StringReader stream = new(sSeqData);
+                    seqs = (SequencerData)serializerSeqData.Deserialize(stream);
                 }
 
                 return new Tuple<Guid, ProjectConfiguration, RoutingBoxes, MidiSequence, SequencerData>(Guid.Parse(sProjectGuid), project, presets, sequence, seqs);
@@ -496,9 +475,6 @@ namespace MidiLiveSystem
         {
             string sId = "";
             string sProjectGuid = "";
-            string sName = "";
-            string sDate = "";
-            string sAuthor = "";
             Stream bConfig = null;
             Stream bRouting = null;
             Stream bRecording = null;
@@ -517,24 +493,22 @@ namespace MidiLiveSystem
                 var selectCommand = connection.CreateCommand();
                 selectCommand.CommandText = "SELECT Id, ProjectGuid, ProjectName, Config, Routing, Recording, Sequences, DateProject, Author, Active FROM Projects WHERE Id = '" + sDbID + "' AND Active = 1;";
 
-                using (var reader = await selectCommand.ExecuteReaderAsync())
+                using var reader = await selectCommand.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
                 {
-                    while (await reader.ReadAsync())
-                    {
-                        sId = reader.GetString(0);
-                        sProjectGuid = reader.GetString(1);
-                        sName = reader.GetString(2);
-                        bConfig = reader.GetStream(3);
-                        sConfig = reader.GetString(3);
-                        bRouting = reader.GetStream(4);
-                        sRouting = reader.GetString(4);
-                        bRecording = reader.IsDBNull(5) ? null : reader.GetStream(5);
-                        sRecording = reader.IsDBNull(5) ? null : reader.GetString(5);
-                        bSequencer = reader.IsDBNull(6) ? null : reader.GetStream(6);
-                        sSequencer = reader.IsDBNull(6) ? null : reader.GetString(6);
-                        sDate = reader.GetString(7);
-                        sAuthor = reader.GetString(8);
-                    }
+                    sId = reader.GetString(0);
+                    sProjectGuid = reader.GetString(1);
+                    string sName = reader.GetString(2);
+                    bConfig = reader.GetStream(3);
+                    sConfig = reader.GetString(3);
+                    bRouting = reader.GetStream(4);
+                    sRouting = reader.GetString(4);
+                    bRecording = reader.IsDBNull(5) ? null : reader.GetStream(5);
+                    sRecording = reader.IsDBNull(5) ? null : reader.GetString(5);
+                    bSequencer = reader.IsDBNull(6) ? null : reader.GetStream(6);
+                    sSequencer = reader.IsDBNull(6) ? null : reader.GetString(6);
+                    string sDate = reader.GetString(7);
+                    string sAuthor = reader.GetString(8);
                 }
             }
 
@@ -561,11 +535,9 @@ namespace MidiLiveSystem
                 }
                 catch
                 {
-                    XmlSerializer serializerConfig = new XmlSerializer(typeof(ProjectConfiguration));
-                    using (StringReader stream = new StringReader(sConfig))
-                    {
-                        project = (ProjectConfiguration)serializerConfig.Deserialize(stream);
-                    }
+                    XmlSerializer serializerConfig = new(typeof(ProjectConfiguration));
+                    using StringReader stream = new(sConfig);
+                    project = (ProjectConfiguration)serializerConfig.Deserialize(stream);
                 }
 
                 try
@@ -581,11 +553,9 @@ namespace MidiLiveSystem
                 }
                 catch
                 {
-                    XmlSerializer serializerRouting = new XmlSerializer(typeof(RoutingBoxes));
-                    using (StringReader stream = new StringReader(sRouting))
-                    {
-                        routing = (RoutingBoxes)serializerRouting.Deserialize(stream);
-                    }
+                    XmlSerializer serializerRouting = new(typeof(RoutingBoxes));
+                    using StringReader stream = new(sRouting);
+                    routing = (RoutingBoxes)serializerRouting.Deserialize(stream);
                 }
 
                 try
@@ -603,11 +573,9 @@ namespace MidiLiveSystem
                 {
                     if (!string.IsNullOrEmpty(sRecording))
                     {
-                        XmlSerializer serializerRecording = new XmlSerializer(typeof(MidiSequence));
-                        using (StringReader stream = new StringReader(sRecording))
-                        {
-                            recording = (MidiSequence)serializerRecording.Deserialize(stream);
-                        }
+                        XmlSerializer serializerRecording = new(typeof(MidiSequence));
+                        using StringReader stream = new(sRecording);
+                        recording = (MidiSequence)serializerRecording.Deserialize(stream);
                     }
                 }
 
@@ -626,11 +594,9 @@ namespace MidiLiveSystem
                 {
                     if (!string.IsNullOrEmpty(sSequencer))
                     {
-                        XmlSerializer serializerSeqData = new XmlSerializer(typeof(SequencerData));
-                        using (StringReader stream = new StringReader(sSequencer))
-                        {
-                            sequencer = (SequencerData)serializerSeqData.Deserialize(stream);
-                        }
+                        XmlSerializer serializerSeqData = new(typeof(SequencerData));
+                        using StringReader stream = new(sSequencer);
+                        sequencer = (SequencerData)serializerSeqData.Deserialize(stream);
                     }
                 }
 
@@ -640,19 +606,17 @@ namespace MidiLiveSystem
             return null;
         }
 
-        public void CloseConnection()
+        public static void CloseConnection()
         {
             // You don't need to explicitly close the connection in Microsoft.Data.Sqlite.
             // The connection is automatically closed when it goes out of scope.
         }
 
-        public byte[] StreamToByteArray(Stream stream)
+        public static byte[] StreamToByteArray(Stream stream)
         {
-            using (MemoryStream memoryStream = new MemoryStream())
-            {
-                stream.CopyTo(memoryStream); // Copie le contenu du Stream dans MemoryStream
-                return memoryStream.ToArray(); // Retourne le contenu de MemoryStream sous forme de tableau de bytes
-            }
+            using MemoryStream memoryStream = new();
+            stream.CopyTo(memoryStream); // Copie le contenu du Stream dans MemoryStream
+            return memoryStream.ToArray(); // Retourne le contenu de MemoryStream sous forme de tableau de bytes
         }
     }
 }

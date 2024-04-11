@@ -22,7 +22,7 @@ namespace MidiLiveSystem
             {
                 PageNumber--;
 
-                BitmapImage bitmapImage = new BitmapImage();
+                BitmapImage bitmapImage = new();
                 bitmapImage.BeginInit();
                 bitmapImage.UriSource = new Uri("assets/" + PageNumber + ".png", UriKind.Relative);
                 bitmapImage.EndInit();
@@ -37,7 +37,7 @@ namespace MidiLiveSystem
             {
                 PageNumber++;
 
-                BitmapImage bitmapImage = new BitmapImage();
+                BitmapImage bitmapImage = new();
                 bitmapImage.BeginInit();
                 bitmapImage.UriSource = new Uri("assets/" + PageNumber + ".png", UriKind.Relative);
                 bitmapImage.EndInit();

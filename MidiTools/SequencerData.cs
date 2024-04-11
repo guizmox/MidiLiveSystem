@@ -42,7 +42,7 @@ namespace MidiTools
 
         }
 
-        public int[] SetTransposition(string sLowKey, string sHighey)
+        public static int[] SetTransposition(string sLowKey, string sHighey)
         {
             int iLow = 0;
             int iHigh = 0;

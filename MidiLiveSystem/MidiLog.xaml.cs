@@ -56,8 +56,10 @@ namespace MidiLiveSystem
                 {
                     if (cbMidiDevices.SelectedIndex == 0 || cbMidiDevices.SelectedValue.ToString().Substring(2).Equals(sDevice))
                     {
-                        Paragraph paragraph = new Paragraph(new Run(sLog));
-                        paragraph.LineHeight = 1;
+                        Paragraph paragraph = new(new Run(sLog))
+                        {
+                            LineHeight = 1
+                        };
                         rtbMidiLog.Document.Blocks.Add(paragraph);
                         if (rtbMidiLog.Document.Blocks.Count > 1000)
                         {

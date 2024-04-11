@@ -21,7 +21,7 @@ namespace MidiTools
         }
 
 
-        public int ProcessEvents(VstEvent[] events)
+        public static int ProcessEvents(VstEvent[] events)
         {
             // Gérer les événements MIDI ici
             foreach (VstEvent vstEvent in events)

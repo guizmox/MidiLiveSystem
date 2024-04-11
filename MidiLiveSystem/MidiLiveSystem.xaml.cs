@@ -20,7 +20,7 @@ namespace MidiLiveSystem
     /// </summary>
     public partial class MainWindow : Window
     {
-        private static string APP_NAME = "Midi Live System";
+        private static readonly string APP_NAME = "Midi Live System";
 
         internal delegate void CCMixEventHandler(Guid RoutingGuid, int[] sValues);
         internal static event CCMixEventHandler CCMixData;
@@ -28,7 +28,7 @@ namespace MidiLiveSystem
         private delegate void UIEventHandler(string sMessage);
         private static event UIEventHandler NewMessage;
 
-        private System.Timers.Timer UIRefreshRate;
+        private readonly System.Timers.Timer UIRefreshRate;
 
         private int CurrentVerticalGrid = 4;
         private int CurrentHorizontalGrid = 4;
@@ -36,22 +36,22 @@ namespace MidiLiveSystem
         private MidiConfiguration ConfigWindow;
         private MidiLog LogWindow;
         private Keyboard KeysWindow;
-        private List<DetachedBox> DetachedWindows = new List<DetachedBox>();
+        private readonly List<DetachedBox> DetachedWindows = new();
         public ProgramHelp HelpWindow;
         public Conductor ConductorWindow;
         public RecallButtons RecallWindow;
         public InternalSequencer SequencerWindow;
         public CCMixer ControlChangeMixer;
 
-        private SequencerData SeqData = new SequencerData();
+        private SequencerData SeqData = new();
 
         private bool ViewOnConfig = false;
 
-        private MidiRouting Routing = new MidiRouting();
-        private List<RoutingBox> Boxes = new List<RoutingBox>();
-        private List<Frame> GridFrames = new List<Frame>();
-        public static BoxPreset CopiedPreset = new BoxPreset();
-        public ProjectConfiguration Project = new ProjectConfiguration();
+        private readonly MidiRouting Routing = new();
+        private List<RoutingBox> Boxes = new();
+        private readonly List<Frame> GridFrames = new();
+        public static BoxPreset CopiedPreset = new();
+        public ProjectConfiguration Project = new();
         public SQLiteDatabaseManager Database;
         public MidiSequence RecordedSequence;
 
@@ -208,34 +208,14 @@ namespace MidiLiveSystem
                 await SequencerWindow.StopPlay(false);
                 SequencerWindow.Close();
             }
-            if (LogWindow != null)
-            {
-                LogWindow.Close();
-            }
-            if (KeysWindow != null)
-            {
-                KeysWindow.Close();
-            }
-            if (ConfigWindow != null)
-            {
-                ConfigWindow.Close();
-            }
-            if (HelpWindow != null)
-            {
-                HelpWindow.Close();
-            }
-            if (ConductorWindow != null)
-            {
-                ConductorWindow.Close();
-            }
-            if (RecallWindow != null)
-            {
-                RecallWindow.Close();
-            }
-            if (ControlChangeMixer != null)
-            {
-                ControlChangeMixer.Close();
-            }
+
+            LogWindow?.Close();
+            KeysWindow?.Close();
+            ConfigWindow?.Close();
+            HelpWindow?.Close();
+            ConductorWindow?.Close();
+            RecallWindow?.Close();
+            ControlChangeMixer?.Close();
 
             foreach (var detached in DetachedWindows)
             {
@@ -383,8 +363,7 @@ namespace MidiLiveSystem
                 switch (sControl)
                 {
                     case "HELP":
-                        if (HelpWindow != null)
-                        { HelpWindow.Close(); }
+                        HelpWindow?.Close();
                         HelpWindow = new ProgramHelp();
                         HelpWindow.Show();
                         break;
@@ -506,7 +485,7 @@ namespace MidiLiveSystem
 
                     case "CHECK_VST_HOST":
                         VSTPlugin vst = await Routing.CheckVSTSlot((string)sValue);
-                        await box.SetVST(vst, Convert.ToInt32(box.cbVSTSlot.SelectedValue.ToString()), Convert.ToInt32(box.cbChannelMidiOut.SelectedValue.ToString()));
+                        await box.SetVST(vst, Convert.ToInt32(box.cbVSTSlot.SelectedValue.ToString()));
                         break;
 
                     case "REMOVE_VST":
@@ -515,7 +494,7 @@ namespace MidiLiveSystem
                         {
                             await b.CheckAndRemoveVST((string)sValue);
                         }
-                        await box.SetVST(null, Convert.ToInt32(box.cbVSTSlot.SelectedValue.ToString()), Convert.ToInt32(box.cbChannelMidiOut.SelectedValue.ToString()));
+                        await box.SetVST(null, Convert.ToInt32(box.cbVSTSlot.SelectedValue.ToString()));
                         break;
 
                     case "PLAY_NOTE":
@@ -674,7 +653,7 @@ namespace MidiLiveSystem
 
         private async void btnAddBox_Click(object sender, RoutedEventArgs e)
         {
-            RoutingBox rtb = new RoutingBox(Project, MidiRouting.InputDevices, MidiRouting.OutputDevices, Boxes.Count);
+            RoutingBox rtb = new(MidiRouting.InputDevices, MidiRouting.OutputDevices, Boxes.Count);
             Boxes.Add(rtb);
             await AddRoutingBoxToFrame(rtb, true);
 
@@ -689,7 +668,7 @@ namespace MidiLiveSystem
                 await SaveTemplate();
                 await Routing.SaveVSTParameters();
 
-                if (RecallWindow != null) { RecallWindow.SaveRecallsToProject(); }
+                RecallWindow?.SaveRecallsToProject();
 
                 try
                 {
@@ -731,7 +710,7 @@ namespace MidiLiveSystem
                 List<string[]> projects = Database.GetProjects();
                 if (projects.Count > 0)
                 {
-                    Projects prj = new Projects(Database, projects);
+                    Projects prj = new(Database, projects);
                     prj.ShowDialog();
                     var project = prj.Project;
                     if (project != null)
@@ -763,7 +742,7 @@ namespace MidiLiveSystem
 
                         await SearchBoxesForAudioInitialization(project.Item3); //initialisation de l'audio si besoin (usage de VST)
 
-                        Boxes = project.Item3.GetBoxes(Project, Routing);
+                        Boxes = project.Item3.GetBoxes(Project);
                         NewMessage?.Invoke("Routing Boxes Loaded");
 
                         if (project.Item4 != null)
@@ -869,7 +848,7 @@ namespace MidiLiveSystem
                 {
                     if (sKey.Equals("BACK", StringComparison.OrdinalIgnoreCase))
                     {
-                        string sNew = textBox.Text.Length == 0 ? "" : textBox.Text.Substring(0, textBox.Text.Length - 1);
+                        string sNew = textBox.Text.Length == 0 ? "" : textBox.Text[..^1];
                         textBox.Text = sNew;
                     }
                     else
@@ -951,10 +930,7 @@ namespace MidiLiveSystem
         {
             if (btnLog.Background == Brushes.IndianRed) //log était inactif
             {
-                if (LogWindow == null)
-                {
-                    LogWindow = new MidiLog();
-                }
+                LogWindow ??= new MidiLog();
                 LogWindow.Closed += Log_Closed;
                 MidiRouting.NewLog += MidiRouting_NewLog;
                 Routing.StartLog();
@@ -1013,10 +989,7 @@ namespace MidiLiveSystem
 
         private async void btnRecordSequence_Click(object sender, RoutedEventArgs e)
         {
-            if (RecordedSequence == null)
-            {
-                RecordedSequence = new MidiSequence();
-            }
+            RecordedSequence ??= new MidiSequence();
 
             RecordedSequence.RecordCounter -= RecordedSequence_RecordCounter;
             RecordedSequence.SequenceFinished -= Routing_SequenceFinished;
@@ -1036,10 +1009,7 @@ namespace MidiLiveSystem
                     btnRecordSequence.Background = Brushes.DarkGray;
                     RecordedSequence.StopRecording(false, true);
 
-                    if (Project == null)
-                    {
-                        Project = new ProjectConfiguration();
-                    }
+                    Project ??= new ProjectConfiguration();
                     Project.RecordedSequence = RecordedSequence;
                     MessageBox.Show(RecordedSequence.GetSequenceInfo());
                 }
@@ -1106,7 +1076,7 @@ namespace MidiLiveSystem
                         RecordedSequence.RecordCounter += PlayedSequence_RecordCounter;
                         UIRefreshRate.Stop(); //blocage de tout ce qui va potentiellement aller modifier le routing
 
-                        RecordedSequence.PlayRecordingAsync(Routing);
+                        RecordedSequence.PlayRecordingAsync();
                     }
                 }
                 else
@@ -1158,9 +1128,11 @@ namespace MidiLiveSystem
             {
                 for (int col = 0; col < iCols; col++)
                 {
-                    Border border = new Border();
-                    border.BorderBrush = Brushes.Gray;
-                    border.BorderThickness = new Thickness(1);
+                    Border border = new()
+                    {
+                        BorderBrush = Brushes.Gray,
+                        BorderThickness = new Thickness(1)
+                    };
 
                     await Dispatcher.InvokeAsync(() =>
                     {
@@ -1168,7 +1140,7 @@ namespace MidiLiveSystem
                         Grid.SetColumn(border, col);
                         gridBoxes.Children.Add(border);
 
-                        Frame frame = new Frame
+                        Frame frame = new()
                         {
                             Name = string.Concat("frmBox", row, "x", col),
                             Tag = ""
@@ -1261,7 +1233,7 @@ namespace MidiLiveSystem
                         }
                         else
                         {
-                            DetachedBox db = new DetachedBox(rtb);
+                            DetachedBox db = new(rtb);
                             db.Show();
                             if (bCreate)
                             {
@@ -1286,7 +1258,7 @@ namespace MidiLiveSystem
 
         private async Task UpdateDevicesUsage()
         {
-            List<string> UsedDevices = new List<string>();
+            List<string> UsedDevices = new();
 
             for (int iB = 0; iB < Boxes.Count; iB++) //mise à jour des pérophériques MIDI utilisés
             {
@@ -1298,7 +1270,7 @@ namespace MidiLiveSystem
 
         private async Task SaveTemplate()
         {
-            List<Task> tasks = new List<Task>();
+            List<Task> tasks = new();
 
             await UpdateDevicesUsage();
 
@@ -1315,21 +1287,14 @@ namespace MidiLiveSystem
 
         private async Task ProcessBoxData(RoutingBox box, bool bFromSave)
         {
-            string sDevIn = "";
-            string sDevOut = "";
-            int iChIn = 0;
-            int iChOut = 0;
-            MidiOptions options = null;
-            MidiPreset preset = null;
-
             BoxPreset snapshot = await box.Snapshot();
 
-            sDevIn = snapshot.DeviceIn;
-            sDevOut = snapshot.DeviceOut;
-            iChIn = snapshot.ChannelIn;
-            iChOut = snapshot.ChannelOut;
-            options = snapshot.MidiOptions;
-            preset = snapshot.MidiPreset;
+            string sDevIn = snapshot.DeviceIn;
+            string sDevOut = snapshot.DeviceOut;
+            int iChIn = snapshot.ChannelIn;
+            int iChOut = snapshot.ChannelOut;
+            MidiOptions options = snapshot.MidiOptions;
+            MidiPreset preset = snapshot.MidiPreset;
             VSTPlugin vst = box.GetVST();
 
             if (box.RoutingGuid == Guid.Empty || bFromSave)
@@ -1340,7 +1305,7 @@ namespace MidiLiveSystem
                     if (vst != null)
                     {
                         vst = await Routing.CheckVSTSlot(sDevOut);
-                        await box.SetVST(vst, Convert.ToInt32(box.cbVSTSlot.SelectedValue.ToString()), Convert.ToInt32(box.cbChannelMidiOut.SelectedValue.ToString()));
+                        await box.SetVST(vst, Convert.ToInt32(box.cbVSTSlot.SelectedValue.ToString()));
                     }
 
                     Routing.SetRoutingGuid(autogeneratedguid, box.RoutingGuid);
@@ -1449,9 +1414,9 @@ namespace MidiLiveSystem
 
         }
 
-        internal List<RoutingBox> GetBoxes(ProjectConfiguration project, MidiRouting routing)
+        internal List<RoutingBox> GetBoxes(ProjectConfiguration project)
         {
-            List<RoutingBox> boxes = new List<RoutingBox>();
+            List<RoutingBox> boxes = new();
 
             IEnumerable<Guid> distinctValues = AllPresets.Select(arr => arr.BoxGuid).Distinct();
 
@@ -1469,12 +1434,12 @@ namespace MidiLiveSystem
                     }
                     else { iGridPosition++; }
 
-                    var box = new RoutingBox(project, MidiRouting.InputDevices, MidiRouting.OutputDevices, iGridPosition, g, presetsample.BoxName, presetsample.RoutingGuid, AllPresets.Where(p => p.BoxGuid == g).ToArray());
+                    var box = new RoutingBox(MidiRouting.InputDevices, MidiRouting.OutputDevices, iGridPosition, g, presetsample.RoutingGuid, AllPresets.Where(p => p.BoxGuid == g).ToArray());
                     boxes.Add(box);
                 }
             }
             //inscrire le nom des presets en force
-            for (int i = 0; i < AllPresets.Count(); i += 8) //toujours 8 par box
+            for (int i = 0; i < AllPresets.Length; i += 8) //toujours 8 par box
             {
                 var box = boxes.FirstOrDefault(b => b.BoxGuid == AllPresets[i].BoxGuid);
                 box.btnPreset1.Content = AllPresets[i].PresetName;

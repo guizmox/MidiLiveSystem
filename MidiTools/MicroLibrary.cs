@@ -115,8 +115,10 @@ namespace MicroLibrary
                                   ref _stopTimer);
             };
 
-            _threadTimer = new System.Threading.Thread(threadStart);
-            _threadTimer.Priority = System.Threading.ThreadPriority.Highest;
+            _threadTimer = new System.Threading.Thread(threadStart)
+            {
+                Priority = System.Threading.ThreadPriority.Highest
+            };
             _threadTimer.Start();
         }
 
@@ -135,7 +137,7 @@ namespace MicroLibrary
             _stopTimer = true;
 
             if (!Enabled || _threadTimer.ManagedThreadId ==
-                System.Threading.Thread.CurrentThread.ManagedThreadId)
+                Environment.CurrentManagedThreadId)
             {
                 return true;
             }
@@ -143,15 +145,15 @@ namespace MicroLibrary
             return _threadTimer.Join(timeoutInMilliSec);
         }
 
-        public void Abort()
-        {
-            _stopTimer = true;
+        //public void Abort()
+        //{
+        //    _stopTimer = true;
 
-            if (Enabled)
-            {
-                _threadTimer.Abort();
-            }
-        }
+        //    if (Enabled)
+        //    {
+        //        _threadTimer.Abort();
+        //    }
+        //}
 
         void NotificationTimer(ref long timerIntervalInMicroSec,
                                ref long ignoreEventIfLateBy,
@@ -160,7 +162,7 @@ namespace MicroLibrary
             int  timerCount = 0;
             long nextNotification = 0;
 
-            MicroStopwatch microStopwatch = new MicroStopwatch();
+            MicroStopwatch microStopwatch = new();
             microStopwatch.Start();
 
             while (!stopTimer)
@@ -191,7 +193,7 @@ namespace MicroLibrary
                 }
 
                 MicroTimerEventArgs microTimerEventArgs =
-                     new MicroTimerEventArgs(timerCount,
+                     new(timerCount,
                                              elapsedMicroseconds,
                                              timerLateBy,
                                              callbackFunctionExecutionTime);

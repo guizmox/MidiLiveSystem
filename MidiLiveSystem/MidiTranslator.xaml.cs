@@ -26,156 +26,93 @@ namespace MidiLiveSystem
             InitializeComponent();
         }
 
-        internal string[] GetTranslatorConfiguration()
+        internal MessageTranslator GetTranslatorConfiguration()
         {
-            string sName = tbTranslatorName.Text.Trim();
-
-            StringBuilder sbINScript = new StringBuilder();
-
             ComboBoxItem cbIN = (ComboBoxItem)cbEventInType.SelectedItem;
+
+            MessageTranslator translator = new MessageTranslator(tbTranslatorName.Text.Trim());
+
+            translator.OutAddsOriginalEvent = ckAddsInEvent.IsChecked.Value;
 
             if (cbIN != null)
             {
-                sbINScript.Append("[IN=");
-
                 switch (cbIN.Tag)
                 {
                     case "KEY":
-                        //[IN=KEY#0-127]
-                        sbINScript.Append("KEY#");
-                        sbINScript.Append(tbINLowKey.Text.Trim());
-                        sbINScript.Append(":");
-                        sbINScript.Append(tbINLowVelo.Text.Trim());
+                        translator.IN_AddNote(tbINLowKey.Text.Trim(), tbINLowVelo.Text.Trim(), tbINHighVelo.Text.Trim());
                         break;
                     case "KEY_RANGE":
-                        sbINScript.Append("KEY#");
-                        sbINScript.Append(tbINLowKey.Text.Trim() + "-" + tbINHighKey.Text.Trim());
-                        sbINScript.Append(":");
-                        sbINScript.Append(tbINLowVelo.Text.Trim() + "-" + tbINHighVelo.Text.Trim());
+                        translator.IN_AddNoteRange(tbINLowKey.Text.Trim(), tbINHighKey.Text.Trim(), tbINLowVelo.Text.Trim(), tbINHighVelo.Text.Trim());
                         break;
                     case "CC":
-                        //[IN=CC#7:0-127]
-                        sbINScript.Append("CC#");
-                        sbINScript.Append(tbINCC.Text.Trim());
-                        sbINScript.Append(":");
-                        sbINScript.Append(tbINLowCCValue.Text.Trim());
+                        translator.IN_AddCC(tbINCC.Text.Trim(), tbINLowCCValue.Text.Trim());
                         break;
                     case "CC_RANGE":
-                        sbINScript.Append("CC#");
-                        sbINScript.Append(tbINCC.Text.Trim());
-                        sbINScript.Append(":");
-                        sbINScript.Append(tbINLowCCValue.Text.Trim() + "-" + tbINHighCCValue.Text.Trim());
+                        translator.IN_AddCCRange(tbINCC.Text.Trim(), tbINLowCCValue.Text.Trim(), tbINHighCCValue.Text.Trim());
                         break;
                     case "PC":
-                        //[IN=PC#0-127]
-                        sbINScript.Append("PC#");
-                        sbINScript.Append(tbINLowPCValue.Text.Trim());
+                        translator.IN_AddPC(tbINLowPCValue.Text.Trim());
                         break;
                     case "PC_RANGE":
-                        sbINScript.Append("PC#");
-                        sbINScript.Append(tbINLowPCValue.Text.Trim() + "-" + tbINHighPCValue.Text.Trim());
+                        translator.IN_AddPCRange(tbINLowPCValue.Text.Trim(), tbINHighPCValue.Text.Trim());
                         break;
                     case "SYS":
-                        //[IN=SYS#F0...F7]
-                        sbINScript.Append("SYS#");
-                        TextRange textRange = new TextRange(rtbINSys.Document.ContentStart, rtbINSys.Document.ContentEnd);
-                        sbINScript.Append(textRange.Text.Replace("-", "").Trim());
+                        TextRange textRange = new(rtbINSys.Document.ContentStart, rtbINSys.Document.ContentEnd);
+                        translator.IN_AddSysEx(textRange.Text.Replace("-", "").Trim());
                         break;
                     case "AT":
-                        sbINScript.Append("AT#");
-                        sbINScript.Append(tbINLowATValue.Text.Trim());
+                        translator.IN_AddAT(tbINLowATValue.Text.Trim());
                         break;
                     case "AT_RANGE":
-                        sbINScript.Append("AT#");
-                        sbINScript.Append(tbINLowATValue.Text.Trim() + "-" + tbINHighATValue.Text.Trim());
+                        translator.IN_AddATRange(tbINLowATValue.Text.Trim(), tbINHighATValue.Text.Trim());
                         break;
                     case "PB":
-                        //[IN=PB#0:0-127] //0=UP, 1=DOWN, 2=BOTH
-                        sbINScript.Append("PB#");
-                        sbINScript.Append(cbINPBDirection.SelectedIndex.ToString() + ":" + tbINLowPBValue.Text.Trim() + "-" + tbINHighPBValue.Text.Trim());
+                        translator.IN_AddPB(cbINPBDirection.SelectedIndex.ToString(), tbINLowPBValue.Text.Trim(), tbINHighPBValue.Text.Trim());
                         break;
                 }
-
-                sbINScript.Append("]");
             }
-
-            StringBuilder sbOUTScript = new StringBuilder();
 
             ComboBoxItem cbOUT = (ComboBoxItem)cbEventOutType.SelectedItem;
 
             if (cbOUT != null)
             {
-                sbOUTScript.Append("[OUT=");
-
                 switch (cbOUT.Tag)
                 {
                     case "KEY":
-                        sbOUTScript.Append("KEY#");
-                        sbOUTScript.Append(tbOUTKey.Text.Trim());
-                        sbOUTScript.Append(":");
-                        sbOUTScript.Append(tbOUTVeloKey.Text.Equals("-1") ? "0-127" : tbOUTVeloKey.Text.Trim());
-                        sbOUTScript.Append(":");
-                        sbOUTScript.Append(tbOUTLengthKey.Text.Trim());
+                        translator.OUT_AddNote(tbOUTKey.Text.Trim(), tbOUTVeloKey.Text.Trim(), tbOUTLengthKey.Text.Trim());
                         break;
                     case "KEY_RANGE":
-                        //[OUT=KEY#64:64:1000] -> fixed key, fixed velo, length
-                        //[OUT=KEY#0-127:0-127:1000] -> key range, velo range, length
-                        sbOUTScript.Append("KEY#");
-                        sbOUTScript.Append(tbOUTKey.Text.Equals("-1") ? "0-127" : tbOUTKey.Text.Trim());
-                        sbOUTScript.Append(":");
-                        sbOUTScript.Append(tbOUTVeloKey.Text.Equals("-1") ? "0-127" : tbOUTVeloKey.Text.Trim());
-                        sbOUTScript.Append(":");
-                        sbOUTScript.Append(tbOUTLengthKey.Text.Trim());
+                        translator.OUT_AddNoteRange(tbOUTKey.Text.Trim(), tbOUTVeloKey.Text.Trim(), tbOUTLengthKey.Text.Trim());
                         break;
                     case "CC":
-                        sbOUTScript.Append("CC#");
-                        sbOUTScript.Append(tbOUTCC.Text.Trim());
-                        sbOUTScript.Append(":");
-                        sbOUTScript.Append(tbOUTCCValue.Text.Trim());
+                        translator.OUT_AddCC(tbOUTCC.Text.Trim(), tbOUTCCValue.Text.Trim());
                         break;
                     case "CC_RANGE":
-                        //[OUT=CC#64:64-127] 4,5,8
-                        //[OUT= CC#64:64]
-                        sbOUTScript.Append("CC#");
-                        sbOUTScript.Append(tbOUTCC.Text.Trim());
-                        sbOUTScript.Append(":");
-                        sbOUTScript.Append("0-127");
+                        translator.OUT_AddCCRange(tbOUTCC.Text.Trim());
                         break;
                     case "PC":
-                        sbOUTScript.Append("PC#");
-                        sbOUTScript.Append(tbOUTPCValue.Text.Trim());
+                        translator.OUT_AddPC(tbOUTPCValue.Text.Trim(), tbOUTMSBValue.Text.Trim(), tbOUTLSBValue.Text.Trim());
                         break;
                     case "PC_RANGE":
-                        //[OUT=PC#0:0:0]
-                        //[OUT= PC#0-127:0:0]
-                        sbOUTScript.Append("PC#");
-                        sbOUTScript.Append("0-127");
+                        translator.OUT_AddPCRange(tbOUTMSBValue.Text.Trim(), tbOUTLSBValue.Text.Trim());
                         break;
                     case "SYS":
-                        sbOUTScript.Append("SYS#");
-                        TextRange textRange = new TextRange(rtbOUTSys.Document.ContentStart, rtbOUTSys.Document.ContentEnd);
-                        sbOUTScript.Append(textRange.Text.Replace("-", "").Trim());
+                        TextRange textRange = new(rtbOUTSys.Document.ContentStart, rtbOUTSys.Document.ContentEnd);
+                        translator.OUT_AddSysEx(textRange.Text.Replace("-", "").Trim());
                         break;
                     case "AT":
-                        sbOUTScript.Append("AT#");
-                        sbOUTScript.Append(tbOUTATValue.Text.Trim());
+                        translator.OUT_AddAT(tbOUTATValue.Text.Trim());
                         break;
                     case "AT_RANGE":
-                        sbOUTScript.Append("AT#");
-                        sbOUTScript.Append("0-127");
+                        translator.OUT_AddATRange();
                         break;
                     case "PB":
-                        //[OUT=PB#0:0-127] //0=UP, 1=DOWN, 2=BOTH
-                        sbINScript.Append("PB#");
-                        sbINScript.Append(cbOUTPBDirection.SelectedIndex.ToString() + ":" + tbOUTLowPBValue.Text.Trim() + "-" + tbOUTHighPBValue.Text.Trim());
+                        translator.OUT_AddPB(cbOUTPBDirection.SelectedIndex.ToString(), tbOUTLowPBValue.Text.Trim(), tbOUTHighPBValue.Text.Trim());
                         break;
                 }
-
-                sbOUTScript.Append("]");
             }
 
-            if (sbINScript.Length > 0 && sbOUTScript.Length > 0)
-            { return new string[] { sbINScript.ToString() + sbOUTScript.ToString(), sName }; }
+            if (translator.IsReady) { return translator; }
             else { return null; }
 
         }
@@ -203,9 +140,9 @@ namespace MidiLiveSystem
             }
         }
 
-        private bool ControlValue(string sValue, bool bLessAuthorized)
+        private static bool ControlValue(string sValue, bool bLessAuthorized)
         {
-            int iParse = -1;
+            int iParse;
             if (int.TryParse(sValue, out iParse))
             {
                 if (iParse >= (bLessAuthorized ? -1 : 0) && iParse <= 127)
@@ -217,9 +154,9 @@ namespace MidiLiveSystem
             else { return false; }
         }
 
-        private bool ControlPitchBendValue(string sValue)
+        private static bool ControlPitchBendValue(string sValue)
         {
-            int iParse = -1;
+            int iParse;
             if (int.TryParse(sValue, out iParse))
             {
                 if (iParse >= -8192 && iParse <= 8192)
@@ -233,7 +170,7 @@ namespace MidiLiveSystem
 
         private string CheckFields()
         {
-            StringBuilder sbErrors = new StringBuilder();
+            StringBuilder sbErrors = new();
 
             if (!ControlValue(tbINLowKey.Text, false))
             {
@@ -300,8 +237,7 @@ namespace MidiLiveSystem
                 sbErrors.AppendLine("OUT Note Velocity (" + tbOUTVeloKey.Text + ")");
             }
 
-            int iLength = 0;
-            if (!int.TryParse(tbOUTLengthKey.Text, out iLength))
+            if (!int.TryParse(tbOUTLengthKey.Text, out int iLength))
             {
                 sbErrors.AppendLine("OUT Note Length. Expecting a value between 1 and 10000 ms (" + tbOUTLengthKey.Text + ")");
             }

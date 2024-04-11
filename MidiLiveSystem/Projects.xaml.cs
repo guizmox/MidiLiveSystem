@@ -21,7 +21,7 @@ namespace MidiLiveSystem
     public partial class Projects : Window
     {
         internal Tuple<Guid, ProjectConfiguration, RoutingBoxes, MidiSequence, SequencerData> Project;
-        private SQLiteDatabaseManager Database;
+        private readonly SQLiteDatabaseManager Database;
 
         public Projects(SQLiteDatabaseManager db, List<string[]> sListProjects)
         {
@@ -42,16 +42,20 @@ namespace MidiLiveSystem
             {
                 var versions = sListProjects.Where(p => p[1].Equals(prj)).ToList();
 
-                TreeViewItem prjItem = new TreeViewItem();
-                prjItem.Header = versions.Count > 0 ? versions[0][2] : prj;
-                prjItem.Tag = prj;
+                TreeViewItem prjItem = new()
+                {
+                    Header = versions.Count > 0 ? versions[0][2] : prj,
+                    Tag = prj
+                };
 
                 foreach (var ver in versions)
                 {
-                    TreeViewItem prjversion = new TreeViewItem();
-                    prjversion.Header = string.Concat("Date : ", ver[3], " [", ver[4], "]");
-                    prjversion.Foreground = ver[5].Equals("1") ? Brushes.Green : Brushes.Red;
-                    prjversion.Tag =string.Concat(prj, "|", ver[0]);
+                    TreeViewItem prjversion = new()
+                    {
+                        Header = string.Concat("Date : ", ver[3], " [", ver[4], "]"),
+                        Foreground = ver[5].Equals("1") ? Brushes.Green : Brushes.Red,
+                        Tag = string.Concat(prj, "|", ver[0])
+                    };
                     prjItem.Items.Add(prjversion);
                 }
                 tvProjects.Items.Add(prjItem);
@@ -66,7 +70,7 @@ namespace MidiLiveSystem
                 string sProject = prj.Tag.ToString();
                 if (sProject.Length > 0)
                 {
-                    bool bWholeProject = false;
+                    bool bWholeProject;
                     if (sProject.IndexOf("|") > 0)
                     {
                         bWholeProject = false;

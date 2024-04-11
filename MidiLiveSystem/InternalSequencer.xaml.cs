@@ -24,10 +24,10 @@ namespace MidiLiveSystem
 
         private bool Playing = false;
         private string DeviceListener = "";
-        private MidiRouting Routing;
-        private SequencerData SeqData;
-        private List<SequencerBox> SequencerBoxes = new List<SequencerBox>();
-        private List<Frame> GridFrames = new List<Frame>();
+        private readonly MidiRouting Routing;
+        private readonly SequencerData SeqData;
+        private readonly List<SequencerBox> SequencerBoxes = new();
+        private readonly List<Frame> GridFrames = new();
 
         public InternalSequencer(ProjectConfiguration project, MidiRouting routing, SequencerData seqdata)
         {
@@ -51,14 +51,16 @@ namespace MidiLiveSystem
 
             for (int row = 1; row < 5; row++)
             {
-                Border border = new Border();
-                border.BorderBrush = Brushes.Gray;
-                border.BorderThickness = new Thickness(1);
+                Border border = new()
+                {
+                    BorderBrush = Brushes.Gray,
+                    BorderThickness = new Thickness(1)
+                };
 
                 Grid.SetRow(border, row);
                 gdSequencer.Children.Add(border);
 
-                Frame frame = new Frame
+                Frame frame = new()
                 {
                     Name = string.Concat("frmBox", row, "x", row),
                     Tag = "",
@@ -130,7 +132,7 @@ namespace MidiLiveSystem
 
             string sLowKey = await tbLowKeyTranspose.Dispatcher.InvokeAsync(() => tbLowKeyTranspose.Text);
             string sHighey = await tbHighKeyTranspose.Dispatcher.InvokeAsync(() => tbHighKeyTranspose.Text);
-            var result = SeqData.SetTransposition(sLowKey, sHighey);
+            var result = SequencerData.SetTransposition(sLowKey, sHighey);
             await tbLowKeyTranspose.Dispatcher.InvokeAsync(() => tbLowKeyTranspose.Text = result[0].ToString());
             await tbHighKeyTranspose.Dispatcher.InvokeAsync(() => tbHighKeyTranspose.Text = result[1].ToString());
         }
@@ -177,7 +179,7 @@ namespace MidiLiveSystem
             {
                 string sLowKey = await tbLowKeyTranspose.Dispatcher.InvokeAsync(() => tbLowKeyTranspose.Text);
                 string sHighey = await tbHighKeyTranspose.Dispatcher.InvokeAsync(() => tbHighKeyTranspose.Text);
-                var result = SeqData.SetTransposition(sLowKey, sHighey);
+                var result = SequencerData.SetTransposition(sLowKey, sHighey);
                 await tbLowKeyTranspose.Dispatcher.InvokeAsync(() => tbLowKeyTranspose.Text = result[0].ToString());
                 await tbHighKeyTranspose.Dispatcher.InvokeAsync(() => tbHighKeyTranspose.Text = result[1].ToString());
 
@@ -259,7 +261,7 @@ namespace MidiLiveSystem
                    
                 }
 
-                Routing.Panic(false);
+                MidiRouting.Panic();
                 Playing = false;
             }
         }

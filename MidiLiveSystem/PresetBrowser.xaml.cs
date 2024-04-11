@@ -24,7 +24,7 @@ namespace MidiLiveSystem
         public delegate void BrowserPresetChanged(MidiPreset mp);
         public event BrowserPresetChanged OnPresetChanged;
 
-        private InstrumentData InstrumentPresets;
+        private readonly InstrumentData InstrumentPresets;
 
         public PresetBrowser(InstrumentData instr, MidiPreset preset = null)
         {
@@ -94,11 +94,13 @@ namespace MidiLiveSystem
             string sL3 = "";
             string sL4 = "";
 
-            TreeViewItem catFav = new TreeViewItem();
-            catFav.Header = "- FAVOURITES -";
-            catFav.Tag = "0";
-            catFav.FontWeight = FontWeights.Bold;
-            catFav.Foreground = Brushes.IndianRed;
+            TreeViewItem catFav = new()
+            {
+                Header = "- FAVOURITES -",
+                Tag = "0",
+                FontWeight = FontWeights.Bold,
+                Foreground = Brushes.IndianRed
+            };
 
             foreach (var g in instr.Categories)
             {
@@ -106,11 +108,13 @@ namespace MidiLiveSystem
                 {
                     if (p.IsFavourite)
                     {
-                        TreeViewItem presetItem = new TreeViewItem();
-                        presetItem.Header = p.PresetName;
-                        presetItem.Tag = p.Id;
-                        presetItem.FontWeight = FontWeights.Normal;
-                        presetItem.Foreground = Brushes.Black;
+                        TreeViewItem presetItem = new()
+                        {
+                            Header = p.PresetName,
+                            Tag = p.Id,
+                            FontWeight = FontWeights.Normal,
+                            Foreground = Brushes.Black
+                        };
                         catFav.Items.Add(presetItem);
                     }
                 }
@@ -120,11 +124,13 @@ namespace MidiLiveSystem
             foreach (var g in instr.Categories)
             {
 
-                TreeViewItem categoryItem = new TreeViewItem();
-                categoryItem.Header = g.Category;
-                categoryItem.Tag = g.IndexInFile.ToString();
-                categoryItem.FontWeight = FontWeights.Normal;
-                categoryItem.Foreground = Brushes.DarkBlue;
+                TreeViewItem categoryItem = new()
+                {
+                    Header = g.Category,
+                    Tag = g.IndexInFile.ToString(),
+                    FontWeight = FontWeights.Normal,
+                    Foreground = Brushes.DarkBlue
+                };
 
                 //if (g.Category.Equals("Orchestral Woodwinds"))
                 //{
@@ -135,11 +141,13 @@ namespace MidiLiveSystem
                 {
                     foreach (var p in g.Presets)
                     {
-                        TreeViewItem presetItem = new TreeViewItem();
-                        presetItem.Header = p.PresetName;
-                        presetItem.Tag = p.Id;
-                        presetItem.FontWeight = FontWeights.Normal;
-                        presetItem.Foreground = Brushes.Black;
+                        TreeViewItem presetItem = new()
+                        {
+                            Header = p.PresetName,
+                            Tag = p.Id,
+                            FontWeight = FontWeights.Normal,
+                            Foreground = Brushes.Black
+                        };
                         categoryItem.Items.Add(presetItem);
                     }
                 }
@@ -177,7 +185,7 @@ namespace MidiLiveSystem
             }
         }
 
-        private TreeViewItem FindParentNode(ItemsControl parent, string categoryIndexInFile)
+        private static TreeViewItem FindParentNode(ItemsControl parent, string categoryIndexInFile)
         {
             foreach (var item in parent.Items)
             {
@@ -213,17 +221,21 @@ namespace MidiLiveSystem
 
         private void FilterTreeViewByPrg(string sPrg, string sMsb, string sLsb)
         {
-            var filter = new InstrumentData();
-            filter.CubaseFile = InstrumentPresets.CubaseFile;
-            filter.Device = InstrumentPresets.Device;
+            var filter = new InstrumentData
+            {
+                CubaseFile = InstrumentPresets.CubaseFile,
+                Device = InstrumentPresets.Device
+            };
             foreach (PresetHierarchy category in InstrumentPresets.Categories)
             {
-                PresetHierarchy cat = new PresetHierarchy();
-                cat.IndexInFile = category.IndexInFile;
-                cat.Category = category.Category;
-                cat.Level = 1;
-                cat.Raw = category.Raw;
-                cat.Presets = new List<MidiPreset>();
+                PresetHierarchy cat = new()
+                {
+                    IndexInFile = category.IndexInFile,
+                    Category = category.Category,
+                    Level = 1,
+                    Raw = category.Raw,
+                    Presets = new List<MidiPreset>()
+                };
 
                 foreach (var preset in category.Presets)
                 {
@@ -231,13 +243,15 @@ namespace MidiLiveSystem
                         (preset.Msb.ToString().Equals(sMsb, StringComparison.InvariantCultureIgnoreCase) || sMsb.Length == 0) &&
                         (preset.Lsb.ToString().Equals(sLsb, StringComparison.InvariantCultureIgnoreCase) || sLsb.Length == 0))
                     {
-                        MidiPreset p = new MidiPreset();
-                        p.PresetName = preset.PresetName;
-                        p.Prg = preset.Prg;
-                        p.Lsb = preset.Lsb;
-                        p.Msb = preset.Msb;
-                        p.InstrumentGroup = preset.InstrumentGroup;
-                        p.Channel = preset.Channel;
+                        MidiPreset p = new()
+                        {
+                            PresetName = preset.PresetName,
+                            Prg = preset.Prg,
+                            Lsb = preset.Lsb,
+                            Msb = preset.Msb,
+                            InstrumentGroup = preset.InstrumentGroup,
+                            Channel = preset.Channel
+                        };
 
                         cat.Presets.Add(p);
                     }
@@ -261,29 +275,35 @@ namespace MidiLiveSystem
                 }
                 else
                 {
-                    var filter = new InstrumentData();
-                    filter.CubaseFile = InstrumentPresets.CubaseFile;
-                    filter.Device = InstrumentPresets.Device;
+                    var filter = new InstrumentData
+                    {
+                        CubaseFile = InstrumentPresets.CubaseFile,
+                        Device = InstrumentPresets.Device
+                    };
                     foreach (PresetHierarchy category in InstrumentPresets.Categories)
                     {
-                        PresetHierarchy cat = new PresetHierarchy();
-                        cat.IndexInFile = category.IndexInFile;
-                        cat.Category = category.Category;
-                        cat.Level = 1;
-                        cat.Raw = category.Raw;
-                        cat.Presets = new List<MidiPreset>();
+                        PresetHierarchy cat = new()
+                        {
+                            IndexInFile = category.IndexInFile,
+                            Category = category.Category,
+                            Level = 1,
+                            Raw = category.Raw,
+                            Presets = new List<MidiPreset>()
+                        };
 
                         foreach (var preset in category.Presets)
                         {
                             if (preset.PresetName.Contains(filterText.Trim(), StringComparison.InvariantCultureIgnoreCase))
                             {
-                                MidiPreset p = new MidiPreset();
-                                p.PresetName = preset.PresetName;
-                                p.Prg = preset.Prg;
-                                p.Lsb = preset.Lsb;
-                                p.Msb = preset.Msb;
-                                p.InstrumentGroup = preset.InstrumentGroup;
-                                p.Channel = preset.Channel;
+                                MidiPreset p = new()
+                                {
+                                    PresetName = preset.PresetName,
+                                    Prg = preset.Prg,
+                                    Lsb = preset.Lsb,
+                                    Msb = preset.Msb,
+                                    InstrumentGroup = preset.InstrumentGroup,
+                                    Channel = preset.Channel
+                                };
 
                                 cat.Presets.Add(p);
                             }
@@ -301,9 +321,10 @@ namespace MidiLiveSystem
 
         internal void GetPreset()
         {
-            MidiPreset mp = new MidiPreset();
-
-            mp.PresetName = tbName.Text.Trim();
+            MidiPreset mp = new()
+            {
+                PresetName = tbName.Text.Trim()
+            };
 
             int iErrors = 0;
 

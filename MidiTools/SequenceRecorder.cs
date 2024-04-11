@@ -17,7 +17,7 @@ namespace MidiTools
     public class MidiSequence
     {
         [IgnoreMember] // Ignorer cette propriété privée lors de la sérialisation
-        private EventPool Tasks = new EventPool("MidiSequence");
+        private readonly EventPool Tasks = new("MidiSequence");
 
         [Key("SequencerDefault")]
         public List<LiveData> SequencerDefault { get; set; } = new List<LiveData>();
@@ -29,10 +29,10 @@ namespace MidiTools
         public event RecorderLengthCounter RecordCounter;
 
         [IgnoreMember] // Ignorer cette propriété privée lors de la sérialisation
-        private readonly List<MidiEvent> _eventsIN = new List<MidiEvent>();
+        private readonly List<MidiEvent> _eventsIN = new();
 
         [IgnoreMember] // Ignorer cette propriété privée lors de la sérialisation
-        private readonly List<MidiEvent> _eventsOUT = new List<MidiEvent>();
+        private readonly List<MidiEvent> _eventsOUT = new();
 
         [Key("EventsOUT")]
         public List<MidiEvent> EventsOUT { get { return _eventsOUT; } }
@@ -65,7 +65,7 @@ namespace MidiTools
         public string GetSequenceInfo()
         {
             int iTracks = 0;
-            StringBuilder sbInfo = new StringBuilder();
+            StringBuilder sbInfo = new();
             sbInfo.AppendLine("Sequence Status :");
             sbInfo.AppendLine(Environment.NewLine);
             var devices = _eventsOUT.Select(e => e.Device).Distinct();
@@ -75,7 +75,7 @@ namespace MidiTools
                 string sChannels = " [Ch : ";
                 for (int i = 1; i <= 16; i++)
                 {
-                    if (_eventsOUT.Count(e => e.Device.Equals(s) && e.Channel == Tools.GetChannel(i)) > 0)
+                    if (_eventsOUT.Any(e => e.Device.Equals(s) && e.Channel == Tools.GetChannel(i)))
                     {
                         iTracks++;
                         sChannels = string.Concat(sChannels, i.ToString() + ", ");
@@ -101,7 +101,7 @@ namespace MidiTools
 
         public async Task StartRecording(bool bIn, bool bOut, MidiRouting routing)
         {
-            if (routing.HasOutDevices > 0)
+            if (MidiRouting.HasOutDevices > 0)
             {
                 //on doit absolument garder les valeurs actuelles des données pour figer tous les paramètres MIDI pour pouvoir reproduire la séquence fidèlement
                 SequencerDefault = await routing.GetLiveCCData();
@@ -215,22 +215,22 @@ namespace MidiTools
             _eventsOUT.Clear();
         }
 
-        public void PlayRecordingAsync(MidiRouting routing)
+        public void PlayRecordingAsync()
         {
             _ = Tasks.AddTask(() =>
             {
                 StopSequenceRequested = false;
 
-                Stopwatch stopwatch = new Stopwatch(); // Créer un chronomètre
+                Stopwatch stopwatch = new(); // Créer un chronomètre
 
-                routing.InitDevicesForSequencePlay(SequencerDefault);
+                MidiRouting.InitDevicesForSequencePlay(SequencerDefault);
 
                 StartStopPlayerCounter(true);
                 Thread.Sleep(1000);
 
                 for (int i = 0; i < _eventsOUT.Count; i++)
                 {
-                    MidiEvent eventtoplay = new MidiEvent(_eventsOUT[i].Type, _eventsOUT[i].Values, _eventsOUT[i].Channel, _eventsOUT[i].Device);
+                    MidiEvent eventtoplay = new(_eventsOUT[i].Type, _eventsOUT[i].Values, _eventsOUT[i].Channel, _eventsOUT[i].Device);
 
                     long elapsedTicks = 0;
                     double waitingTime = 0;
@@ -252,7 +252,7 @@ namespace MidiTools
                         stopwatch.Stop(); // Arrêter le chronomètre
                     }
 
-                    routing.SendRecordedEvent(eventtoplay);
+                    MidiRouting.SendRecordedEvent(eventtoplay);
 
                     if (StopSequenceRequested)
                     {
@@ -262,7 +262,7 @@ namespace MidiTools
 
                 StartStopPlayerCounter(false);
 
-                routing.Panic(false);
+                MidiRouting.Panic();
 
                 SequenceFinished?.Invoke(_eventsOUT.Count.ToString() + " event(s) have been played.");
             });

@@ -17,7 +17,7 @@ namespace NAudio.Wave
         private WaveFormat waveFormat;
         private long length;
         private long position;
-        private int bytesPerSample;
+        private readonly int bytesPerSample;
         private bool autoStop;
 
         /// <summary>

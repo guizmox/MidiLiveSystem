@@ -25,15 +25,15 @@ namespace MidiLiveSystem
     {
         internal class RecallMemory
         {
-            internal List<Guid> BoxGuids = new List<Guid>();
-            internal List<int> BoxPresets = new List<int>();
+            internal List<Guid> BoxGuids = new();
+            internal List<int> BoxPresets = new();
             internal int CurrentPreset;
         }
 
-        private List<RoutingBox> Boxes;
-        private ProjectConfiguration Project;
+        private readonly List<RoutingBox> Boxes;
+        private readonly ProjectConfiguration Project;
         private int CurrentPreset = 0;
-        private RecallMemory[] Memory = new RecallMemory[8];
+        private readonly RecallMemory[] Memory = new RecallMemory[8];
 
         public RecallButtons(List<RoutingBox> boxes, ProjectConfiguration project)
         {
@@ -154,7 +154,7 @@ namespace MidiLiveSystem
 
             if (Memory[iPreset] != null)
             {
-                List<Task> tasks = new List<Task>();
+                List<Task> tasks = new();
 
                 for (int i = 0; i < Memory[iPreset].BoxGuids.Count; i++)
                 {
@@ -218,8 +218,8 @@ namespace MidiLiveSystem
         {
             int iButton = Convert.ToInt32(((Button)sender).Tag);
 
-            List<Guid> boxguids = new List<Guid>();
-            List<int> boxpresets = new List<int>();
+            List<Guid> boxguids = new();
+            List<int> boxpresets = new();
             foreach (var box in Boxes) 
             {
                 boxguids.Add(box.BoxGuid);

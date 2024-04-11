@@ -29,15 +29,17 @@ namespace MidiLiveSystem
         internal void EncapsulateRoutingBox()
         {
             this.Title = string.Concat(RoutingBox.BoxName, " [", RoutingBox.BoxGuid.ToString(), "]");
-            Border border = new Border();
-            border.BorderBrush = Brushes.Gray;
-            border.BorderThickness = new Thickness(1);
+            Border border = new()
+            {
+                BorderBrush = Brushes.Gray,
+                BorderThickness = new Thickness(1)
+            };
 
             Grid.SetRow(border, 0);
             Grid.SetColumn(border, 0);
             gdRoutingBox.Children.Add(border);
 
-            Frame frame = new Frame
+            Frame frame = new()
             {
                 Name = string.Concat("frmBox", 0, "x", 0),
                 Tag = ""

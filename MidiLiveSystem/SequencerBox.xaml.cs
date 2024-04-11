@@ -23,20 +23,20 @@ namespace MidiLiveSystem
     /// </summary>
     public partial class SequencerBox : Page
     {
-        private InternalSequencer MainWindow;
+        private readonly InternalSequencer MainWindow;
 
-        private System.Timers.Timer BufferProcessor;
+        private readonly System.Timers.Timer BufferProcessor;
         internal bool IsRecording { get; private set; } = false;
 
         internal int SequencerChannel = 0;
         internal Sequencer InternalSequence;
-        private List<MidiEvent> Buffer = new List<MidiEvent>();
+        private readonly List<MidiEvent> Buffer = new();
         private int ActualStep = 0;
-        private Button[] ButtonSteps = new Button[32];
+        private readonly Button[] ButtonSteps = new Button[32];
         private bool AlternateButtonColor = false;
         private bool IsPlaying = false;
 
-        private List<SequenceStep> StepsRecorded = new List<SequenceStep>();
+        private readonly List<SequenceStep> StepsRecorded = new();
 
         public SequencerBox(int iSequencer, Sequencer seq, InternalSequencer mainW)
         {
@@ -64,17 +64,19 @@ namespace MidiLiveSystem
 
             for (int i = 1; i < 33; i++)
             {
-                Button btn = new Button();
-                btn.Name = "btnStep_" + i.ToString();
-                btn.Tag = i - 1;
-                btn.Background = Brushes.White;
-                btn.Margin = new Thickness(1);
-                btn.VerticalAlignment = VerticalAlignment.Bottom;
-                btn.FontSize = 9;
-                btn.Width = 40;
-                btn.Padding = new Thickness(1);
-                btn.Content = "--";
-                btn.Foreground = Brushes.Black;
+                Button btn = new()
+                {
+                    Name = "btnStep_" + i.ToString(),
+                    Tag = i - 1,
+                    Background = Brushes.White,
+                    Margin = new Thickness(1),
+                    VerticalAlignment = VerticalAlignment.Bottom,
+                    FontSize = 9,
+                    Width = 40,
+                    Padding = new Thickness(1),
+                    Content = "--",
+                    Foreground = Brushes.Black
+                };
                 btn.Click += BtnStep_Click;
                 Grid.SetColumn(btn, i - 1);
                 gdSteps.Children.Add(btn);
@@ -83,7 +85,7 @@ namespace MidiLiveSystem
 
             if (InternalSequence != null)
             {
-                FillUI();
+                Task.Run(() => FillUI());
             }
         }
 
@@ -226,7 +228,7 @@ namespace MidiLiveSystem
         {
             if (IsRecording)
             {
-                AlternateButtonColor = AlternateButtonColor ? false : true;
+                AlternateButtonColor = !AlternateButtonColor;
                 await ChangeButtonColor(ActualStep, AlternateButtonColor ? Brushes.White : Brushes.IndianRed);
             }
         }
@@ -275,7 +277,7 @@ namespace MidiLiveSystem
 
                 if (InternalSequence.Sequence[iTag].NotesAndVelocity != null && InternalSequence.Sequence[iTag].NotesAndVelocity.Count > 0)
                 {
-                    EditValue editor = new EditValue(InternalSequence.Sequence[iTag], "Edit Step Values");
+                    EditValue editor = new(InternalSequence.Sequence[iTag], "Edit Step Values");
                     editor.ShowDialog();
                     InternalSequence.Sequence[iTag] = editor.GetStep();
                 }
@@ -381,12 +383,12 @@ namespace MidiLiveSystem
             {
                 if (Buffer.Count >= 1)
                 {
-                    List<int[]> notes = new List<int[]>();
+                    List<int[]> notes = new();
                     foreach (var buf in Buffer.Where(b => b.Type == MidiDevice.TypeEvent.NOTE_ON))
                     {
                         notes.Add(new int[] { buf.Values[0], buf.Values[1] });
                     }
-                    SequenceStep step = new SequenceStep(ActualStep, dGatePercent, 1, notes);
+                    SequenceStep step = new(ActualStep, dGatePercent, 1, notes);
                     StepsRecorded.Add(step);
                     ActualStep++;
                 }
