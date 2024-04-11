@@ -1040,6 +1040,76 @@ namespace MidiLiveSystem
                 }
                 cbTranslators.SelectedIndex = iTranslatorIndex;
             });
+
+            int itranscount = await cbTranslators.Dispatcher.InvokeAsync(() => cbTranslators.Items.Count);
+            await EnableDisableFields(itranscount);
+        }
+
+        private async Task EnableDisableFields(int translatorcount)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                if (translatorcount == 0)
+                {
+                    //tbSmoothCC.Text = "0";
+                    tbSmoothCC.IsEnabled = true;
+                    //tbSmoothPresetChange.Text = "0";
+                    tbSmoothPresetChange.IsEnabled = true;
+                    //cbCCConvert.Items.Clear();
+                    //cbNOTEConvert.Items.Clear();
+                    btnAddCCConvert.IsEnabled = true;
+                    btnAddNOTEConvert.IsEnabled = true;
+                    btnRemoveCCConvert.IsEnabled = true;
+                    btnRemoveNOTEConvert.IsEnabled = true;
+                    cbFilters.IsEnabled = true;
+                    //tbFilterLowNote.Text = "0";
+                    tbFilterLowNote.IsEnabled = true;
+                    //tbFilterHighNote.Text = "127";
+                    tbFilterHighNote.IsEnabled = true;
+                    //tbFilterLowVelo.Text = "0";
+                    tbFilterLowVelo.IsEnabled = true;
+                    //tbFilterHighVelo.Text = "127";
+                    tbFilterHighVelo.IsEnabled = true;
+                    cbPlayMode.SelectedIndex = 0;
+                    cbPlayMode.IsEnabled = true;
+                    //tbNoteTransposition.Text = "0";
+                    tbNoteTransposition.IsEnabled = true;
+                    //tbDelayNotes.Text = "0";
+                    tbDelayNotes.IsEnabled = true;
+                    ckTransposeNoteRange.IsEnabled = true;
+                    ckCompressVelocityRange.IsEnabled = true;
+                }
+                else
+                {
+                    //tbSmoothCC.Text = "0";
+                    tbSmoothCC.IsEnabled = false;
+                    //tbSmoothPresetChange.Text = "0";
+                    tbSmoothPresetChange.IsEnabled = false;
+                    //cbCCConvert.Items.Clear();
+                    //cbNOTEConvert.Items.Clear();
+                    btnAddCCConvert.IsEnabled = false;
+                    btnAddNOTEConvert.IsEnabled = false;
+                    btnRemoveCCConvert.IsEnabled = false;
+                    btnRemoveNOTEConvert.IsEnabled = false;
+                    cbFilters.IsEnabled = false;
+                    //tbFilterLowNote.Text = "0";
+                    tbFilterLowNote.IsEnabled = false;
+                    //tbFilterHighNote.Text = "127";
+                    tbFilterHighNote.IsEnabled = false;
+                    //tbFilterLowVelo.Text = "0";
+                    tbFilterLowVelo.IsEnabled = false;
+                    //tbFilterHighVelo.Text = "127";
+                    tbFilterHighVelo.IsEnabled = false;
+                    cbPlayMode.SelectedIndex = 0;
+                    cbPlayMode.IsEnabled = false;
+                    //tbNoteTransposition.Text = "0";
+                    tbNoteTransposition.IsEnabled = false;
+                    //tbDelayNotes.Text = "0";
+                    tbDelayNotes.IsEnabled = false;
+                    ckTransposeNoteRange.IsEnabled = false;
+                    ckCompressVelocityRange.IsEnabled = false;
+                }
+            });
         }
 
         public async Task<MidiPreset> GetPreset()

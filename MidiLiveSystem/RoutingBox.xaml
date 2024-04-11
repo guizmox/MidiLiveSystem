@@ -128,9 +128,8 @@
                                     <ColumnDefinition Width="20*" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Name="tbRoutingName" Grid.Column="0" Text="Routing Name" VerticalAlignment="Center" HorizontalAlignment="Left" Foreground="IndianRed" />
-                                <TextBlock Name="tbRoutingPlay" Grid.Column="1" >  
+                                <TextBlock Name="tbRoutingPlay" Foreground="White" Grid.Column="1" >  
                                 <materialDesign:PackIcon
-                                Foreground="White"
                                 Kind="Play" />
                                 </TextBlock>
                             </Grid>
@@ -375,7 +374,7 @@
                         </Grid.ColumnDefinitions>
 
                         <TextBlock Grid.Column="0" Grid.Row="0" Text="FILTERS"/>
-                        <ComboBox Grid.Column="1" Grid.Row="0" SelectedValuePath="Tag" >
+                        <ComboBox Name="cbFilters" Grid.Column="1" Grid.Row="0" SelectedValuePath="Tag" >
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
                                     <CheckBox Content="{Binding Content}" IsChecked="{Binding IsChecked}"/>

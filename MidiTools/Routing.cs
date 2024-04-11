@@ -1055,11 +1055,12 @@ namespace MidiTools
             {
                 try
                 {
+                    OutputMidiMessage?.Invoke(true, routingOUT.RoutingGuid);
+
                     List<MidiEvent> EventsToProcess = await EventPreProcessor(routingOUT, deviceOut, iChannelOut, ev, true, routingOUT.cancellationToken);
 
                     await routingOUT.Tasks.AddTask(() =>
                     {
-                        OutputMidiMessage?.Invoke(true, routingOUT.RoutingGuid);
 
                         EventsToProcess = FilterEventsDropMode(EventsToProcess, routingOUT);
 
@@ -1122,11 +1123,11 @@ namespace MidiTools
 
                     try
                     {
+                        OutputMidiMessage?.Invoke(true, routing.RoutingGuid);
+
                         List<MidiEvent> EventsToProcess = await EventPreProcessor(routing, deviceOut, iChannelOut, ev, false, routing.cancellationToken);
 
                         EventsToProcess = FilterEventsDropMode(EventsToProcess, routing);
-
-                        OutputMidiMessage?.Invoke(true, routing.RoutingGuid);
 
                         for (int i = 0; i < EventsToProcess.Count; i++)
                         {
@@ -1344,6 +1345,7 @@ namespace MidiTools
             if (_eventsOUT != null)
             {
                 _eventsOUT.Delay = evIN.Delay; //si on avait un délai positionné sur l'évènement entrant (cas du séquenceur notamment)
+
                 return EventProcessor(routing, deviceout, iChannelOut, _eventsOUT, cancellationToken);
             }
             else { return new List<MidiEvent>(); }
