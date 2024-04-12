@@ -169,6 +169,26 @@ namespace MidiLiveSystem
 
         private void InitPage(List<IMidiInputDeviceInfo> inputDevices, List<IMidiOutputDeviceInfo> outputDevices)
         {
+            for (int i = -36; i <= 36; i++)
+            {
+                cbNoteTransposition.Items.Add(new ComboBoxItem() { Tag=i.ToString(), Content = i.ToString() });
+            }
+            cbNoteTransposition.SelectedValue = "0";
+
+            for (int i = 0; i <= 1000; i += 50)
+            {
+                cbDelayNotes.Items.Add(new ComboBoxItem() { Tag = i.ToString(), Content = i.ToString() + " ms" });
+            }
+            cbDelayNotes.SelectedValue = "0";
+
+            for (int i = 0; i <= 5000; i += 100)
+            {
+                cbSmoothCC.Items.Add(new ComboBoxItem() { Tag = i.ToString(), Content = i.ToString() + " ms" });
+                cbSmoothPresetChange.Items.Add(new ComboBoxItem() { Tag = i.ToString(), Content = i.ToString() + " ms" });
+            }
+            cbSmoothCC.SelectedValue = "0";
+            cbSmoothPresetChange.SelectedValue = "0";
+
             foreach (var s in inputDevices)
             {
                 cbMidiIn.Items.Add(new ComboBoxItem() { Tag = s.Name, Content = s.Name });
@@ -391,7 +411,6 @@ namespace MidiLiveSystem
                     tbVelocityRangeLabel.Visibility = Visibility.Hidden;
                     tbNoteRangeLabel.Visibility = Visibility.Hidden;
                     pnlNoteRange.Visibility = Visibility.Hidden;
-                    pnlVelocityRange.Visibility = Visibility.Hidden;
                     pnlInternalGenerator.Visibility = Visibility.Visible;
                 }
                 else if (item.Tag.Equals(Tools.VST_HOST))
@@ -399,7 +418,6 @@ namespace MidiLiveSystem
                     tbVelocityRangeLabel.Visibility = Visibility.Hidden;
                     tbNoteRangeLabel.Visibility = Visibility.Hidden;
                     pnlNoteRange.Visibility = Visibility.Hidden;
-                    pnlVelocityRange.Visibility = Visibility.Hidden;
                     pnlInternalGenerator.Visibility = Visibility.Hidden;
                 }
                 else
@@ -407,7 +425,6 @@ namespace MidiLiveSystem
                     tbVelocityRangeLabel.Visibility = Visibility.Visible;
                     tbNoteRangeLabel.Visibility = Visibility.Visible;
                     pnlNoteRange.Visibility = Visibility.Visible;
-                    pnlVelocityRange.Visibility = Visibility.Visible;
                     pnlInternalGenerator.Visibility = Visibility.Hidden;
                 }
             }
@@ -986,8 +1003,8 @@ namespace MidiLiveSystem
                 lbPreset.Text = bp.MidiPreset.PresetName;
                 lbPreset.Tag = bp.MidiPreset.Tag;
 
-                if (!tbFilterHighNote.IsFocused) { tbFilterHighNote.Text = bp.MidiOptions.NoteFilterHigh.ToString(); }
-                if (!tbFilterLowNote.IsFocused) { tbFilterLowNote.Text = bp.MidiOptions.NoteFilterLow.ToString(); }
+                if (!tbFilterHighNote.IsFocused) { tbFilterHighNote.Text = string.Concat(bp.MidiOptions.NoteFilterHigh.ToString(), " [", Tools.MidiNoteNumberToNoteName(bp.MidiOptions.NoteFilterHigh), "]"); }
+                if (!tbFilterLowNote.IsFocused) { tbFilterLowNote.Text = string.Concat(bp.MidiOptions.NoteFilterLow.ToString(), " [", Tools.MidiNoteNumberToNoteName(bp.MidiOptions.NoteFilterLow), "]"); }
                 if (!tbFilterHighVelo.IsFocused) { tbFilterHighVelo.Text = bp.MidiOptions.VelocityFilterHigh.ToString(); }
                 if (!tbFilterLowVelo.IsFocused) { tbFilterLowVelo.Text = bp.MidiOptions.VelocityFilterLow.ToString(); }
 
@@ -1006,11 +1023,11 @@ namespace MidiLiveSystem
 
                 cbPlayMode.SelectedValue = bp.MidiOptions.PlayMode;
 
-                if (!tbNoteTransposition.IsFocused) { tbNoteTransposition.Text = bp.MidiOptions.TranspositionOffset.ToString(); }
+                if (!cbNoteTransposition.IsFocused) { cbNoteTransposition.SelectedValue = bp.MidiOptions.TranspositionOffset.ToString(); }
 
-                if (!tbSmoothCC.IsFocused) { tbSmoothCC.Text = bp.MidiOptions.SmoothCCLength.ToString(); }
-                if (!tbDelayNotes.IsFocused) { tbDelayNotes.Text = bp.MidiOptions.DelayNotesLength.ToString(); }
-                if (!tbSmoothPresetChange.IsFocused) { tbSmoothPresetChange.Text = bp.MidiOptions.PresetMorphing.ToString(); }
+                if (!cbSmoothCC.IsFocused) { cbSmoothCC.SelectedValue = bp.MidiOptions.SmoothCCLength.ToString(); }
+                if (!cbDelayNotes.IsFocused) { cbDelayNotes.SelectedValue = bp.MidiOptions.DelayNotesLength.ToString(); }
+                if (!cbSmoothPresetChange.IsFocused) { cbSmoothPresetChange.SelectedValue = bp.MidiOptions.PresetMorphing.ToString(); }
 
                 int iCCConvertIndex = cbCCConvert.SelectedIndex;
                 cbCCConvert.Items.Clear();
@@ -1052,9 +1069,9 @@ namespace MidiLiveSystem
                 if (translatorcount == 0)
                 {
                     //tbSmoothCC.Text = "0";
-                    tbSmoothCC.IsEnabled = true;
+                    cbSmoothCC.IsEnabled = true;
                     //tbSmoothPresetChange.Text = "0";
-                    tbSmoothPresetChange.IsEnabled = true;
+                    cbSmoothPresetChange.IsEnabled = true;
                     //cbCCConvert.Items.Clear();
                     //cbNOTEConvert.Items.Clear();
                     btnAddCCConvert.IsEnabled = true;
@@ -1073,18 +1090,18 @@ namespace MidiLiveSystem
                     cbPlayMode.SelectedIndex = 0;
                     cbPlayMode.IsEnabled = true;
                     //tbNoteTransposition.Text = "0";
-                    tbNoteTransposition.IsEnabled = true;
+                    cbNoteTransposition.IsEnabled = true;
                     //tbDelayNotes.Text = "0";
-                    tbDelayNotes.IsEnabled = true;
+                    cbDelayNotes.IsEnabled = true;
                     ckTransposeNoteRange.IsEnabled = true;
                     ckCompressVelocityRange.IsEnabled = true;
                 }
                 else
                 {
                     //tbSmoothCC.Text = "0";
-                    tbSmoothCC.IsEnabled = false;
+                    cbSmoothCC.IsEnabled = false;
                     //tbSmoothPresetChange.Text = "0";
-                    tbSmoothPresetChange.IsEnabled = false;
+                    cbSmoothPresetChange.IsEnabled = false;
                     //cbCCConvert.Items.Clear();
                     //cbNOTEConvert.Items.Clear();
                     btnAddCCConvert.IsEnabled = false;
@@ -1103,9 +1120,9 @@ namespace MidiLiveSystem
                     cbPlayMode.SelectedIndex = 0;
                     cbPlayMode.IsEnabled = false;
                     //tbNoteTransposition.Text = "0";
-                    tbNoteTransposition.IsEnabled = false;
+                    cbNoteTransposition.IsEnabled = false;
                     //tbDelayNotes.Text = "0";
-                    tbDelayNotes.IsEnabled = false;
+                    cbDelayNotes.IsEnabled = false;
                     ckTransposeNoteRange.IsEnabled = false;
                     ckCompressVelocityRange.IsEnabled = false;
                 }
@@ -1189,10 +1206,16 @@ namespace MidiLiveSystem
                 if (options.PlayNote != null)
                 {
                     options.NoteFilterHigh = 127;
-                    tbFilterHighNote.Text = options.NoteFilterHigh.ToString();
+                    if (!tbFilterHighNote.IsFocused)
+                    {
+                        tbFilterHighNote.Text = string.Concat(options.NoteFilterHigh.ToString(), " [", Tools.MidiNoteNumberToNoteName(options.NoteFilterHigh), "]");
+                    }
 
                     options.NoteFilterLow = 0;
-                    tbFilterLowNote.Text = options.NoteFilterLow.ToString();
+                    if (!tbFilterLowNote.IsFocused)
+                    {
+                        tbFilterLowNote.Text = string.Concat(options.NoteFilterLow.ToString(), " [", Tools.MidiNoteNumberToNoteName(options.NoteFilterLow), "]");
+                    }
 
                     options.VelocityFilterHigh = 127;
                     tbFilterHighVelo.Text = options.VelocityFilterHigh.ToString();
@@ -1202,11 +1225,17 @@ namespace MidiLiveSystem
                 }
                 else
                 {
-                    options.NoteFilterHigh = TextParser(tbFilterHighNote.Text);
-                    tbFilterHighNote.Text = options.NoteFilterHigh.ToString();
+                    options.NoteFilterHigh = TextParser(tbFilterHighNote.Text.Split('[')[0].Trim());
+                    if (!tbFilterHighNote.IsFocused)
+                    {
+                        tbFilterHighNote.Text = string.Concat(options.NoteFilterHigh.ToString(), " [", Tools.MidiNoteNumberToNoteName(options.NoteFilterHigh), "]");
+                    }
 
-                    options.NoteFilterLow = TextParser(tbFilterLowNote.Text);
-                    tbFilterLowNote.Text = options.NoteFilterLow.ToString();
+                    options.NoteFilterLow = TextParser(tbFilterLowNote.Text.Split('[')[0].Trim());
+                    if (!tbFilterLowNote.IsFocused)
+                    {
+                        tbFilterLowNote.Text = string.Concat(options.NoteFilterLow.ToString(), " [", Tools.MidiNoteNumberToNoteName(options.NoteFilterLow), "]");
+                    }
 
                     options.VelocityFilterHigh = TextParser(tbFilterHighVelo.Text);
                     tbFilterHighVelo.Text = options.VelocityFilterHigh.ToString();
@@ -1236,7 +1265,10 @@ namespace MidiLiveSystem
                 else if (options.PlayMode != PlayModes.AFTERTOUCH && options.CC_Volume_Value == -1)
                 { options.CC_Volume_Value = 100; }
 
-                options.TranspositionOffset = TextParser(tbNoteTransposition.Text);
+                options.TranspositionOffset = Convert.ToInt32(cbNoteTransposition.SelectedValue.ToString());
+                options.SmoothCCLength = Convert.ToInt32(cbSmoothCC.SelectedValue.ToString());
+                options.DelayNotesLength = Convert.ToInt32(cbDelayNotes.SelectedValue.ToString());
+                options.PresetMorphing = Convert.ToInt32(cbSmoothPresetChange.SelectedValue.ToString());
 
                 foreach (var item in cbCCConvert.Items)
                 {
@@ -1270,30 +1302,6 @@ namespace MidiLiveSystem
                 {
                     var translator = (MessageTranslator)item.Content;
                     options.AddTranslator(translator);
-                }
-
-                if (int.TryParse(tbSmoothCC.Text.Trim(), out int iSmooth))
-                {
-                    if (iSmooth >= 0 && iSmooth <= 5000)
-                    {
-                        options.SmoothCCLength = iSmooth;
-                    }
-                }
-
-                if (int.TryParse(tbDelayNotes.Text.Trim(), out int iDelay))
-                {
-                    if (iDelay >= 0 && iDelay <= 1000)
-                    {
-                        options.DelayNotesLength = iDelay;
-                    }
-                }
-
-                if (int.TryParse(tbSmoothPresetChange.Text.Trim(), out int iMorph))
-                {
-                    if (iMorph >= 0 && iMorph <= 5000)
-                    {
-                        options.PresetMorphing = iMorph;
-                    }
                 }
             });
 

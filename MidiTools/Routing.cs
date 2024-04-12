@@ -1108,7 +1108,7 @@ namespace MidiTools
                                                        && i.Options.Active
                                                        && i.DeviceIn != null
                                                        && (i.DeviceIn.Name == ev.Device || i.DeviceIn.Name.Equals(Tools.ALL_INPUTS) && AllInputs.Contains(ev.Device))
-                                                       && Tools.GetChannel(i.ChannelIn) == ev.Channel).OrderBy(r => r.Options.PlayMode);
+                                                       && (Tools.GetChannel(i.ChannelIn) == ev.Channel) || i.ChannelIn == 0).OrderBy(r => r.Options.PlayMode);
 
             List<Task> tasksmatrix = new();
 

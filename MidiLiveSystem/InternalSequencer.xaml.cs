@@ -77,8 +77,8 @@ namespace MidiLiveSystem
                 frame.Navigate(box);
             };
 
-            tbLowKeyTranspose.Text = SequencerData.LowKeyTranspose.ToString();
-            tbHighKeyTranspose.Text = SequencerData.HighKeyTranspose.ToString();
+            tbLowKeyTranspose.Text = string.Concat(SequencerData.LowKeyTranspose.ToString(), " [", Tools.MidiNoteNumberToNoteName(SequencerData.LowKeyTranspose), " ]");
+            tbHighKeyTranspose.Text = string.Concat(SequencerData.HighKeyTranspose.ToString(), " [", Tools.MidiNoteNumberToNoteName(SequencerData.HighKeyTranspose), " ]");
 
             MidiRouting.InputStaticMidiMessage += Routing_IncomingMidiMessage;
         }
@@ -130,11 +130,11 @@ namespace MidiLiveSystem
 
             await StopPlay(true);
 
-            string sLowKey = await tbLowKeyTranspose.Dispatcher.InvokeAsync(() => tbLowKeyTranspose.Text);
-            string sHighey = await tbHighKeyTranspose.Dispatcher.InvokeAsync(() => tbHighKeyTranspose.Text);
+            string sLowKey = await tbLowKeyTranspose.Dispatcher.InvokeAsync(() => tbLowKeyTranspose.Text.Split('[')[0].Trim());
+            string sHighey = await tbHighKeyTranspose.Dispatcher.InvokeAsync(() => tbHighKeyTranspose.Text.Split('[')[0].Trim());
             var result = SequencerData.SetTransposition(sLowKey, sHighey);
-            await tbLowKeyTranspose.Dispatcher.InvokeAsync(() => tbLowKeyTranspose.Text = result[0].ToString());
-            await tbHighKeyTranspose.Dispatcher.InvokeAsync(() => tbHighKeyTranspose.Text = result[1].ToString());
+            await tbLowKeyTranspose.Dispatcher.InvokeAsync(() => tbLowKeyTranspose.Text = string.Concat(result[0].ToString(), " [", Tools.MidiNoteNumberToNoteName(result[0]), "]"));
+            await tbHighKeyTranspose.Dispatcher.InvokeAsync(() => tbHighKeyTranspose.Text = string.Concat(result[1].ToString(), " [", Tools.MidiNoteNumberToNoteName(result[1]), "]"));
         }
 
         private async void btnPlaySequences_Click(object sender, RoutedEventArgs e)
@@ -177,11 +177,11 @@ namespace MidiLiveSystem
             }
             else
             {
-                string sLowKey = await tbLowKeyTranspose.Dispatcher.InvokeAsync(() => tbLowKeyTranspose.Text);
-                string sHighey = await tbHighKeyTranspose.Dispatcher.InvokeAsync(() => tbHighKeyTranspose.Text);
+                string sLowKey = await tbLowKeyTranspose.Dispatcher.InvokeAsync(() => tbLowKeyTranspose.Text.Split('[')[0].Trim());
+                string sHighey = await tbHighKeyTranspose.Dispatcher.InvokeAsync(() => tbHighKeyTranspose.Text.Split('[')[0].Trim());
                 var result = SequencerData.SetTransposition(sLowKey, sHighey);
-                await tbLowKeyTranspose.Dispatcher.InvokeAsync(() => tbLowKeyTranspose.Text = result[0].ToString());
-                await tbHighKeyTranspose.Dispatcher.InvokeAsync(() => tbHighKeyTranspose.Text = result[1].ToString());
+                await tbLowKeyTranspose.Dispatcher.InvokeAsync(() => tbLowKeyTranspose.Text = string.Concat(result[0].ToString(), " [", Tools.MidiNoteNumberToNoteName(result[0]), "]"));
+                await tbHighKeyTranspose.Dispatcher.InvokeAsync(() => tbHighKeyTranspose.Text = string.Concat(result[1].ToString(), " [", Tools.MidiNoteNumberToNoteName(result[1]), "]"));
 
                 await btnPlaySequences.Dispatcher.InvokeAsync(() => btnPlaySequences.Background = Brushes.IndianRed);
                 await btnStopSequences.Dispatcher.InvokeAsync(() => btnStopSequences.Background = Brushes.DarkGray);

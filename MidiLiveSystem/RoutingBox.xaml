@@ -203,17 +203,17 @@
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="20*" />
-                            <ColumnDefinition Width="50*" />
-                            <ColumnDefinition Width="10*" />
-                            <ColumnDefinition Width="10*" />
-                            <ColumnDefinition Width="10*" />
+                            <ColumnDefinition Width="20*" />
+                            <ColumnDefinition Width="20*" />
+                            <ColumnDefinition Width="20*" />
+                            <ColumnDefinition Width="20*" />
                         </Grid.ColumnDefinitions>
 
                         <TextBlock TextWrapping="Wrap" Grid.Column="0" Grid.Row="0" Text="PRESET BUTTON"/>
                         <TextBox Name="tbPresetName" Text="Preset 1" Grid.Column="1" Grid.ColumnSpan="2" Grid.Row="0" MaxLength="30" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
                         <ComboBox Name="cbPresetButton" Grid.Column="3" Grid.ColumnSpan="2" Grid.Row="0" SelectedValuePath="Tag"  SelectionChanged="cbPresetButton_SelectionChanged"/>
-                        <TextBlock Grid.Column="0" Grid.Row="1" Text="INPUT PORT + CH"/>
-                        <TextBlock Grid.Column="0" Grid.Row="2" Text="OUTPUT PORT + CH"/>
+                        <TextBlock Grid.Column="0" Grid.Row="1" Text="INPUT PORT/CH"/>
+                        <TextBlock Grid.Column="0" Grid.Row="2" Text="OUTPUT PORT/CH"/>
                         <ComboBox Name="cbMidiIn" MinWidth="120" Grid.ColumnSpan="2" Grid.Column="1" Grid.Row="1" SelectedValuePath="Tag" SelectionChanged="cbMidiIn_SelectionChanged" />
                         <ComboBox Name="cbMidiOut" MinWidth="120" Grid.ColumnSpan="2" Grid.Column="1" Grid.Row="2" SelectedValuePath="Tag" SelectionChanged="cbMidiOut_SelectionChanged" />
                         <ComboBox Name="cbChannelMidiIn" MinWidth="40" Grid.Column="4" Grid.Row="1" SelectedValuePath="Tag"  />
@@ -282,39 +282,34 @@
                             </Grid>
                         </StackPanel>
                         
-                        <StackPanel Name="pnlNoteRange" Grid.Column="1" Grid.ColumnSpan="4" Grid.Row="4" Visibility="Visible" >
+                        <StackPanel Name="pnlNoteRange" Grid.Column="1" Grid.ColumnSpan="4" Grid.Row="4" Grid.RowSpan="2" Visibility="Visible" >
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="25*" />
-                                    <ColumnDefinition Width="15*" />
-                                    <ColumnDefinition Width="25*" />
-                                    <ColumnDefinition Width="15*" />
-                                    <ColumnDefinition Width="30*" />
+                                    <ColumnDefinition Width="18*" />
+                                    <ColumnDefinition Width="18*" />
+                                    <ColumnDefinition Width="18*" />
+                                    <ColumnDefinition Width="18*" />
+                                    <ColumnDefinition Width="28*" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="Low"/>
-                                <TextBox Name="tbFilterLowNote" Grid.Column="1" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                                <TextBlock Grid.Column="2" Text="High"/>
-                                <TextBox Name="tbFilterHighNote" Grid.Column="3" MaxLength="3" Text="127" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                                <CheckBox x:Name="ckTransposeNoteRange" Grid.Column="4" Content="Octaver" />
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="50*"/>
+                                    <RowDefinition Height="50*"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Column="0" Grid.Row="0" Text="Low"/>
+                                <TextBox Name="tbFilterLowNote" Grid.Column="1" Grid.Row="0" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                                <TextBlock Grid.Column="2" Grid.Row="0" Text="High"/>
+                                <TextBox Name="tbFilterHighNote" Grid.Column="3" Grid.Row="0" MaxLength="3" Text="127" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                                <CheckBox x:Name="ckTransposeNoteRange" Grid.Column="4" Grid.Row="0" Content="Octaver" />
+
+                                <TextBlock Grid.Column="0" Grid.Row="1" Text="Low"/>
+                                <TextBox Name="tbFilterLowVelo" Grid.Column="1" Grid.Row="1" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                                <TextBlock Grid.Column="2" Grid.Row="1" Text="High"/>
+                                <TextBox Name="tbFilterHighVelo" Grid.Column="3" Grid.Row="1" ToolTip="Checking this will octave-transpose the notes that are below or above the range" MaxLength="3" Text="127" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                                <CheckBox x:Name="ckCompressVelocityRange" Grid.Column="4" Grid.Row="1" ToolTip="Checking this will still play notes that are below or above the valocity range but with the limited velocity" Content="Limiter" />
                             </Grid>
                         </StackPanel>
                         <TextBlock Name="tbVelocityRangeLabel" Grid.Column="0" Grid.Row="5" Text="VELOCITY RANGE"/>
-                        <StackPanel Name="pnlVelocityRange"  Grid.Column="1" Grid.Row="5" Grid.ColumnSpan="4" Visibility="Visible" >
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="25*" />
-                                    <ColumnDefinition Width="15*" />
-                                    <ColumnDefinition Width="25*" />
-                                    <ColumnDefinition Width="15*" />
-                                    <ColumnDefinition Width="30*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="Low"/>
-                                <TextBox Name="tbFilterLowVelo" Grid.Column="1" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                                <TextBlock Grid.Column="2" Text="High"/>
-                                <TextBox Name="tbFilterHighVelo" Grid.Column="3" ToolTip="Checking this will octave-transpose the notes that are below or above the range" MaxLength="3" Text="127" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                                <CheckBox x:Name="ckCompressVelocityRange" ToolTip="Checking this will still play notes that are below or above the valocity range but with the limited velocity" Grid.Column="4" Content="Limiter" />
-                            </Grid>
-                        </StackPanel>
+                      
                         <TextBlock Grid.Column="0" Grid.Row="6" Text="PLAY MODE" />
                         <ComboBox Name="cbPlayMode" SelectedIndex="0" Grid.Column="1" Grid.Row="6" Grid.ColumnSpan="2" SelectedValuePath="Tag">
                             <ComboBoxItem Tag="NORMAL" Content="Normal"/>
@@ -333,9 +328,11 @@
                             <ComboBoxItem Tag="OCTAVE_DOWN" Content="Octave Doubler (Down)"/>
                         </ComboBox>
                         <TextBlock Grid.Column="0" Grid.Row="7" Text="TRANSPOSITION"/>
-                        <TextBox Name="tbNoteTransposition" Grid.Column="1" Grid.Row="7" MaxLength="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed" />
-                        <TextBlock Grid.Column="2" Grid.Row="7" Grid.ColumnSpan="2" HorizontalAlignment="Right"  Text="DELAY NOTES (ms)"/>
-                        <TextBox Name="tbDelayNotes" Grid.Row="7" Grid.Column="4" Width="40" MaxLength="4" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                        <ComboBox Name="cbNoteTransposition" Grid.Column="1" Grid.Row="7" SelectedValuePath="Tag">
+                        </ComboBox>
+                        <TextBlock Grid.Column="2" Grid.Row="7" Grid.ColumnSpan="2" HorizontalAlignment="Right"  Text="DELAY NOTES"/>
+                        <ComboBox Name="cbDelayNotes" Grid.Row="7" Grid.Column="4" SelectedValuePath="Tag">
+                        </ComboBox>
                     </Grid>
                 </Viewbox>
             </TabItem>
@@ -457,10 +454,10 @@
                                     <ColumnDefinition Width="25*"/>
                                     <ColumnDefinition Width="20*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="SMOOTH CC (ms)"/>
-                                <TextBox Name="tbSmoothCC" Grid.Column="1" Width="40" MaxLength="4" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                                <TextBlock Grid.Column="2" Text="PRESET MORPH. (ms)"/>
-                                <TextBox Name="tbSmoothPresetChange" Grid.Column="3" Width="40" MaxLength="4" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                                <TextBlock Grid.Column="0" Text="SMOOTH CC"/>
+                                <ComboBox Name="cbSmoothCC" Grid.Column="1" SelectedValuePath="Tag"/>
+                                <TextBlock Grid.Column="2" Text="PRESET MORPHING"/>
+                                <ComboBox Name="cbSmoothPresetChange" Grid.Column="3" SelectedValuePath="Tag"/>
                             </Grid>
                         </StackPanel>
                        

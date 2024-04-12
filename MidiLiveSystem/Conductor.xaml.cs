@@ -1,6 +1,7 @@
 ﻿using MidiTools;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -38,6 +39,8 @@ namespace MidiLiveSystem
             Routing = routing;
 
             Task.Run(() => InitStage());
+
+            MidiRouting.OutputCCValues += MidiRouting_OutputCCValues;
         }
 
         public async Task InitStage()
@@ -64,8 +67,34 @@ namespace MidiLiveSystem
             });
         }
 
+        private async void MidiRouting_OutputCCValues(Guid routingGuid, List<int> CC)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                if (CC[0] == 10 || CC[0] == 7)
+                {
+                    for (int i = 0; i < Boxes.Count; i++)
+                    {
+                        if (Boxes[i].RoutingGuid == routingGuid)
+                        {
+                            foreach (Button el in gdButtons.Children)
+                            {
+                                if (el.Tag.ToString().Equals(Boxes[i].BoxGuid.ToString()))
+                                {
+                                    gdButtons.Children.Remove(el);
+                                    break;
+                                }
+                            }
+                            InitializeRoutingBoxButton(Boxes[i], i);
+                        }
+                    }
+                }
+            });
+        }
+
         private void btnClose_Click(object sender, RoutedEventArgs e)
         {
+            MidiRouting.OutputCCValues -= MidiRouting_OutputCCValues;
             Close();
         }
 
@@ -158,7 +187,7 @@ namespace MidiLiveSystem
 
         private static string NameButtonBox(RoutingBox box, int iVol, int iPan)
         {
-            return string.Concat(box.BoxName, Environment.NewLine, box.PresetName, Environment.NewLine, "VOL=", iVol, " - PAN=", iPan);
+            return string.Concat(box.BoxName, Environment.NewLine, box.GetCurrentPreset().PresetName, Environment.NewLine, "VOL=", iVol, " - PAN=", iPan);
         }
 
         private void SetBoxData(int iVol, int iPan, int iReverb, int iCutOff, int iAttack, RoutingBox box)
