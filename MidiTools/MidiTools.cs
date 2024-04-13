@@ -6,6 +6,7 @@ using System.IO;
 using System.IO.Pipes;
 using System.Linq;
 using System.Runtime.Intrinsics.X86;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -113,7 +114,7 @@ namespace MidiTools
         public TypeEvent InType { get; set; } = TypeEvent.STOP;
         [Key("OutType")]
         public TypeEvent OutType { get; set; } = TypeEvent.STOP;
-        [Key("IsReady")]
+        [IgnoreDataMember]
         public bool IsReady { get { if (InType != TypeEvent.STOP && OutType != TypeEvent.STOP) { return true; } else { return false; } } }
 
         [Key("InData")]
@@ -132,6 +133,11 @@ namespace MidiTools
         private bool InIsFixedValue { get; set; }
         [Key("OutIsFixedValue")]
         private bool OutIsFixedValue { get; set; }
+
+        public MessageTranslator()
+        {
+
+        }
 
         public MessageTranslator(string name)
         {

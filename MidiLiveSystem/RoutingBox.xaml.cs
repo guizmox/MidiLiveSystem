@@ -175,7 +175,7 @@ namespace MidiLiveSystem
             }
             cbNoteTransposition.SelectedValue = "0";
 
-            for (int i = 0; i <= 1000; i += 50)
+            for (int i = 0; i <= 500; i += 10)
             {
                 cbDelayNotes.Items.Add(new ComboBoxItem() { Tag = i.ToString(), Content = i.ToString() + " ms" });
             }
@@ -1025,7 +1025,7 @@ namespace MidiLiveSystem
 
                 if (!cbNoteTransposition.IsFocused) { cbNoteTransposition.SelectedValue = bp.MidiOptions.TranspositionOffset.ToString(); }
 
-                if (!cbSmoothCC.IsFocused) { cbSmoothCC.SelectedValue = bp.MidiOptions.SmoothCCLength.ToString(); }
+                if (!cbSmoothCC.IsFocused && bp.MidiOptions.SmoothCCLength % 100 == 0) { cbSmoothCC.SelectedValue = bp.MidiOptions.SmoothCCLength.ToString(); }
                 if (!cbDelayNotes.IsFocused) { cbDelayNotes.SelectedValue = bp.MidiOptions.DelayNotesLength.ToString(); }
                 if (!cbSmoothPresetChange.IsFocused) { cbSmoothPresetChange.SelectedValue = bp.MidiOptions.PresetMorphing.ToString(); }
 
@@ -1087,7 +1087,7 @@ namespace MidiLiveSystem
                     tbFilterLowVelo.IsEnabled = true;
                     //tbFilterHighVelo.Text = "127";
                     tbFilterHighVelo.IsEnabled = true;
-                    cbPlayMode.SelectedIndex = 0;
+                    //cbPlayMode.SelectedIndex = 0;
                     cbPlayMode.IsEnabled = true;
                     //tbNoteTransposition.Text = "0";
                     cbNoteTransposition.IsEnabled = true;
@@ -1266,7 +1266,8 @@ namespace MidiLiveSystem
                 { options.CC_Volume_Value = 100; }
 
                 options.TranspositionOffset = Convert.ToInt32(cbNoteTransposition.SelectedValue.ToString());
-                options.SmoothCCLength = Convert.ToInt32(cbSmoothCC.SelectedValue.ToString());
+
+                options.SmoothCCLength =  Convert.ToInt32(cbSmoothCC.SelectedValue.ToString());
                 options.DelayNotesLength = Convert.ToInt32(cbDelayNotes.SelectedValue.ToString());
                 options.PresetMorphing = Convert.ToInt32(cbSmoothPresetChange.SelectedValue.ToString());
 
@@ -1468,6 +1469,11 @@ namespace MidiLiveSystem
 
         internal void SetBoxName(string boxname)
         {
+            foreach (var p in TempMemory)
+            {
+                p.BoxName = boxname;
+            }
+
             BoxName = boxname;
         }
 

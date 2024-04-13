@@ -262,7 +262,7 @@ namespace MidiTools
 
                 StartStopPlayerCounter(false);
 
-                MidiRouting.Panic();
+                MidiRouting.Panic(false);
 
                 SequenceFinished?.Invoke(_eventsOUT.Count.ToString() + " event(s) have been played.");
             });

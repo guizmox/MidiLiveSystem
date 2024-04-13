@@ -246,19 +246,6 @@ namespace MidiLiveSystem
                     CurrentHorizontalGrid = config.HorizontalGrid;
                 }
 
-                //réinit de la fenêtre
-                if (Project.VerticalGrid != CurrentVerticalGrid || Project.HorizontalGrid != CurrentHorizontalGrid)
-                {
-                    Project = config;
-                    await AddAllRoutingBoxes();
-                }
-
-                Project = config;
-
-                await Routing.ChangeAllInputsMidiIn(Project.AllInputs);
-
-                await SaveTemplate();
-
                 //rename des box
                 if (config.BoxNames != null)
                 {
@@ -276,6 +263,19 @@ namespace MidiLiveSystem
                         }
                     }
                 }
+
+                //réinit de la fenêtre
+                if (Project.VerticalGrid != CurrentVerticalGrid || Project.HorizontalGrid != CurrentHorizontalGrid)
+                {
+                    Project = config;
+                    await AddAllRoutingBoxes();
+                }
+
+                Project = config;
+
+                await Routing.ChangeAllInputsMidiIn(Project.AllInputs);
+
+                await SaveTemplate();
             }
             else
             {

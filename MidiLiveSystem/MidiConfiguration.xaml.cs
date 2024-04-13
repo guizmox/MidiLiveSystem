@@ -410,7 +410,7 @@ namespace MidiLiveSystem
 
         private void btnPanic_Click(object sender, RoutedEventArgs e)
         {
-            MidiRouting.Panic();
+            MidiRouting.Panic(true);
         }
 
         private void GetConfiguration()

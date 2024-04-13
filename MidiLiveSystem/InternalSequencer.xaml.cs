@@ -261,7 +261,7 @@ namespace MidiLiveSystem
                    
                 }
 
-                MidiRouting.Panic();
+                MidiRouting.Panic(false);
                 Playing = false;
             }
         }
