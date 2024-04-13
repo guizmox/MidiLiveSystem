@@ -1098,6 +1098,7 @@ namespace MidiTools
                     return;
                 }
             }
+
             routingTracker.Clear();
         }
 
@@ -1662,7 +1663,7 @@ namespace MidiTools
 
         private async Task SendProgramChange(MatrixItem routing, MidiPreset preset)
         {
-            if (routing.DeviceOut != null && routing.ChannelOut > 0) 
+            if (routing.DeviceOut != null && routing.ChannelOut > 0)
             {
                 await routing.Tasks.AddTask(() =>
                 {
@@ -2085,7 +2086,7 @@ namespace MidiTools
                     await routingCopy.Tasks.AddTask(() =>
                     {
                         //device.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 123, 127 }, Tools.GetChannel(channelOut), device.Name));
-                 
+
                         for (int iKey = 0; iKey < 128; iKey++)
                         {
                             while (device.GetLiveNOTEValue(channelOut, iKey))
@@ -2936,7 +2937,7 @@ namespace MidiTools
         {
             await Tasks.AddTask(async () =>
             {
-                var items = MidiMatrix.Where(mm => mm.DeviceInSequencer != null && mm.DropMode == 0 && mm.ChannelIn == iChannel);
+                var items = MidiMatrix.Where(mm => mm.DeviceInSequencer != null && mm.DropMode == 0 && mm.ChannelIn == iChannel && mm.DeviceOut != null && mm.ChannelOut > 0);
                 foreach (var matrix in items)
                 {
                     await GenerateOUTEvent(ev, matrix, new TrackerGuid());
