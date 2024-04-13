@@ -171,62 +171,62 @@ namespace MidiLiveSystem
 
         public async Task StartPlay(bool bFromActualWindow)
         {
+            bool bOK = true;
+
             if (Playing) //si on joue déjà, le deuxième message start éteint les séquences.
             {
                 await StopPlay(bFromActualWindow);
             }
             else
             {
-                string sLowKey = await tbLowKeyTranspose.Dispatcher.InvokeAsync(() => tbLowKeyTranspose.Text.Split('[')[0].Trim());
-                string sHighey = await tbHighKeyTranspose.Dispatcher.InvokeAsync(() => tbHighKeyTranspose.Text.Split('[')[0].Trim());
-                var result = SequencerData.SetTransposition(sLowKey, sHighey);
-                await tbLowKeyTranspose.Dispatcher.InvokeAsync(() => tbLowKeyTranspose.Text = string.Concat(result[0].ToString(), " [", Tools.MidiNoteNumberToNoteName(result[0]), "]"));
-                await tbHighKeyTranspose.Dispatcher.InvokeAsync(() => tbHighKeyTranspose.Text = string.Concat(result[1].ToString(), " [", Tools.MidiNoteNumberToNoteName(result[1]), "]"));
-
-                await btnPlaySequences.Dispatcher.InvokeAsync(() => btnPlaySequences.Background = Brushes.IndianRed);
-                await btnStopSequences.Dispatcher.InvokeAsync(() => btnStopSequences.Background = Brushes.DarkGray);
-
-                if (bFromActualWindow)
+                for (int i = 0; i < SequencerBoxes.Count; i++)
                 {
-                    bool bOK = true;
-
-                    for (int i = 0; i < SequencerBoxes.Count; i++)
+                    if (SequencerBoxes[i].IsRecording)
                     {
-                        if (SequencerBoxes[i].IsRecording)
-                        {
-                            MessageBox.Show("You must stop the recordings");
-                            bOK = false;
-                            break;
-                        }
+                        MessageBox.Show("You must stop the recordings");
+                        bOK = false;
+                        break;
                     }
+                }
 
-                    if (bOK)
+                if (bOK)
+                {
+                    string sLowKey = await tbLowKeyTranspose.Dispatcher.InvokeAsync(() => tbLowKeyTranspose.Text.Split('[')[0].Trim());
+                    string sHighey = await tbHighKeyTranspose.Dispatcher.InvokeAsync(() => tbHighKeyTranspose.Text.Split('[')[0].Trim());
+                    var result = SequencerData.SetTransposition(sLowKey, sHighey);
+                    await tbLowKeyTranspose.Dispatcher.InvokeAsync(() => tbLowKeyTranspose.Text = string.Concat(result[0].ToString(), " [", Tools.MidiNoteNumberToNoteName(result[0]), "]"));
+                    await tbHighKeyTranspose.Dispatcher.InvokeAsync(() => tbHighKeyTranspose.Text = string.Concat(result[1].ToString(), " [", Tools.MidiNoteNumberToNoteName(result[1]), "]"));
+
+                    await btnPlaySequences.Dispatcher.InvokeAsync(() => btnPlaySequences.Background = Brushes.IndianRed);
+                    await btnStopSequences.Dispatcher.InvokeAsync(() => btnStopSequences.Background = Brushes.DarkGray);
+
+                    if (bFromActualWindow)
                     {
                         MidiRouting.InputStaticMidiMessage -= Routing_IncomingMidiMessage;
 
                         for (int i = 0; i < MaxSequences; i++)
                         {
                             if (SeqData.Sequencer[i].SequenceHasData()) { SequencerData.InitTimer(SeqData.Sequencer[i], i); }
-                            SeqData.Sequencer[i].InitSequence();        
+                            SeqData.Sequencer[i].InitSequence();
                             await SequencerBoxes[i].Listener(true);
                         }
                         SequencerData.StartTimers();
                     }
-                }
-                else
-                {
-                    MidiRouting.InputStaticMidiMessage -= Routing_IncomingMidiMessage;
-
-                    for (int i = 0; i < MaxSequences; i++)
+                    else
                     {
-                        await SequencerBoxes[i].Listener(false);
-                        if (SeqData.Sequencer[i].SequenceHasData()) { SequencerData.InitTimer(SeqData.Sequencer[i], i); }
-                        SeqData.Sequencer[i].InitSequence();
-                    }
-                    SequencerData.StartTimers();
-                }
+                        MidiRouting.InputStaticMidiMessage -= Routing_IncomingMidiMessage;
 
-                Playing = true;
+                        for (int i = 0; i < MaxSequences; i++)
+                        {
+                            await SequencerBoxes[i].Listener(false);
+                            if (SeqData.Sequencer[i].SequenceHasData()) { SequencerData.InitTimer(SeqData.Sequencer[i], i); }
+                            SeqData.Sequencer[i].InitSequence();
+                        }
+                        SequencerData.StartTimers();
+                    }
+
+                    Playing = true;
+                }
             }
         }
 
@@ -246,7 +246,7 @@ namespace MidiLiveSystem
                         SeqData.Sequencer[i].StopSequence();
                         await SequencerBoxes[i].Listener(false);
                     }
-                   
+
                     MidiRouting.InputStaticMidiMessage += Routing_IncomingMidiMessage;
                 }
                 else
@@ -258,7 +258,7 @@ namespace MidiLiveSystem
                         await SequencerBoxes[i].Listener(false);
                         SeqData.Sequencer[i].StopSequence();
                     }
-                   
+
                 }
 
                 MidiRouting.Panic(false);

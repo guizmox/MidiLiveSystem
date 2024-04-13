@@ -237,10 +237,17 @@ namespace MidiLiveSystem
         {
             if (iStep >= 0)
             {
-                await Dispatcher.InvokeAsync(() =>
+                try
                 {
-                    ButtonSteps[iStep].Background = color;
-                });
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        ButtonSteps[iStep].Background = color;
+                    });
+                }
+                catch
+                {
+
+                }
             }
         }
 
