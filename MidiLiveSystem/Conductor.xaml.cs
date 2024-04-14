@@ -172,11 +172,11 @@ namespace MidiLiveSystem
                 {
                     text = string.Concat(text, " - REV=", iReverb);
                 }
-                if (ckCutoff.IsChecked.Value) 
+                if (ckCutoff.IsChecked.Value)
                 {
                     text = string.Concat(text, " - CUTOFF=", iCutOff);
                 }
-                if (ckAttack.IsChecked.Value) 
+                if (ckAttack.IsChecked.Value)
                 {
                     text = string.Concat(text, " - ATTACK=", iAttack);
                 }
@@ -303,13 +303,6 @@ namespace MidiLiveSystem
             int iConvert = Convert.ToInt32(-(dHorizontal * ratio) + 64);
 
             return iConvert;
-        }
-
-        private void ckAddLifeToProject_Click(object sender, RoutedEventArgs e)
-        {
-            CheckBox ck = (CheckBox)sender;
-
-            Routing.AddLifeToProject(ck.IsChecked.Value);
         }
     }
 }

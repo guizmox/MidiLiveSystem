@@ -311,26 +311,39 @@
                         <TextBlock Name="tbVelocityRangeLabel" Grid.Column="0" Grid.Row="5" Text="VELOCITY RANGE"/>
                       
                         <TextBlock Grid.Column="0" Grid.Row="6" Text="PLAY MODE" />
-                        <ComboBox Name="cbPlayMode" SelectedIndex="0" Grid.Column="1" Grid.Row="6" Grid.ColumnSpan="2" SelectedValuePath="Tag">
-                            <ComboBoxItem Tag="NORMAL" Content="Normal"/>
-                            <ComboBoxItem Tag="PIZZICATO_FAST" Content="Pizzicato (fast)"/>
-                            <ComboBoxItem Tag="PIZZICATO_SLOW" Content="Pizzicato (long)"/>
-                            <ComboBoxItem Tag="AFTERTOUCH" Content="Aftertouch"/>
-                            <ComboBoxItem Tag="MONO_HIGH" Content="Mono-H. note"/>
-                            <ComboBoxItem Tag="MONO_LOW" Content="Mono-L. note"/>
-                            <ComboBoxItem Tag="MONO_INTERMEDIATE_HIGH" Content="Intermediate high note"/>
-                            <ComboBoxItem Tag="MONO_INTERMEDIATE_LOW" Content="Intermediate low note"/>
-                            <ComboBoxItem Tag="MONO_IN_BETWEEN" Content="Fill empty octave with less used note"/>
-                            <ComboBoxItem Tag="HARMONY" Content="Third harmonizer"/>
-                            <ComboBoxItem Tag="REPEAT_NOTE_OFF_FAST" Content="Repeat Note (Short)"/>
-                            <ComboBoxItem Tag="REPEAT_NOTE_OFF_SLOW" Content="Repeat Note (Long)"/>
-                            <ComboBoxItem Tag="OCTAVE_UP" Content="Octave Doubler (Up)"/>
-                            <ComboBoxItem Tag="OCTAVE_DOWN" Content="Octave Doubler (Down)"/>
-                        </ComboBox>
+
+                        <StackPanel Grid.Column="1" Grid.Row="6" Grid.ColumnSpan="4">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="40*"/>
+                                    <ColumnDefinition Width="40*"/>
+                                    <ColumnDefinition Width="20*"/>
+                                </Grid.ColumnDefinitions>
+                                <ComboBox Name="cbPlayMode" SelectedIndex="0" Grid.Column="0" SelectedValuePath="Tag" SelectionChanged="cbPlayMode_SelectionChanged">
+                                    <ComboBoxItem Tag="NORMAL" Content="Normal"/>
+                                    <ComboBoxItem Tag="PIZZICATO_FAST" Content="Pizzicato (fast)"/>
+                                    <ComboBoxItem Tag="PIZZICATO_SLOW" Content="Pizzicato (long)"/>
+                                    <ComboBoxItem Tag="AFTERTOUCH" Content="Aftertouch"/>
+                                    <ComboBoxItem Tag="MONO_HIGH" Content="Mono-H. note"/>
+                                    <ComboBoxItem Tag="MONO_LOW" Content="Mono-L. note"/>
+                                    <ComboBoxItem Tag="MONO_INTERMEDIATE_HIGH" Content="Intermediate high note"/>
+                                    <ComboBoxItem Tag="MONO_INTERMEDIATE_LOW" Content="Intermediate low note"/>
+                                    <ComboBoxItem Tag="MONO_IN_BETWEEN" Content="Fill empty octave with less used note"/>
+                                    <ComboBoxItem Tag="HARMONY" Content="Third harmonizer"/>
+                                    <ComboBoxItem Tag="REPEAT_NOTE_OFF_FAST" Content="Repeat Note (Short)"/>
+                                    <ComboBoxItem Tag="REPEAT_NOTE_OFF_SLOW" Content="Repeat Note (Long)"/>
+                                    <ComboBoxItem Tag="OCTAVE_UP" Content="Octave Doubler (Up)"/>
+                                    <ComboBoxItem Tag="OCTAVE_DOWN" Content="Octave Doubler (Down)"/>
+                                </ComboBox>
+                                <TextBlock Name="tbPlayModeOption" Grid.Column="1" Text="% VOL" HorizontalAlignment="Center" />
+                                <ComboBox Name="cbPlayModeOption" Grid.Column="2" SelectedValuePath="Tag"/>
+                            </Grid>
+                        </StackPanel>
+                     
                         <TextBlock Grid.Column="0" Grid.Row="7" Text="TRANSPOSITION"/>
                         <ComboBox Name="cbNoteTransposition" Grid.Column="1" Grid.Row="7" SelectedValuePath="Tag">
                         </ComboBox>
-                        <TextBlock Grid.Column="2" Grid.Row="7" Grid.ColumnSpan="2" HorizontalAlignment="Right"  Text="DELAY NOTES"/>
+                        <TextBlock Grid.Column="2" Grid.Row="7" Grid.ColumnSpan="2" HorizontalAlignment="Center"  Text="DELAY NOTES"/>
                         <ComboBox Name="cbDelayNotes" Grid.Row="7" Grid.Column="4" SelectedValuePath="Tag">
                         </ComboBox>
                     </Grid>
@@ -371,22 +384,42 @@
                         </Grid.ColumnDefinitions>
 
                         <TextBlock Grid.Column="0" Grid.Row="0" Text="FILTERS"/>
-                        <ComboBox Name="cbFilters" Grid.Column="1" Grid.Row="0" SelectedValuePath="Tag" >
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate>
-                                    <CheckBox Content="{Binding Content}" IsChecked="{Binding IsChecked}"/>
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                            <CheckBox Name="ckAllowModulation" IsChecked="True" Content="Allow Modulation"/>
-                            <CheckBox Name="ckAllowNotes" IsChecked="True" Content="Allow Notes"/>
-                            <CheckBox Name="ckAllowAllCC"  IsChecked="True" Content="Allow CC"/>
-                            <CheckBox Name="ckAllowUndefinedCC"  IsChecked="True" Content="Allow Undefined CC"/>
-                            <CheckBox Name="ckAllowSysex" IsChecked="True" Content="Allow SysEx"/>
-                            <CheckBox Name="ckAllowNrpn" IsChecked="True" Content="Allow Nrpn"/>
-                            <CheckBox Name="ckAllowAftertouch" IsChecked="True" Content="Allow Aftertouch"/>
-                            <CheckBox Name="ckAllowPitchBend" IsChecked="True" Content="Allow Pitch Bend"/>
-                            <CheckBox Name="ckAllowProgramChange" IsChecked="True" Content="Allow Prog. Change"/>
-                        </ComboBox>
+
+                        <StackPanel Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="3">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="40*"/>
+                                    <ColumnDefinition Width="30*"/>
+                                    <ColumnDefinition Width="30*"/>
+                                </Grid.ColumnDefinitions>
+                                <ComboBox Name="cbFilters" Grid.Column="0" Grid.Row="0" SelectedValuePath="Tag" >
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox Content="{Binding Content}" IsChecked="{Binding IsChecked}"/>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                    <CheckBox Name="ckAllowModulation" IsChecked="True" Content="Allow Modulation"/>
+                                    <CheckBox Name="ckAllowNotes" IsChecked="True" Content="Allow Notes"/>
+                                    <CheckBox Name="ckAllowAllCC"  IsChecked="True" Content="Allow CC"/>
+                                    <CheckBox Name="ckAllowUndefinedCC"  IsChecked="True" Content="Allow Undefined CC"/>
+                                    <CheckBox Name="ckAllowSysex" IsChecked="True" Content="Allow SysEx"/>
+                                    <CheckBox Name="ckAllowNrpn" IsChecked="True" Content="Allow Nrpn"/>
+                                    <CheckBox Name="ckAllowAftertouch" IsChecked="True" Content="Allow Aftertouch"/>
+                                    <CheckBox Name="ckAllowPitchBend" IsChecked="True" Content="Allow Pitch Bend"/>
+                                    <CheckBox Name="ckAllowProgramChange" IsChecked="True" Content="Allow Prog. Change"/>
+                                </ComboBox>
+
+                                <TextBlock Grid.Column="1" Grid.Row="0" Text="ADD LIFE" HorizontalAlignment="Center"/>
+                                <ComboBox Name="cbAddLife" Grid.Column="2" Grid.Row="0" SelectedValuePath="Tag" SelectedIndex="0">
+                                    <ComboBoxItem Tag="0" Content="None"/>
+                                    <ComboBoxItem Tag="1" Content="Mild"/>
+                                    <ComboBoxItem Tag="2" Content="Moderate"/>
+                                    <ComboBoxItem Tag="3" Content="Intervening"/>
+                                    <ComboBoxItem Tag="4" Content="Extreme"/>
+                                </ComboBox>
+                            </Grid>
+                        </StackPanel>
+                       
                         <TextBlock Grid.Column="0" Grid.Row="2" Text="CC CONVERT"/>
                         <StackPanel Grid.Column="2" Grid.Row="2" Grid.ColumnSpan="2" Grid.RowSpan="2">
                             <Grid>
@@ -456,7 +489,7 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="SMOOTH CC"/>
                                 <ComboBox Name="cbSmoothCC" Grid.Column="1" SelectedValuePath="Tag"/>
-                                <TextBlock Grid.Column="2" Text="PRESET MORPHING"/>
+                                <TextBlock Grid.Column="2" Text="PRESET MORPHING" HorizontalAlignment="Center"/>
                                 <ComboBox Name="cbSmoothPresetChange" Grid.Column="3" SelectedValuePath="Tag"/>
                             </Grid>
                         </StackPanel>

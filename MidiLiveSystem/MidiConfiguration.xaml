@@ -87,15 +87,31 @@
                 <StackPanel Grid.Column="1" Grid.Row="2" VerticalAlignment="Center">
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="40*"/>
-                            <ColumnDefinition Width="10*"/>
-                            <ColumnDefinition Width="40*"/>
-                            <ColumnDefinition Width="10*"/>
+                            <ColumnDefinition Width="30*"/>
+                            <ColumnDefinition Width="20*"/>
+                            <ColumnDefinition Width="30*"/>
+                            <ColumnDefinition Width="20*"/>
                         </Grid.ColumnDefinitions>
-                        <Label Grid.Column="0" Content="BOXES / COL."/>
-                        <TextBox Name="tbHorizontalItems" ToolTip="Main grid configuration. Keep '-1' for automatic behavior" Grid.Column="1" Text="-1" MaxLength="1" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
-                        <Label Grid.Column="2" Content="BOXES / ROW"/>
-                        <TextBox Name="tbVerticalItems" ToolTip="Main grid configuration. Keep '-1' for automatic behavior" Grid.Column="3" Text="-1" MaxLength="1" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
+                        <Label Grid.Column="0" Content="COLUMNS"/>
+                        <ComboBox Name="cbHorizontalItems" ToolTip="Main grid configuration. Keep '-1' for automatic behavior" SelectedValuePath="Tag" Grid.Column="1" SelectedIndex="0">
+                            <ComboBoxItem Tag="-1" Content="-1"/>
+                            <ComboBoxItem Tag="1" Content="1"/>
+                            <ComboBoxItem Tag="2" Content="2"/>
+                            <ComboBoxItem Tag="3" Content="3"/>
+                            <ComboBoxItem Tag="4" Content="4"/>
+                            <ComboBoxItem Tag="5" Content="5"/>
+                        </ComboBox>
+
+                        <ComboBox Name="cbVerticalItems" ToolTip="Main grid configuration. Keep '-1' for automatic behavior" SelectedValuePath="Tag" Grid.Column="3" SelectedIndex="0">
+                            <ComboBoxItem Tag="-1" Content="-1"/>
+                            <ComboBoxItem Tag="1" Content="1"/>
+                            <ComboBoxItem Tag="2" Content="2"/>
+                            <ComboBoxItem Tag="3" Content="3"/>
+                            <ComboBoxItem Tag="4" Content="4"/>
+                            <ComboBoxItem Tag="5" Content="5"/>
+                        </ComboBox>
+
+                        <Label Grid.Column="2" Content="ROWS"/>
                     </Grid>
                 </StackPanel>
 

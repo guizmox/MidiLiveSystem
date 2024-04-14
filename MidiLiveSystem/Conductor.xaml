@@ -52,8 +52,6 @@
 
             <CheckBox Name="ckAttack" Grid.Column="4" Grid.ColumnSpan="2" Content="Also Change Attack (if set)"/>
 
-            <CheckBox Name="ckAddLifeToProject" Grid.Column="6" Grid.ColumnSpan="2" FontWeight="Bold" Foreground="OrangeRed" Content="Add Life To Performance !" ToolTip="This parameter will add virtual life to the project by smightly randomize pitch + delay of incoming notes " Click="ckAddLifeToProject_Click"/>
-
             <Button Name="btnClose" Grid.Row="0" Grid.Column="9" Content="OK" Width="50" Margin="5,0,5,0" HorizontalAlignment="Right" Click="btnClose_Click" />
 
         </Grid>

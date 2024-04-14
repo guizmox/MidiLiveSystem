@@ -273,6 +273,97 @@ namespace MidiLiveSystem
             }
         }
 
+        private async void cbPlayMode_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                Enum.TryParse<PlayModes>(cbPlayMode.SelectedValue.ToString(), out PlayModes playmode);
+
+                switch (playmode)
+                {
+                    case PlayModes.OCTAVE_DOWN:
+                        tbPlayModeOption.Visibility = Visibility.Visible;
+                        cbPlayModeOption.Visibility = Visibility.Visible;
+                        tbPlayModeOption.Text = "% VEL";
+                        cbPlayModeOption.Items.Clear();
+                        for (int i = 10; i <= 150; i += 10)
+                        {
+                            cbPlayModeOption.Items.Add(new ComboBoxItem() { Tag = i.ToString(), Content = string.Concat(i.ToString(), " %") });
+                        }
+                        cbPlayModeOption.SelectedValue = "100";
+                        break;
+                    case PlayModes.OCTAVE_UP:
+                        tbPlayModeOption.Visibility = Visibility.Visible;
+                        cbPlayModeOption.Visibility = Visibility.Visible;
+                        tbPlayModeOption.Visibility = Visibility.Visible;
+                        cbPlayModeOption.Visibility = Visibility.Visible;
+                        tbPlayModeOption.Text = "% VEL";
+                        cbPlayModeOption.Items.Clear();
+                        for (int i = 10; i <= 150; i += 10)
+                        {
+                            cbPlayModeOption.Items.Add(new ComboBoxItem() { Tag = i.ToString(), Content = string.Concat(i.ToString(), " %") });
+                        }
+                        cbPlayModeOption.SelectedValue = "100";
+                        break;
+                    case PlayModes.REPEAT_NOTE_OFF_FAST:
+                        tbPlayModeOption.Visibility = Visibility.Visible;
+                        cbPlayModeOption.Visibility = Visibility.Visible;
+                        tbPlayModeOption.Visibility = Visibility.Visible;
+                        cbPlayModeOption.Visibility = Visibility.Visible;
+                        tbPlayModeOption.Text = "% VEL";
+                        cbPlayModeOption.Items.Clear();
+                        for (int i = 10; i <= 150; i += 10)
+                        {
+                            cbPlayModeOption.Items.Add(new ComboBoxItem() { Tag = i.ToString(), Content = string.Concat(i.ToString(), " %") });
+                        }
+                        cbPlayModeOption.SelectedValue = "100";
+                        break;
+                    case PlayModes.REPEAT_NOTE_OFF_SLOW:
+                        tbPlayModeOption.Visibility = Visibility.Visible;
+                        cbPlayModeOption.Visibility = Visibility.Visible;
+                        tbPlayModeOption.Visibility = Visibility.Visible;
+                        cbPlayModeOption.Visibility = Visibility.Visible;
+                        tbPlayModeOption.Text = "% VEL";
+                        cbPlayModeOption.Items.Clear();
+                        for (int i = 10; i <= 150; i += 10)
+                        {
+                            cbPlayModeOption.Items.Add(new ComboBoxItem() { Tag = i.ToString(), Content = string.Concat(i.ToString(), " %") });
+                        }
+                        cbPlayModeOption.SelectedValue = "100";
+                        break;
+                    case PlayModes.PIZZICATO_FAST:
+                        tbPlayModeOption.Visibility = Visibility.Visible;
+                        cbPlayModeOption.Visibility = Visibility.Visible;
+                        tbPlayModeOption.Visibility = Visibility.Visible;
+                        cbPlayModeOption.Visibility = Visibility.Visible;
+                        tbPlayModeOption.Text = "LENGTH";
+                        cbPlayModeOption.Items.Clear();
+                        for (int i = 20; i <= 300; i += 20)
+                        {
+                            cbPlayModeOption.Items.Add(new ComboBoxItem() { Tag = i.ToString(), Content = string.Concat(i.ToString(), " ms") });
+                        }
+                        cbPlayModeOption.SelectedValue = "200";
+                        break;
+                    case PlayModes.PIZZICATO_SLOW:
+                        tbPlayModeOption.Visibility = Visibility.Visible;
+                        cbPlayModeOption.Visibility = Visibility.Visible;
+                        tbPlayModeOption.Text = "LENGTH";
+                        cbPlayModeOption.Items.Clear();
+                        for (int i = 400; i <= 800; i += 20)
+                        {
+                            cbPlayModeOption.Items.Add(new ComboBoxItem() { Tag = i.ToString(), Content = string.Concat(i.ToString(), " ms") });
+                        }
+                        cbPlayModeOption.SelectedValue = "600";
+                        break;
+                    default:
+                        tbPlayModeOption.Visibility = Visibility.Hidden;
+                        cbPlayModeOption.Visibility = Visibility.Hidden;
+                        cbPlayModeOption.Items.Clear();
+                        break;
+                }
+            });
+        }
+
         private void ckInternalGeneratorLowestKey_Checked(object sender, RoutedEventArgs e)
         {
             tbInternalGeneratorKeyLabel.Visibility = Visibility.Hidden;
@@ -1022,12 +1113,14 @@ namespace MidiLiveSystem
                 ckAllowSysex.IsChecked = bp.MidiOptions.AllowSysex;
 
                 cbPlayMode.SelectedValue = bp.MidiOptions.PlayMode;
+                if (cbPlayModeOption.Items.Count > 0) { cbPlayModeOption.SelectedValue = bp.MidiOptions.PlayModeOption; }
 
                 if (!cbNoteTransposition.IsFocused) { cbNoteTransposition.SelectedValue = bp.MidiOptions.TranspositionOffset.ToString(); }
 
                 if (!cbSmoothCC.IsFocused && bp.MidiOptions.SmoothCCLength % 100 == 0) { cbSmoothCC.SelectedValue = bp.MidiOptions.SmoothCCLength.ToString(); }
                 if (!cbDelayNotes.IsFocused) { cbDelayNotes.SelectedValue = bp.MidiOptions.DelayNotesLength.ToString(); }
                 if (!cbSmoothPresetChange.IsFocused) { cbSmoothPresetChange.SelectedValue = bp.MidiOptions.PresetMorphing.ToString(); }
+                if (!cbAddLife.IsFocused) { cbAddLife.SelectedValue = bp.MidiOptions.AddLife.ToString(); }
 
                 int iCCConvertIndex = cbCCConvert.SelectedIndex;
                 cbCCConvert.Items.Clear();
@@ -1072,6 +1165,7 @@ namespace MidiLiveSystem
                     cbSmoothCC.IsEnabled = true;
                     //tbSmoothPresetChange.Text = "0";
                     cbSmoothPresetChange.IsEnabled = true;
+                    cbAddLife.IsEnabled = true;
                     //cbCCConvert.Items.Clear();
                     //cbNOTEConvert.Items.Clear();
                     btnAddCCConvert.IsEnabled = true;
@@ -1089,6 +1183,7 @@ namespace MidiLiveSystem
                     tbFilterHighVelo.IsEnabled = true;
                     //cbPlayMode.SelectedIndex = 0;
                     cbPlayMode.IsEnabled = true;
+                    cbPlayModeOption.IsEnabled = true;
                     //tbNoteTransposition.Text = "0";
                     cbNoteTransposition.IsEnabled = true;
                     //tbDelayNotes.Text = "0";
@@ -1102,6 +1197,7 @@ namespace MidiLiveSystem
                     cbSmoothCC.IsEnabled = false;
                     //tbSmoothPresetChange.Text = "0";
                     cbSmoothPresetChange.IsEnabled = false;
+                    cbAddLife.IsEnabled = false;
                     //cbCCConvert.Items.Clear();
                     //cbNOTEConvert.Items.Clear();
                     btnAddCCConvert.IsEnabled = false;
@@ -1119,6 +1215,7 @@ namespace MidiLiveSystem
                     tbFilterHighVelo.IsEnabled = false;
                     cbPlayMode.SelectedIndex = 0;
                     cbPlayMode.IsEnabled = false;
+                    cbPlayModeOption.IsEnabled= false;
                     //tbNoteTransposition.Text = "0";
                     cbNoteTransposition.IsEnabled = false;
                     //tbDelayNotes.Text = "0";
@@ -1258,6 +1355,7 @@ namespace MidiLiveSystem
                 options.AllowSysex = ckAllowSysex.IsChecked.Value;
 
                 Enum.TryParse<PlayModes>(cbPlayMode.SelectedValue.ToString(), out options.PlayMode);
+                options.PlayModeOption = cbPlayModeOption.Items.Count > 0 && cbPlayModeOption.SelectedIndex > -1 ? Convert.ToInt32(cbPlayModeOption.SelectedValue.ToString()) : 0;
 
                 //pour éviter que le volume soit à 0 après un click sur aftertouch
                 if (options.PlayMode == PlayModes.AFTERTOUCH && options.CC_Volume_Value > 0)
@@ -1270,6 +1368,7 @@ namespace MidiLiveSystem
                 options.SmoothCCLength =  Convert.ToInt32(cbSmoothCC.SelectedValue.ToString());
                 options.DelayNotesLength = Convert.ToInt32(cbDelayNotes.SelectedValue.ToString());
                 options.PresetMorphing = Convert.ToInt32(cbSmoothPresetChange.SelectedValue.ToString());
+                options.AddLife = Convert.ToInt32(cbAddLife.SelectedValue.ToString());
 
                 foreach (var item in cbCCConvert.Items)
                 {

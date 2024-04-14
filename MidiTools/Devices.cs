@@ -293,7 +293,7 @@ namespace MidiTools
             }
         }
 
-        internal static void AddLog(string sDevice, bool bIn, int iChannel, string sType, string sValue, string sExtra, string sExtraValue)
+        internal static void AddLog(string sDevice, bool bIn, int iChannel, string sType, string sValue, string sExtra, string sExtraValue, string sDelay)
         {
             if (OnLogAdded != null)
             {
@@ -304,6 +304,10 @@ namespace MidiTools
                 if (sExtra.Length > 0)
                 {
                     sMessage = string.Concat(sMessage, " / ", sExtra, (sExtraValue.Length > 0 ? (" = " + sExtraValue) : ""));
+                    if (!bIn)
+                    {
+                        sMessage = string.Concat(sMessage, " / Delay = ", sDelay);
+                    }
                 }
 
                 OnLogAdded?.Invoke(sDevice, bIn, sMessage);
@@ -706,38 +710,38 @@ namespace MidiTools
                         NOTEmemory[iChannel, ev.Values[0]] += 1;
                         VELOCITYmemory[iChannel, ev.Values[0]] = ev.Values[1];
                         Plugin.VSTSynth.MIDI_NoteOn(ev.Values[0], ev.Values[1], iChannel + 1);
-                        AddLog(Plugin.VSTHostInfo.VSTName, false, (int)ev.Channel, "Note On", ev.Values[0].ToString(), "Velocity", ev.Values[1].ToString());
+                        AddLog(Plugin.VSTHostInfo.VSTName, false, (int)ev.Channel, "Note On", ev.Values[0].ToString(), "Velocity", ev.Values[1].ToString(), ev.Delay.ToString());
                         break;
                     case TypeEvent.NOTE_OFF:
                         NOTEmemory[iChannel, ev.Values[0]] = Math.Max(0, NOTEmemory[iChannel, ev.Values[0]] - 1);
                         VELOCITYmemory[iChannel, ev.Values[0]] = ev.Values[1];
                         Plugin.VSTSynth.MIDI_NoteOff(ev.Values[0], ev.Values[1], iChannel + 1);
-                        AddLog(Plugin.VSTHostInfo.VSTName, false, (int)ev.Channel, "Note Off", ev.Values[0].ToString(), "Velocity", ev.Values[1].ToString());
+                        AddLog(Plugin.VSTHostInfo.VSTName, false, (int)ev.Channel, "Note Off", ev.Values[0].ToString(), "Velocity", ev.Values[1].ToString(), ev.Delay.ToString());
                         break;                   
                     case TypeEvent.PB:
                         Plugin.VSTSynth.MIDI_PitchBend(ev.Values[0], iChannel + 1);
-                        AddLog(Plugin.VSTHostInfo.VSTName, false, (int)ev.Channel, "Pitch Bend", ev.Values[0].ToString(), "", "");
+                        AddLog(Plugin.VSTHostInfo.VSTName, false, (int)ev.Channel, "Pitch Bend", ev.Values[0].ToString(), "", "", ev.Delay.ToString());
                         break;
                     case TypeEvent.PC:
                         Plugin.VSTSynth.MIDI_ProgramChange(ev.Values[0], iChannel + 1);
-                        AddLog(Plugin.VSTHostInfo.VSTName, false, (int)ev.Channel, "Program Change", ev.Values[0].ToString(), "", "");
+                        AddLog(Plugin.VSTHostInfo.VSTName, false, (int)ev.Channel, "Program Change", ev.Values[0].ToString(), "", "", ev.Delay.ToString());
                         break;
                     case TypeEvent.CC:
                         CCmemory[iChannel, ev.Values[0]] = ev.Values[1];
                         Plugin.VSTSynth.MIDI_CC(ev.Values[0], ev.Values[1], iChannel + 1);
-                        AddLog(Plugin.VSTHostInfo.VSTName, false, (int)ev.Channel, "Control Change", ev.Values[0].ToString(), "Value", ev.Values[1].ToString());
+                        AddLog(Plugin.VSTHostInfo.VSTName, false, (int)ev.Channel, "Control Change", ev.Values[0].ToString(), "Value", ev.Values[1].ToString(), ev.Delay.ToString());
                         break;
                     case TypeEvent.CH_PRES:
                         Plugin.VSTSynth.MIDI_Aftertouch(Convert.ToByte(ev.Values[0]), iChannel + 1);
-                        AddLog(Plugin.VSTHostInfo.VSTName, false, (int)ev.Channel, "Channel Pressure", ev.Values[0].ToString(), "", "");
+                        AddLog(Plugin.VSTHostInfo.VSTName, false, (int)ev.Channel, "Channel Pressure", ev.Values[0].ToString(), "", "", ev.Delay.ToString());
                         break;
                     case TypeEvent.POLY_PRES:
                         Plugin.VSTSynth.MIDI_PolyphonicAftertouch(Convert.ToByte(ev.Values[0]), Convert.ToByte(ev.Values[1]), iChannel + 1);
-                        AddLog(Plugin.VSTHostInfo.VSTName, false, (int)ev.Channel, "Poly. Channel Key", ev.Values[0].ToString(), "Pressure", ev.Values[1].ToString());
+                        AddLog(Plugin.VSTHostInfo.VSTName, false, (int)ev.Channel, "Poly. Channel Key", ev.Values[0].ToString(), "Pressure", ev.Values[1].ToString(), ev.Delay.ToString());
                         break;
                     case TypeEvent.NRPN:
                         Plugin.VSTSynth.MIDI_NRPN(ev.Values[0], ev.Values[1]);
-                        AddLog(Plugin.VSTHostInfo.VSTName, false, (int)ev.Channel, "Nrpn", ev.Values[0].ToString(), "Value", ev.Values[1].ToString());
+                        AddLog(Plugin.VSTHostInfo.VSTName, false, (int)ev.Channel, "Nrpn", ev.Values[0].ToString(), "Value", ev.Values[1].ToString(), ev.Delay.ToString());
                         break;
                     case TypeEvent.CLOCK:
                         Plugin.VSTSynth.MIDI_Clock();
@@ -745,7 +749,7 @@ namespace MidiTools
                         break;
                     case TypeEvent.SYSEX:
                         Plugin.VSTSynth.MIDI_Sysex(Encoding.ASCII.GetBytes(ev.SysExData));
-                        AddLog(Plugin.VSTHostInfo.VSTName, false, 0, "SysEx", ev.SysExData, "", "");
+                        AddLog(Plugin.VSTHostInfo.VSTName, false, 0, "SysEx", ev.SysExData, "", "", ev.Delay.ToString());
                         break;
                 }
                 OnMidiEvent?.Invoke(ev);
@@ -797,22 +801,22 @@ namespace MidiTools
                 {
                     outputDevice = device.CreateDevice();
                     outputDevice.Open();
-                    AddLog(outputDevice.Name, false, -1, "[OPEN]", "", "", "");
+                    AddLog(outputDevice.Name, false, -1, "[OPEN]", "", "", "", "");
                 }
                 else if (outputDevice != null && !outputDevice.IsOpen)
                 {
                     outputDevice.Open();
-                    AddLog(outputDevice.Name, false, -1, "[OPEN]", "", "", "");
+                    AddLog(outputDevice.Name, false, -1, "[OPEN]", "", "", "", "");
                 }
             }
             catch (Exception ex)
             {
-                AddLog(outputDevice.Name, false, -1, "Unable to open MIDI OUT port : ", ex.Message, "", "");
+                AddLog(outputDevice.Name, false, -1, "Unable to open MIDI OUT port : ", ex.Message, "", "", "");
 
                 if (outputDevice.IsOpen)
                 {
                     outputDevice.Close();
-                    AddLog(outputDevice.Name, false, -1, "[CLOSE]", "", "", "");
+                    AddLog(outputDevice.Name, false, -1, "[CLOSE]", "", "", "", "");
                 }
                 outputDevice.Dispose();
 
@@ -841,7 +845,7 @@ namespace MidiTools
                         VELOCITYmemory[Tools.GetChannelInt(ev.Channel) - 1, ev.Values[0]] = ev.Values[1];
                         NoteOnMessage msg = new(ev.Channel, ev.GetKey(), ev.Values[1]);
                         outputDevice.Send(msg);
-                        AddLog(outputDevice.Name, false, (int)ev.Channel, "Note On", ev.Values[0].ToString(), "Velocity", ev.Values[1].ToString());
+                        AddLog(outputDevice.Name, false, (int)ev.Channel, "Note On", ev.Values[0].ToString(), "Velocity", ev.Values[1].ToString(), ev.Delay.ToString());
                     }
                     break;
                 case TypeEvent.NOTE_OFF:
@@ -851,7 +855,7 @@ namespace MidiTools
                         VELOCITYmemory[Tools.GetChannelInt(ev.Channel) - 1, ev.Values[0]] = ev.Values[1];
                         NoteOffMessage msg = new(ev.Channel, ev.GetKey(), ev.Values[1]);
                         outputDevice.Send(msg);
-                        AddLog(outputDevice.Name, false, (int)ev.Channel, "Note Off", ev.Values[0].ToString(), "Velocity", ev.Values[1].ToString());
+                        AddLog(outputDevice.Name, false, (int)ev.Channel, "Note Off", ev.Values[0].ToString(), "Velocity", ev.Values[1].ToString(), ev.Delay.ToString());
                     }
                     break;
                 case TypeEvent.NRPN:
@@ -859,7 +863,7 @@ namespace MidiTools
                     {
                         NrpnMessage msg = new(ev.Channel, ev.Values[0], ev.Values[1]);
                         outputDevice.Send(msg);
-                        AddLog(outputDevice.Name, false, (int)ev.Channel, "Nrpn", ev.Values[0].ToString(), "Value", ev.Values[1].ToString());
+                        AddLog(outputDevice.Name, false, (int)ev.Channel, "Nrpn", ev.Values[0].ToString(), "Value", ev.Values[1].ToString(), ev.Delay.ToString());
                     }
                     break;
                 case TypeEvent.PB:
@@ -867,7 +871,7 @@ namespace MidiTools
                     {
                         PitchBendMessage msg = new(ev.Channel, ev.Values[0]);
                         outputDevice.Send(msg);
-                        AddLog(outputDevice.Name, false, (int)ev.Channel, "Pitch Bend", ev.Values[0].ToString(), "", "");
+                        AddLog(outputDevice.Name, false, (int)ev.Channel, "Pitch Bend", ev.Values[0].ToString(), "", "", ev.Delay.ToString());
                     }
                     break;
                 case TypeEvent.PC:
@@ -875,7 +879,7 @@ namespace MidiTools
                     {
                         ProgramChangeMessage msg = new(ev.Channel, ev.Values[0]);
                         outputDevice.Send(msg);
-                        AddLog(outputDevice.Name, false, (int)ev.Channel, "Program Change", ev.Values[0].ToString(), "", "");
+                        AddLog(outputDevice.Name, false, (int)ev.Channel, "Program Change", ev.Values[0].ToString(), "", "", ev.Delay.ToString());
                     }
                     break;
                 case TypeEvent.SYSEX:
@@ -887,7 +891,7 @@ namespace MidiTools
                             SysExMessage msg = new(sysex);
                             outputDevice.Send(msg);
                             Thread.Sleep(SysExWaiter(sysex.Length));
-                            AddLog(outputDevice.Name, false, -1, "SysEx", ev.SysExData, "", "");
+                            AddLog(outputDevice.Name, false, -1, "SysEx", ev.SysExData, "", "", ev.Delay.ToString());
                         }
                     }
                     break;
@@ -897,7 +901,7 @@ namespace MidiTools
                         CCmemory[Tools.GetChannelInt(ev.Channel) - 1, ev.Values[0]] = ev.Values[1];
                         ControlChangeMessage msg = new(ev.Channel, ev.Values[0], ev.Values[1]);
                         outputDevice.Send(msg);
-                        AddLog(outputDevice.Name, false, (int)ev.Channel, "Control Change", ev.Values[0].ToString(), "Value", ev.Values[1].ToString());
+                        AddLog(outputDevice.Name, false, (int)ev.Channel, "Control Change", ev.Values[0].ToString(), "Value", ev.Values[1].ToString(), ev.Delay.ToString());
                     }
                     break;
                 case TypeEvent.CH_PRES:
@@ -905,7 +909,7 @@ namespace MidiTools
                     {
                         ChannelPressureMessage msg = new(ev.Channel, ev.Values[0]);
                         outputDevice.Send(msg);
-                        AddLog(outputDevice.Name, false, (int)ev.Channel, "Channel Pressure", ev.Values[0].ToString(), "", "");
+                        AddLog(outputDevice.Name, false, (int)ev.Channel, "Channel Pressure", ev.Values[0].ToString(), "", "", ev.Delay.ToString());
                     }
                     break;
                 case TypeEvent.POLY_PRES:
@@ -913,7 +917,7 @@ namespace MidiTools
                     {
                         PolyphonicKeyPressureMessage msg = new(ev.Channel, ev.GetKey(), ev.Values[1]);
                         outputDevice.Send(msg);
-                        AddLog(outputDevice.Name, false, (int)ev.Channel, "Poly. Channel Key", ev.Values[0].ToString(), "Pressure", ev.Values[1].ToString());
+                        AddLog(outputDevice.Name, false, (int)ev.Channel, "Poly. Channel Key", ev.Values[0].ToString(), "Pressure", ev.Values[1].ToString(), ev.Delay.ToString());
                     }
                     break;
             }
@@ -945,14 +949,14 @@ namespace MidiTools
                     {
                         outputDevice.Close();
                         outputDevice.Dispose();
-                        AddLog(outputDevice.Name, false, -1, "[CLOSE]", "", "", "");
+                        AddLog(outputDevice.Name, false, -1, "[CLOSE]", "", "", "", "");
                     }
 
                     outputDevice = null;
                 }
                 catch (Exception ex)
                 {
-                    AddLog(outputDevice.Name, false, -1, "Unable to close MIDI OUT port : ", ex.Message, "", "");
+                    AddLog(outputDevice.Name, false, -1, "Unable to close MIDI OUT port : ", ex.Message, "", "", "");
                     throw;
                 }
             }
@@ -999,7 +1003,7 @@ namespace MidiTools
 
                     //inputDevice.Clock += ClockHandler;
                     inputDevice.Open();
-                    AddLog(inputDevice.Name, true, -1, "[OPEN]", "", "", "");
+                    AddLog(inputDevice.Name, true, -1, "[OPEN]", "", "", "", "");
                 }
                 else if (inputDevice != null && !inputDevice.IsOpen)
                 {
@@ -1017,12 +1021,12 @@ namespace MidiTools
                     inputDevice.Stop -= InputDevice_Stop;
 
                     inputDevice.Open();
-                    AddLog(inputDevice.Name, true, -1, "[OPEN]", "", "", "");
+                    AddLog(inputDevice.Name, true, -1, "[OPEN]", "", "", "", "");
                 }
             }
             catch (Exception ex)
             {
-                AddLog(inputDevice.Name, true, -1, "Unable to open MIDI IN port : ", ex.Message, "", "");
+                AddLog(inputDevice.Name, true, -1, "Unable to open MIDI IN port : ", ex.Message, "", "", "");
                 inputDevice.ControlChange -= ControlChangeHandler;
                 inputDevice.NoteOn -= NoteOnChangeHandler;
                 inputDevice.NoteOff -= NoteOffChangeHandler;
@@ -1039,7 +1043,7 @@ namespace MidiTools
                 if (inputDevice.IsOpen)
                 {
                     inputDevice.Close();
-                    AddLog(inputDevice.Name, true, -1, "[CLOSE]", "", "", "");
+                    AddLog(inputDevice.Name, true, -1, "[CLOSE]", "", "", "", "");
                 }
                 inputDevice.Dispose();
 
@@ -1049,14 +1053,14 @@ namespace MidiTools
 
         private void InputDevice_Stop(IMidiInputDevice sender, in StopMessage msg)
         {
-            AddLog(inputDevice.Name, true, -1, "Stop", "", "", "");
+            AddLog(inputDevice.Name, true, -1, "Stop", "", "", "", "");
 
             AddEvent(TypeEvent.STOP, null, Channel.Channel1);
         }
 
         private void InputDevice_Start(IMidiInputDevice sender, in StartMessage msg)
         {
-            AddLog(inputDevice.Name, true, -1, "Start", "", "", "");
+            AddLog(inputDevice.Name, true, -1, "Start", "", "", "", "");
 
             AddEvent(TypeEvent.START, null, Channel.Channel1);
         }
@@ -1064,21 +1068,21 @@ namespace MidiTools
         private void ClockHandler(IMidiInputDevice sender, in ClockMessage msg)
         {
             //on log la clock ?
-            AddLog(inputDevice.Name, true, -1, "Clock", "", "", "");
+            AddLog(inputDevice.Name, true, -1, "Clock", "", "", "", "");
 
             AddEvent(TypeEvent.CLOCK, null, Channel.Channel1);
         }
 
         private void NrPnChangeHandler(IMidiInputDevice sender, in NrpnMessage msg)
         {
-            AddLog(inputDevice.Name, true, (int)msg.Channel, "Nrpn", msg.Parameter.ToString(), "Value", msg.Value.ToString());
+            AddLog(inputDevice.Name, true, (int)msg.Channel, "Nrpn", msg.Parameter.ToString(), "Value", msg.Value.ToString(), "");
 
             AddEvent(TypeEvent.NRPN, new List<int> { msg.Parameter, msg.Value }, msg.Channel);
         }
 
         private void ProgramChangeChangeHandler(IMidiInputDevice sender, in ProgramChangeMessage msg)
         {
-            AddLog(inputDevice.Name, true, (int)msg.Channel, "Program Change", msg.Program.ToString(), "", "");
+            AddLog(inputDevice.Name, true, (int)msg.Channel, "Program Change", msg.Program.ToString(), "", "", "");
 
             AddEvent(TypeEvent.PC, new List<int> { msg.Program }, msg.Channel);
         }
@@ -1086,28 +1090,28 @@ namespace MidiTools
         private void SysexChangeHandler(IMidiInputDevice sender, in SysExMessage msg)
         {
             string sData = Tools.GetSysExString(msg.Data);
-            AddLog(inputDevice.Name, true, -1, "SysEx", sData, "", "");
+            AddLog(inputDevice.Name, true, -1, "SysEx", sData, "", "", "");
 
             AddEventSysEx(TypeEvent.SYSEX, sData);
         }
 
         private void PitchBendChangeHandler(IMidiInputDevice sender, in PitchBendMessage msg)
         {
-            AddLog(inputDevice.Name, true, (int)msg.Channel, "Pitch Bend", msg.Value.ToString(), "", "");
+            AddLog(inputDevice.Name, true, (int)msg.Channel, "Pitch Bend", msg.Value.ToString(), "", "", "");
 
             AddEvent(TypeEvent.PB, new List<int> { msg.Value }, msg.Channel);
         }
 
         private void NoteOffChangeHandler(IMidiInputDevice sender, in NoteOffMessage msg)
         {
-            AddLog(inputDevice.Name, true, (int)msg.Channel, "Note Off", msg.Key.ToString(), "Velocity", msg.Velocity.ToString());
+            AddLog(inputDevice.Name, true, (int)msg.Channel, "Note Off", msg.Key.ToString(), "Velocity", msg.Velocity.ToString(), "");
 
             AddEvent(TypeEvent.NOTE_OFF, new List<int> { Tools.GetNoteInt(msg.Key), msg.Velocity }, msg.Channel);
         }
 
         private void NoteOnChangeHandler(IMidiInputDevice sender, in NoteOnMessage msg)
         {
-            AddLog(inputDevice.Name, true, (int)msg.Channel, "Note On", msg.Key.ToString(), "Velocity", msg.Velocity.ToString());
+            AddLog(inputDevice.Name, true, (int)msg.Channel, "Note On", msg.Key.ToString(), "Velocity", msg.Velocity.ToString(), "");
 
             if (msg.Velocity == 0)
             {
@@ -1121,21 +1125,21 @@ namespace MidiTools
 
         private void ControlChangeHandler(IMidiInputDevice sender, in ControlChangeMessage msg)
         {
-            AddLog(inputDevice.Name, true, (int)msg.Channel, "Control Change", msg.Control.ToString(), "Value", msg.Value.ToString());
+            AddLog(inputDevice.Name, true, (int)msg.Channel, "Control Change", msg.Control.ToString(), "Value", msg.Value.ToString(), "");
 
             AddEvent(TypeEvent.CC, new List<int> { msg.Control, msg.Value }, msg.Channel);
         }
 
         private void PolyphonicPressure(IMidiInputDevice sender, in PolyphonicKeyPressureMessage msg)
         {
-            AddLog(inputDevice.Name, true, (int)msg.Channel, "Poly. Channel Pressure", msg.Pressure.ToString(), "Key", msg.Key.ToString());
+            AddLog(inputDevice.Name, true, (int)msg.Channel, "Poly. Channel Pressure", msg.Pressure.ToString(), "Key", msg.Key.ToString(), "");
 
             AddEvent(TypeEvent.POLY_PRES, new List<int> { Tools.GetNoteInt(msg.Key), msg.Pressure }, msg.Channel);
         }
 
         private void ChannelPressureHandler(IMidiInputDevice sender, in ChannelPressureMessage msg)
         {
-            AddLog(inputDevice.Name, true, (int)msg.Channel, "Channel Pressure", msg.Pressure.ToString(), "", "");
+            AddLog(inputDevice.Name, true, (int)msg.Channel, "Channel Pressure", msg.Pressure.ToString(), "", "", "");
 
             AddEvent(TypeEvent.CH_PRES, new List<int> { msg.Pressure }, msg.Channel);
         }
@@ -1160,14 +1164,14 @@ namespace MidiTools
                     {
                         inputDevice.Close();
                         inputDevice.Dispose();
-                        AddLog(inputDevice.Name, true, -1, "[CLOSE]", "", "", "");
+                        AddLog(inputDevice.Name, true, -1, "[CLOSE]", "", "", "", "");
                     }
 
                     inputDevice = null;
                 }
                 catch (Exception ex)
                 {
-                    AddLog(inputDevice.Name, true, -1, "Unable to close MIDI IN port : ", ex.Message, "", "");
+                    AddLog(inputDevice.Name, true, -1, "Unable to close MIDI IN port : ", ex.Message, "", "", "");
                     throw;
                 }
             }

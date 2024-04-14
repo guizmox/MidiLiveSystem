@@ -99,6 +99,9 @@ namespace MidiTools
             }
         }
 
+        [Key("AddLife")]
+        public int AddLife { get; set; } = 0;
+
         [Key("PlayNote")]
         public NoteGenerator PlayNote { get; set; }
 
@@ -128,6 +131,8 @@ namespace MidiTools
 
         [Key("PlayMode")]
         public PlayModes PlayMode = PlayModes.NORMAL;
+        [Key("PlayModeOption")]
+        public int PlayModeOption = 0;
 
         [Key("AllowModulation")]
         public bool AllowModulation { get; set; } = true;

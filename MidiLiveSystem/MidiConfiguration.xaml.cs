@@ -42,8 +42,8 @@ namespace MidiLiveSystem
 
                 if (Configuration.HorizontalGrid > -1)
                 {
-                    tbHorizontalItems.Text = Configuration.HorizontalGrid.ToString();
-                    tbVerticalItems.Text = Configuration.VerticalGrid.ToString();
+                    cbHorizontalItems.SelectedValue = Configuration.HorizontalGrid.ToString();
+                    cbVerticalItems.SelectedValue = Configuration.VerticalGrid.ToString();
                 }
 
                 if (Configuration.DevicesIN == null)
@@ -128,8 +128,8 @@ namespace MidiLiveSystem
                 ckActivateClock.IsChecked = false;
 
                 tbProjectName.Text = "My Project";
-                tbHorizontalItems.Text = "-1";
-                tbVerticalItems.Text = "-1";
+                cbHorizontalItems.SelectedValue = "-1";
+                cbVerticalItems.SelectedValue = "-1";
 
                 tbRecallButtonsTrigger.Text = "UI";
                 cbRecallButtonsTrigger.SelectedValue = "0";
@@ -416,45 +416,6 @@ namespace MidiLiveSystem
         private void GetConfiguration()
         {
             string projectName = tbProjectName.Text.Trim();
-            string verticalgrid = tbVerticalItems.Text.Trim();
-            string horizontalgrid = tbHorizontalItems.Text.Trim();
-
-            if (!int.TryParse(verticalgrid, out int ivertical))
-            {
-                MessageBox.Show("Invalid Vertical Grid value");
-                ivertical = 3;
-            }
-            if (!int.TryParse(horizontalgrid, out int ihorizontal))
-            {
-                MessageBox.Show("Invalid Horizontal Grid value");
-                ihorizontal = 4;
-            }
-            if (ivertical > 6)
-            {
-                MessageBox.Show("Invalid Vertical Grid value. Set to 6");
-                ivertical = 6;
-            }
-            if (ivertical != -1)
-            {
-                if (ivertical < 1)
-                {
-                    MessageBox.Show("Invalid Vertical Grid value. Set to 1");
-                    ivertical = 1;
-                }
-            }
-            if (ihorizontal > 6)
-            {
-                MessageBox.Show("Invalid Horizontal Grid value. Set to 6");
-                ihorizontal = 6;
-            }
-            if (ihorizontal != -1)
-            {
-                if (ihorizontal < 1)
-                {
-                    MessageBox.Show("Invalid Horizontal Grid value. Set to 1");
-                    ihorizontal = 1;
-                }
-            }
 
             List<string> sDevicesIn = new();
             List<string> sDevicesOut = new();
@@ -490,8 +451,8 @@ namespace MidiLiveSystem
             Configuration.DevicesIN = sDevicesIn;
             Configuration.DevicesOUT = sDevicesOut;
             Configuration.AllInputs = allinputs;
-            Configuration.HorizontalGrid = ihorizontal;
-            Configuration.VerticalGrid = ivertical;
+            Configuration.HorizontalGrid = Convert.ToInt32(cbHorizontalItems.SelectedValue.ToString());
+            Configuration.VerticalGrid = Convert.ToInt32(cbVerticalItems.SelectedValue.ToString());
             Configuration.TriggerRecallButtons = ((ComboBoxItem)cbRecallButtonsTrigger.SelectedItem).Tag.ToString();
             Configuration.AddTriggerDevice(cbMidiInRecall.SelectedItem == null ? "" : ((ComboBoxItem)cbMidiInRecall.SelectedItem).Tag.ToString());
             Configuration.AddClockDevice(cbMidiInClock.SelectedItem == null ? "" : ((ComboBoxItem)cbMidiInClock.SelectedItem).Tag.ToString());

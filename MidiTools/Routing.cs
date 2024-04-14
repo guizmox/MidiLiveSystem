@@ -870,9 +870,10 @@ namespace MidiTools
             get
             {
                 StringBuilder sbMessage = new();
-                sbMessage.Append("MIDI Average Processing Messages / Sec. : ");
+                sbMessage.Append("MIDI Avg. Messages / Sec. : ");
                 sbMessage.Append(" [IN] : " + (_eventsProcessedINLast).ToString());
                 sbMessage.Append(" / [OUT] : " + (_eventsProcessedOUTLast).ToString());
+                sbMessage.Append(" / Latency : " + Math.Round(_processinglatency / _allinevents, 2).ToString() + " ms");
                 int iMatrix = 0;
                 int iSum = 0;
                 lock (MidiMatrix) { iMatrix = MidiMatrix.Count; iSum = MidiMatrix.Sum(m => m.Tasks.LastMinuteProcessing); }
@@ -901,6 +902,8 @@ namespace MidiTools
         private int _eventsProcessedOUT = 0;
         private int _eventsProcessedINLast = 0;
         private int _eventsProcessedOUTLast = 0;
+        private double _processinglatency = 0;
+        private int _allinevents = 1;
 
         private int _lowestNotePlayed = -1;
         private string AudioDevice = "";
@@ -936,6 +939,9 @@ namespace MidiTools
             _eventsProcessedOUTLast = _eventsProcessedOUT;
             _eventsProcessedIN = 0;
             _eventsProcessedOUT = 0;
+
+            if (DateTime.Now.Second == 0) //réinit toutes les minutes
+            { _processinglatency = 0; _allinevents = 1; }
         }
 
         private async void MatrixItem_OnSequencerPlayNote(List<MidiEvent> eventsON, List<MidiEvent> eventsOFF, MatrixItem matrix)
@@ -1049,6 +1055,9 @@ namespace MidiTools
 
         private async Task GenerateOUTEvent(MidiEvent ev, MatrixItem routingOUT, TrackerGuid routingTracker)
         {
+            _allinevents += 1;
+            DateTime dtStart = DateTime.Now;
+
             MidiDevice deviceOut = UsedDevicesOUT.FirstOrDefault(d => d.Name.Equals(routingOUT.DeviceOut.Name));
             int iChannelOut = routingOUT.ChannelOut;
 
@@ -1100,10 +1109,15 @@ namespace MidiTools
             }
 
             routingTracker.Clear();
+
+            _processinglatency += (DateTime.Now - dtStart).TotalMilliseconds;
         }
 
         private async Task CreateOUTEventFromInput(MidiEvent ev)
         {
+            _allinevents += 1;
+            DateTime dtStart = DateTime.Now;
+       
             //attention : c'est bien un message du device IN qui arrive !
             var matrix = MidiMatrix.Where(i => i.DeviceOut != null
                                                        && i.DropMode < 2
@@ -1166,6 +1180,8 @@ namespace MidiTools
             }
 
             await Task.WhenAll(tasksmatrix);
+
+            _processinglatency += (DateTime.Now - dtStart).TotalMilliseconds;
         }
 
         private static List<MidiEvent> FilterEventsDropMode(List<MidiEvent> eventsToProcess, MatrixItem routing)
@@ -1403,6 +1419,7 @@ namespace MidiTools
                                          //if (!bOutEvent) // ne doit fonctionner qu'avec les input du routing et pas avec les évènements forcés
                                          //{
                     bool bMono = false;
+                    int iVelocity = 0;
 
                     switch (routing.Options.PlayMode)
                     {
@@ -1439,7 +1456,7 @@ namespace MidiTools
                             var evON = new MidiEvent(TypeEvent.NOTE_ON, new List<int> { eventOUT.Values[0], eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device);
                             var evOFF = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { eventOUT.Values[0], 0 }, eventOUT.Channel, eventOUT.Device)
                             {
-                                Delay = 200
+                                Delay = routing.Options.PlayModeOption
                             };
                             EventsToProcess.Add(evON);
                             EventsToProcess.Add(evOFF);
@@ -1449,7 +1466,7 @@ namespace MidiTools
                             var evON2 = new MidiEvent(TypeEvent.NOTE_ON, new List<int> { eventOUT.Values[0], eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device);
                             var evOFF2 = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { eventOUT.Values[0], 0 }, eventOUT.Channel, eventOUT.Device)
                             {
-                                Delay = 600
+                                Delay = routing.Options.PlayModeOption
                             };
                             EventsToProcess.Add(evON2);
                             EventsToProcess.Add(evOFF2);
@@ -1458,8 +1475,10 @@ namespace MidiTools
                         case PlayModes.REPEAT_NOTE_OFF_FAST:
                             if (eventOUT.Type == TypeEvent.NOTE_OFF)
                             {
-                                int iVelocity = deviceout.GetLiveVelocityValue(Tools.GetChannelInt(eventOUT.Channel), eventOUT.Values[0]);
-                                if (iVelocity - 15 > 0) { iVelocity -= 15; } //parti pris
+                                iVelocity = deviceout.GetLiveVelocityValue(Tools.GetChannelInt(eventOUT.Channel), eventOUT.Values[0]);
+                                iVelocity = (int)(iVelocity * (routing.Options.PlayModeOption / 100.0));
+                                if (iVelocity <= 0) { iVelocity = 1; } //parti pris
+                                else if (iVelocity > 127) { iVelocity = 127; }
                                 var evONDouble = new MidiEvent(TypeEvent.NOTE_ON, new List<int> { eventOUT.Values[0], iVelocity }, eventOUT.Channel, eventOUT.Device);
                                 var evOFFDouble = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { eventOUT.Values[0], 0 }, eventOUT.Channel, eventOUT.Device)
                                 {
@@ -1474,8 +1493,10 @@ namespace MidiTools
                         case PlayModes.REPEAT_NOTE_OFF_SLOW:
                             if (eventOUT.Type == TypeEvent.NOTE_OFF)
                             {
-                                int iVelocity = deviceout.GetLiveVelocityValue(Tools.GetChannelInt(eventOUT.Channel), eventOUT.Values[0]);
-                                if (iVelocity - 15 > 0) { iVelocity -= 15; } //parti pris
+                                iVelocity = deviceout.GetLiveVelocityValue(Tools.GetChannelInt(eventOUT.Channel), eventOUT.Values[0]);
+                                iVelocity = (int)(iVelocity * (routing.Options.PlayModeOption / 100.0));
+                                if (iVelocity <= 0) { iVelocity = 1; } //parti pris
+                                else if (iVelocity > 127) { iVelocity = 127; }
                                 var evONDouble = new MidiEvent(TypeEvent.NOTE_ON, new List<int> { eventOUT.Values[0], iVelocity }, eventOUT.Channel, eventOUT.Device);
                                 var evOFFDouble = new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { eventOUT.Values[0], 0 }, eventOUT.Channel, eventOUT.Device)
                                 {
@@ -1489,12 +1510,18 @@ namespace MidiTools
                             break;
                         case PlayModes.OCTAVE_UP:
                             EventsToProcess.Add(eventOUT);
-                            EventsToProcess.Add(new MidiEvent(eventOUT.Type, new List<int> { eventOUT.Values[0] + 12, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
+                            iVelocity = (int)(eventOUT.Values[1] * (routing.Options.PlayModeOption / 100.0));
+                            if (iVelocity <= 0) { iVelocity = 1; } //parti pris
+                            else if (iVelocity > 127) { iVelocity = 127; }
+                            EventsToProcess.Add(new MidiEvent(eventOUT.Type, new List<int> { eventOUT.Values[0] + 12, iVelocity }, eventOUT.Channel, eventOUT.Device));
                             bMono = true;
                             break;
                         case PlayModes.OCTAVE_DOWN:
                             EventsToProcess.Add(eventOUT);
-                            EventsToProcess.Add(new MidiEvent(eventOUT.Type, new List<int> { eventOUT.Values[0] - 12, eventOUT.Values[1] }, eventOUT.Channel, eventOUT.Device));
+                            iVelocity = (int)(eventOUT.Values[1] * (routing.Options.PlayModeOption / 100.0));
+                            if (iVelocity <= 0) { iVelocity = 1; } //parti pris
+                            else if (iVelocity > 127) { iVelocity = 127; }
+                            EventsToProcess.Add(new MidiEvent(eventOUT.Type, new List<int> { eventOUT.Values[0] - 12, iVelocity }, eventOUT.Channel, eventOUT.Device));
                             bMono = true;
                             break;
                         default:
@@ -1502,17 +1529,17 @@ namespace MidiTools
                             break;
                     }
 
-                    if (GiveLife) //donne de la vie au projet en ajoutant un peu de pitch bend et de delay
+                    if (routing.Options.AddLife > 0) //donne de la vie au projet en ajoutant un peu de pitch bend et de delay
                     {
                         Random random = new();
 
                         if (eventOUT.Type == TypeEvent.NOTE_ON)
                         {
-                            int randomWaitON = random.Next(1, 40);
-                            int randomPB = random.Next(8192 - 400, 8192 + 400);
+                            int randomWaitON = random.Next(1, (routing.Options.AddLife * 10));
+                            int randomPB = random.Next(8192 - (routing.Options.AddLife * 250), 8192 + (routing.Options.AddLife * 250));
 
-                            int iNewVol = RandomizeCCValue(7, 8, routing);
-                            int iNewMod = RandomizeCCValue(1, 8, routing);
+                            int iNewVol = RandomizeCCValue(7, (routing.Options.AddLife * 5), routing);
+                            int iNewMod = RandomizeCCValue(1, (routing.Options.AddLife * 5), routing);
                             //int iNewPan = 0; // routing.RandomizeCCValue(10, copiedevent.Channel, copiedevent.Device, 5);
 
                             MidiEvent pbRandom = new(TypeEvent.PB, new List<int> { randomPB }, eventOUT.Channel, eventOUT.Device);
@@ -1534,7 +1561,7 @@ namespace MidiTools
 
                             if (!bMono)
                             {
-                                eventOUT.Delay = randomWaitON + routing.Options.DelayNotesLength > 0 ? routing.Options.DelayNotesLength : 0;
+                                eventOUT.Delay = randomWaitON + (routing.Options.DelayNotesLength > 0 ? routing.Options.DelayNotesLength : 0);
                                 EventsToProcess.Add(eventOUT);
                             }
                         }
@@ -1542,8 +1569,8 @@ namespace MidiTools
                         {
                             if (!bMono)
                             {
-                                int randomWaitOFF = random.Next(41, 60); //trick pour éviter que les note off se déclenchent avant les note on
-                                eventOUT.Delay = randomWaitOFF + routing.Options.DelayNotesLength > 0 ? routing.Options.DelayNotesLength : 0;
+                                int randomWaitOFF = (routing.Options.AddLife * 10) + 10; //trick pour éviter que les note off se déclenchent avant les note on
+                                eventOUT.Delay = randomWaitOFF + (routing.Options.DelayNotesLength > 0 ? routing.Options.DelayNotesLength : 0);
                                 //deviceout.SendMidiEvent(eventOUT);
                                 EventsToProcess.Add(eventOUT);
                             }
@@ -1741,16 +1768,36 @@ namespace MidiTools
         {
             int liveCC = routing.DeviceOut.GetLiveCCValue(routing.ChannelOut, iCC);
 
-            Random random = new();
-            int iVariation = random.Next(-iMax, iMax);
-            int iNewValue = (liveCC - routing.RandomizedCCValues[iCC]) + iVariation;
-
-            if (iNewValue > 0 && iNewValue < 127)
+            if (routing.RandomizedCCValues[iCC] != 0)
             {
-                routing.RandomizedCCValues[iCC] = iVariation;
-                return iNewValue;
+                int tmp = routing.RandomizedCCValues[iCC];
+                routing.RandomizedCCValues[iCC] = 0;
+                return liveCC - tmp;
             }
-            else { return 0; }
+            else
+            {
+                Random random = new();
+                int iVariation = random.Next(-iMax, iMax);
+                int iNewValue = (liveCC - routing.RandomizedCCValues[iCC]) + iVariation;
+
+                if (iNewValue < 0)
+                {
+                    int tmp = routing.RandomizedCCValues[iCC];
+                    routing.RandomizedCCValues[iCC] = 0;
+                    return liveCC - tmp;
+                }
+                else if (iNewValue > 127)
+                {
+                    int tmp = routing.RandomizedCCValues[iCC];
+                    routing.RandomizedCCValues[iCC] = 0;
+                    return liveCC - tmp;
+                }
+                else
+                {
+                    routing.RandomizedCCValues[iCC] = iVariation;
+                    return iNewValue;
+                }
+            }
         }
 
         internal static void InitDevicesForSequencePlay(List<LiveData> initParams)
@@ -1913,11 +1960,6 @@ namespace MidiTools
             //var regex2 = Regex.Match("[IN=KEY#64-127:64]", "(\\[)(IN)=(KEY#)(\\d{1,3})((-)(\\d{1,3}))*(:)(\\d{1,3})((-)(\\d{1,3}))*(\\])");
 
             //MidiTranslator(null, null);
-        }
-
-        public void AddLifeToProject(bool value)
-        {
-            GiveLife = value;
         }
 
         public int GetFreeChannelForDevice(string sDevice, int iWanted)
@@ -2826,7 +2868,7 @@ namespace MidiTools
                         {
                             UtilityAudio.AudioInitialized = true;
                             AudioDevice = plugin.VSTHostInfo.AsioDevice;
-                            AddLog(plugin.VSTHostInfo.AsioDevice, false, -1, "[OPEN]", "", "", "");
+                            AddLog(plugin.VSTHostInfo.AsioDevice, false, -1, "[OPEN]", "", "", "", "");
                         }
 
                         if (bOK)
@@ -2862,7 +2904,7 @@ namespace MidiTools
 
                     try
                     {
-                        AddLog(AudioDevice, false, -1, "[CLOSE]", "", "", "");
+                        AddLog(AudioDevice, false, -1, "[CLOSE]", "", "", "", "");
                     }
                     catch
                     { bOK = false; }
