@@ -25,8 +25,10 @@ namespace MidiLiveSystem
         public delegate void RoutingBoxEventHandler(Guid gBox, string sControl, object sValue);
         public event RoutingBoxEventHandler OnUIEvent;
 
-        private readonly List<ComboBox> ComboBoxes = new();
+        private readonly List<ComboBox> ComboBoxesCC = new();
         private readonly List<Slider> Sliders = new();
+        private readonly List<ComboBox> ComboBoxesUpperLimit = new();
+        private readonly List<ComboBox> ComboBoxesLowerLimit = new();
 
         private readonly Guid RoutingGuid;
         private readonly Guid BoxGuid;
@@ -63,7 +65,7 @@ namespace MidiLiveSystem
             {
                 gdMix.Children.Clear();
                 Sliders.Clear();
-                ComboBoxes.Clear();
+                ComboBoxesCC.Clear();
                 BoxMixersValues = new int[8] { 0, 0, 0, 0, 0, 0, 0, 0 };
 
                 Title = string.Concat("Control Change Mixer", " [", boxname, " - Preset : ", presetname, "]");
@@ -73,6 +75,55 @@ namespace MidiLiveSystem
 
                 for (int i = 0; i < BoxMixers.Length; i++)
                 {
+                    ComboBox cbLower = new()
+                    {
+                        Name = "cbLowerCC" + (i + 1),
+                        SelectedValuePath = "Tag",
+                        Tag = i
+                    };
+                    cbLower.SelectionChanged += CbLower_SelectionChanged;
+                    ComboBoxesLowerLimit.Add(cbLower);
+                    FillComboBoxUpperLower(false, ComboBoxesLowerLimit.Last());
+
+                    StackPanel spLower = new StackPanel
+                    {
+                        Orientation = Orientation.Horizontal,
+                        VerticalAlignment = VerticalAlignment.Center
+
+                    };
+                    Grid.SetColumn(spLower, i);
+                    Grid.SetRow(spLower, 3);
+
+
+                    spLower.Children.Add(new Label() { Content = "MIN LIMIT" });
+                    spLower.Children.Add(cbLower);
+
+                    gdMix.Children.Add(spLower);
+
+                    ComboBox cbUpper = new()
+                    {
+                        Name = "cbUpperCC" + (i + 1),
+                        SelectedValuePath = "Tag",
+                        Tag = i
+                    };
+                    cbUpper.SelectionChanged += CbUpper_SelectionChanged;
+                    ComboBoxesUpperLimit.Add(cbUpper);
+                    FillComboBoxUpperLower(true, ComboBoxesUpperLimit.Last());
+
+                    StackPanel spUpper = new StackPanel
+                    {
+                        Orientation = Orientation.Horizontal,
+                        VerticalAlignment = VerticalAlignment.Center
+                    };
+                    Grid.SetColumn(spUpper, i);
+                    Grid.SetRow(spUpper, 4);
+
+
+                    spUpper.Children.Add(new Label() { Content = "MAX LIMIT" });
+                    spUpper.Children.Add(cbUpper);
+
+                    gdMix.Children.Add(spUpper);
+
                     ComboBox comboBox = new()
                     {
                         Name = "cbCC" + (i + 1),
@@ -86,8 +137,8 @@ namespace MidiLiveSystem
                     Grid.SetColumn(comboBox, i);
                     Grid.SetRow(comboBox, 0);
                     gdMix.Children.Add(comboBox);
-                    ComboBoxes.Add(comboBox);
-                    FillComboBox(CC, ComboBoxes.Last());
+                    ComboBoxesCC.Add(comboBox);
+                    FillComboBox(CC, ComboBoxesCC.Last());
 
                     Slider slider = new()
                     {
@@ -107,6 +158,32 @@ namespace MidiLiveSystem
                     Grid.SetRow(slider, 1);
                     gdMix.Children.Add(slider);
                     Sliders.Add(slider);
+                }
+            });
+        }
+
+        private async void CbLower_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                if (((ComboBox)sender).IsFocused && e.AddedItems != null && e.AddedItems.Count > 0)
+                {
+                    int ilowLimit = Convert.ToInt32(((ComboBoxItem)e.AddedItems[0]).Tag.ToString());
+                    int icc = BoxMixers[Convert.ToInt32(((ComboBox)sender).Tag)];
+                    OnUIEvent?.Invoke(BoxGuid, "CC_LOW_LIMIT", new int[] { icc, ilowLimit });
+                }
+            });
+        }
+
+        private async void CbUpper_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                if (((ComboBox)sender).IsFocused && e.AddedItems != null && e.AddedItems.Count > 0)
+                {
+                    int ihighLimit = Convert.ToInt32(((ComboBoxItem)e.AddedItems[0]).Tag.ToString());
+                    int icc = BoxMixers[Convert.ToInt32(((ComboBox)sender).Tag)];
+                    OnUIEvent?.Invoke(BoxGuid, "CC_HIGH_LIMIT", new int[] { icc, ihighLimit });
                 }
             });
         }
@@ -136,12 +213,12 @@ namespace MidiLiveSystem
                 if (RoutingGuid == routingGuid)
                 {
                     int iCb = -1;
-                    for (int i = 0; i < ComboBoxes.Count; i++) 
+                    for (int i = 0; i < ComboBoxesCC.Count; i++)
                     {
-                        if (ComboBoxes[i].SelectedValue.Equals(sValues[0]))
+                        if (ComboBoxesCC[i].SelectedValue.Equals(sValues[0]))
                         { iCb = i; break; }
                     }
-                    if (iCb > - 1) 
+                    if (iCb > -1)
                     {
                         Sliders[iCb].Value = sValues[1];
                     }
@@ -149,19 +226,21 @@ namespace MidiLiveSystem
             });
         }
 
-        private async void MainWindow_CCMixData(Guid routingguid, int[] sValues)
+        private async void MainWindow_CCMixData(Guid routingguid, MidiOptions options)
         {
             await Dispatcher.InvokeAsync(() =>
             {
                 if (routingguid == RoutingGuid)
                 {
-                    for (int iCC = 0; iCC < sValues.Length; iCC++)
+                    for (int iCC = 0; iCC < options.DefaultRoutingCC.Length; iCC++)
                     {
                         for (int iBox = 0; iBox < 8; iBox++)
                         {
                             if (BoxMixers[iBox] == iCC)
                             {
-                                Sliders[iBox].Value = sValues[iCC];
+                                Sliders[iBox].Value = options.DefaultRoutingCC[iCC];
+                                ComboBoxesLowerLimit[iBox].SelectedValue = options.CC_LowLimiter[iCC];
+                                ComboBoxesUpperLimit[iBox].SelectedValue = options.CC_HighLimiter[iCC];
                                 break;
                             }
                         }
@@ -199,6 +278,24 @@ namespace MidiLiveSystem
             }
             int iIndex = Convert.ToInt32(cb.Tag);
             cb.SelectedValue = BoxMixers[iIndex - 1];
+        }
+
+        private void FillComboBoxUpperLower(bool bIsUpper, ComboBox cb)
+        {
+            if (bIsUpper)
+            {
+                for (int i = 64; i < 128; i++)
+                {
+                    cb.Items.Add(new ComboBoxItem { Content = i.ToString(), Tag = i.ToString() });
+                }
+            }
+            else
+            {
+                for (int i = 0; i < 64; i++)
+                {
+                    cb.Items.Add(new ComboBoxItem { Content = i.ToString(), Tag = i.ToString() });
+                }
+            }
         }
 
         private static List<string[]> CCList()

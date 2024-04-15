@@ -56,7 +56,7 @@ namespace MidiLiveSystem
                     Configuration.DevicesIN = listDevicesIn;
                 }
 
-                if (Configuration.DevicesOUT == null) 
+                if (Configuration.DevicesOUT == null)
                 {
                     var listDevicesOut = new List<string>();
                     foreach (var v in MidiTools.MidiRouting.OutputDevices)
@@ -215,8 +215,8 @@ namespace MidiLiveSystem
             if (cbMidiOut.SelectedIndex >= 0)
             {
                 InstrumentData instr = CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(((ComboBoxItem)cbMidiOut.SelectedItem).Tag.ToString()));
-               
-                if (instr == null) 
+
+                if (instr == null)
                 {
                     CubaseInstrumentData.Instruments.Add(new InstrumentData() { Device = ((ComboBoxItem)cbMidiOut.SelectedItem).Tag.ToString() });
                     instr = CubaseInstrumentData.Instruments.Last();
@@ -263,7 +263,7 @@ namespace MidiLiveSystem
                 MessageBox.Show("You must select a OUT Port");
             }
         }
-        
+
         private void btnClose_Click(object sender, RoutedEventArgs e)
         {
             Close();
@@ -272,6 +272,7 @@ namespace MidiLiveSystem
         private void btnLoadPresetFile_Click(object sender, RoutedEventArgs e)
         {
             bool bOK = false;
+            bool bNeedUpdate = false;
 
             if (cbMidiOut.SelectedIndex >= 0)
             {
@@ -279,10 +280,11 @@ namespace MidiLiveSystem
                 var instr = CubaseInstrumentData.Instruments.FirstOrDefault(i => i.Device.Equals(sPort));
                 if (instr != null)
                 {
-                    var confirm = MessageBox.Show("There's already a Preset List for that Device. Are you sure ?", "Overwrite ?", MessageBoxButton.YesNo);
+                    var confirm = MessageBox.Show("There's already a Preset List for that Device. Are you sure to update ?", "Update ?", MessageBoxButton.YesNo);
                     if (confirm == MessageBoxResult.Yes)
                     {
                         bOK = true;
+                        bNeedUpdate = true;
                     }
                 }
                 else { bOK = true; }
@@ -303,6 +305,11 @@ namespace MidiLiveSystem
                         {
                             MessageBox.Show("Instrument successfully loaded (" + data.Device + ")");
                             data.ChangeDevice(sPort);
+
+                            if (bNeedUpdate)
+                            {
+                                data = CubaseInstrumentData.UpdateData(instr, data);
+                            }
 
                             if (instr != null)
                             {
@@ -360,13 +367,13 @@ namespace MidiLiveSystem
 
                 if (instr == null)
                 {
-                    sys = new SysExInput(Routing);
+                    sys = new SysExInput();
                 }
                 else
                 {
-                    sys = new SysExInput(instr.SysExInitializer, Routing);
+                    sys = new SysExInput(instr.SysExInitializer);
                 }
-                
+
                 sys.ShowDialog();
                 if (sys.InvalidData)
                 {
@@ -377,7 +384,7 @@ namespace MidiLiveSystem
                     TextRange textRange = new(sys.rtbSysEx.Document.ContentStart, sys.rtbSysEx.Document.ContentEnd);
                     string sSysex = textRange.Text.Replace("-", "").Trim();
 
-                    
+
                     if (instr != null)
                     {
                         instr.SysExInitializer = sSysex;
@@ -401,7 +408,7 @@ namespace MidiLiveSystem
 
         private void cbMidiOut_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-           ComboBoxItem cb = (ComboBoxItem)e.AddedItems[0];
+            ComboBoxItem cb = (ComboBoxItem)e.AddedItems[0];
             if (cb != null)
             {
                 InitCC(cb.Tag.ToString());
@@ -536,7 +543,7 @@ namespace MidiLiveSystem
             get { return _listDevicesOut; }
             set { _listDevicesOut = value; }
         }
-        
+
         [Key("AllInputs")]
         public List<string> AllInputs
         {

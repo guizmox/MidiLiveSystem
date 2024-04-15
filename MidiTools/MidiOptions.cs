@@ -186,6 +186,10 @@ namespace MidiTools
         [Key("CC_FilterCutOff_Value")]
         public int CC_FilterCutOff_Value { get { return DefaultRoutingCC[74]; } set { if (value < -1) { DefaultRoutingCC[74] = -1; } else if (value > 127) { DefaultRoutingCC[74] = 127; } else { DefaultRoutingCC[74] = value; } } }
 
+        [Key("CC_HighLimiter")]
+        public int[] CC_HighLimiter = { 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127 };
+        [Key("CC_LowLimiter")]
+        public int[] CC_LowLimiter = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
         [Key("CC_Converters")]
         public List<int[]> CC_Converters { get; set; } = new List<int[]>();
         [Key("Note_Converters")]
@@ -241,6 +245,25 @@ namespace MidiTools
             if (iCC[0] == 10 && iCC[1] < 0) { iCC[1] = 64; }
 
             DefaultRoutingCC[iCC[0]] = iCC[1];
+        }
+
+        public void SetDefaultLowHighCCValue(bool bHigh, int[] iCC)
+        {
+            if (iCC[1] > 127) { iCC[1] = 127; }
+            else if (iCC[1] < 0) { iCC[1] = 0; }
+
+            if (bHigh)
+            { CC_HighLimiter[iCC[0]] = iCC[1]; }
+            else
+            { CC_LowLimiter[iCC[0]] = iCC[1]; }
+        }
+
+        public void SetDefaultCC(int[,] tempCCDefault)
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                CCMixDefaultParameters[i] = tempCCDefault[0, i];
+            }
         }
     }
 }

@@ -1,3 +1,3 @@
 ﻿- CC limiters : pouvoir limiter la valeur maximum d'un CC (routing box - CC mixer)
-- Ajout contrôle BDD au démarrage pour dire ou se trouve l'aide
 - pouvoir renommer en masse les devices dans la BDD si on a changé de matériel
+- Yamaha Genos Sysex / preset : comment gérer si on veut mettre à jour le fichier d'instrument ? (pour ne pas perdre la data sysex + channel) : prendre le nouveau fichier et rechercher par index pour attacher le channel + sysex

@@ -12,6 +12,9 @@ namespace MidiTools
         [Key("InstrumentGroup")]
         public string InstrumentGroup { get; set; } = "";
 
+        [Key("SysEx")]
+        public string SysEx = "";
+
         [Key("Prg")]
         public int Prg = 0;
 
@@ -36,12 +39,13 @@ namespace MidiTools
         [IgnoreMember] // Ignorer cette propriété lors de la sérialisation, car elle est dérivée
         public string Tag => string.Concat(Prg, "-", Msb, "-", Lsb);
 
-        public MidiPreset(string sSection, int iChannel, int iPrg, int iMsb, int iLsb, string sPName)
+        public MidiPreset(string sSection, int iChannel, int iPrg, int iMsb, int iLsb, string sSysEx, string sPName)
         {
             this.InstrumentGroup = sSection;
             this.Prg = iPrg;
             this.Msb = iMsb;
             this.Lsb = iLsb;
+            this.SysEx = sSysEx;
             this.PresetName = sPName;
             this.Channel = iChannel;
         }

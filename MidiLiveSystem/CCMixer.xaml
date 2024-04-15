@@ -6,13 +6,15 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:MidiLiveSystem"
         mc:Ignorable="d"
-        Title="Control Change Mixer" Height="300" Width="1200" WindowStartupLocation="CenterScreen" WindowStyle="ToolWindow" Background="DarkGray" Closed="Window_Closed" >
+        Title="Control Change Mixer" Height="400" Width="1200" WindowStartupLocation="CenterScreen" WindowStyle="ToolWindow" Background="DarkGray" Closed="Window_Closed" >
 
     <Grid x:Name="gdMix" Margin="10,10,10,10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="15*"/>
-            <RowDefinition Height="70*"/>
-            <RowDefinition Height="15*"/>
+            <RowDefinition Height="10*"/>
+            <RowDefinition Height="65*"/>
+            <RowDefinition Height="5*"/>
+            <RowDefinition Height="10*"/>
+            <RowDefinition Height="10*"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="12*"/>

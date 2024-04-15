@@ -20,7 +20,7 @@ namespace MidiLiveSystem
     /// </summary>
     public partial class PresetBrowser : Window
     {
-
+        private string CurrentPreset = "";
         public delegate void BrowserPresetChanged(MidiPreset mp);
         public event BrowserPresetChanged OnPresetChanged;
 
@@ -206,6 +206,8 @@ namespace MidiLiveSystem
 
         private void ChangePreset(string idx)
         {
+            CurrentPreset = idx;
+
             if (idx.Length > 0)
             {
                 MidiPreset mp = InstrumentPresets.GetPreset(idx);
@@ -214,6 +216,7 @@ namespace MidiLiveSystem
                 tbLsb.Text = mp.Lsb.ToString();
                 tbPrg.Text = mp.Prg.ToString();
                 tbName.Text = mp.PresetName.ToString();
+                tbSysex.Text = mp.SysEx;
                 ckSetFavorite.IsChecked = mp.IsFavourite;
                 OnPresetChanged?.Invoke(mp);
             }
@@ -346,6 +349,8 @@ namespace MidiLiveSystem
                 iErrors++;
             }
 
+            mp.SysEx = tbSysex.Text.Trim();
+
             if (iErrors == 3)
             {
                 mp.PresetName = "[ERROR]";
@@ -375,6 +380,30 @@ namespace MidiLiveSystem
                     }
                     PopulateHierarchyTree(InstrumentPresets);
                 }
+            }
+        }
+
+        private void cbSysExInit_Click(object sender, RoutedEventArgs e)
+        {
+            if (tbPrg.Text.Length > 0 && tbMsb.Text.Length > 0 && tbLsb.Text.Length > 0 && CurrentPreset.Length > 0)
+            {
+                SysExInput sys = new SysExInput();
+                sys.ShowDialog();
+                if (sys.InvalidData)
+                {
+                    MessageBox.Show("Cancelled.");
+                }
+                else
+                {
+                    TextRange textRange = new(sys.rtbSysEx.Document.ContentStart, sys.rtbSysEx.Document.ContentEnd);
+                    string sSysex = textRange.Text.Replace("-", "").Trim();
+                    tbSysex.Text = sSysex;
+                    InstrumentPresets.GetPreset(CurrentPreset).SysEx = sSysex;
+                }
+            }
+            else
+            {
+                MessageBox.Show("You must choose a Preset first (or manually set MSB/LSB/PRG data)");
             }
         }
     }

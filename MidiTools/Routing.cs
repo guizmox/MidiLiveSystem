@@ -1258,9 +1258,17 @@ namespace MidiTools
                     {
                         var convertedCC = routing.Options.CC_Converters.FirstOrDefault(i => i[0] == evIN.Values[0]);
 
+                        int lowCClimit = routing.Options.CC_LowLimiter[evIN.Values[0]];
+                        int highCClimit = routing.Options.CC_HighLimiter[evIN.Values[0]];
+
+                        int iCCValue = evIN.Values[1];
+
+                        if (iCCValue < lowCClimit) { iCCValue = lowCClimit; }
+                        else if (iCCValue > highCClimit) { iCCValue = highCClimit; }
+
                         if (routing.Options.AllowUndefinedCC)
                         {
-                            _eventsOUT = new MidiEvent(evIN.Type, new List<int> { convertedCC != null ? convertedCC[1] : evIN.Values[0], evIN.Values[1] }, Tools.GetChannel(iChannelOut), deviceout.Name);
+                            _eventsOUT = new MidiEvent(evIN.Type, new List<int> { convertedCC != null ? convertedCC[1] : evIN.Values[0], iCCValue }, Tools.GetChannel(iChannelOut), deviceout.Name);
                         }
                         else
                         {
@@ -1269,7 +1277,7 @@ namespace MidiTools
                             //sinon on ne fait rien
                             if (!routing.Options.UndefinedCC.Contains(evIN.Values[0]) || convertedCC != null)
                             {
-                                _eventsOUT = new MidiEvent(evIN.Type, new List<int> { convertedCC != null ? convertedCC[1] : evIN.Values[0], evIN.Values[1] }, Tools.GetChannel(iChannelOut), deviceout.Name);
+                                _eventsOUT = new MidiEvent(evIN.Type, new List<int> { convertedCC != null ? convertedCC[1] : evIN.Values[0], iCCValue }, Tools.GetChannel(iChannelOut), deviceout.Name);
                             }
                         }
                     }
@@ -1701,6 +1709,11 @@ namespace MidiTools
                     routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { pc00.Control, pc00.Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
                     routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { pc32.Control, pc32.Value }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
                     routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.PC, new List<int> { preset.Prg }, Tools.GetChannel(routing.ChannelOut), routing.DeviceOut.Name));
+
+                    if (preset.SysEx.Length > 0)
+                    {
+                        routing.DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.SYSEX, preset.SysEx, routing.DeviceOut.Name));
+                    }
                 });
             }
         }
@@ -1715,7 +1728,7 @@ namespace MidiTools
                 }
                 else
                 {
-                    if (bInit || (newpres.Lsb != routing.Preset.Lsb || newpres.Msb != routing.Preset.Msb || newpres.Prg != routing.Preset.Prg || newpres.Channel != routing.Preset.Channel))
+                    if (bInit || (!newpres.SysEx.Equals(routing.Preset.SysEx)) || (newpres.Lsb != routing.Preset.Lsb || newpres.Msb != routing.Preset.Msb || newpres.Prg != routing.Preset.Prg || newpres.Channel != routing.Preset.Channel))
                     {
                         await SendProgramChange(routing, newpres);
                         routing.Preset = newpres;

@@ -1256,7 +1256,7 @@ namespace MidiTools
                     int iMsb = Convert.ToInt32(sPG[2].Trim());
                     int iLsb = Convert.ToInt32(sPG[3][..sPG[3].IndexOf("]")].Trim());
                     string sPName = sData[i][(sData[i].IndexOf("]") + 1)..].Trim();
-                    sFileData.Add(new MidiPreset(group.Category, 1, iPrg, iMsb, iLsb, sPName));
+                    sFileData.Add(new MidiPreset(group.Category, 1, iPrg, iMsb, iLsb, "", sPName));
                 }
             }
             return sFileData;

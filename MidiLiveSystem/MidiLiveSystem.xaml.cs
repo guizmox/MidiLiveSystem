@@ -22,7 +22,7 @@ namespace MidiLiveSystem
     {
         private static readonly string APP_NAME = "Midi Live System";
 
-        internal delegate void CCMixEventHandler(Guid RoutingGuid, int[] sValues);
+        internal delegate void CCMixEventHandler(Guid RoutingGuid, MidiOptions opt);
         internal static event CCMixEventHandler CCMixData;
 
         private delegate void UIEventHandler(string sMessage);
@@ -302,7 +302,7 @@ namespace MidiLiveSystem
 
         private void ControlChangeMixer_Closed(object sender, EventArgs e)
         {
-            ControlChangeMixer.OnUIEvent -= RoutingBox_UIEvent;
+            ControlChangeMixer.OnUIEvent -= ControlChange_UIEvent;
         }
 
         private void RecallWindow_Closed(object sender, EventArgs e)
@@ -423,7 +423,7 @@ namespace MidiLiveSystem
                             if (ControlChangeMixer != null)
                             {
                                 ControlChangeMixer.Close();
-                                ControlChangeMixer.OnUIEvent -= RoutingBox_UIEvent;
+                                ControlChangeMixer.OnUIEvent -= ControlChange_UIEvent;
                                 ControlChangeMixer.Closed -= ControlChangeMixer_Closed;
                             }
 
@@ -596,7 +596,7 @@ namespace MidiLiveSystem
                         if (box.RoutingGuid != Guid.Empty)
                         {
                             MidiOptions presetopt = await box.GetOptions();
-                            CCMixData?.Invoke(box.RoutingGuid, presetopt.DefaultRoutingCC);
+                            CCMixData?.Invoke(box.RoutingGuid, presetopt);
                         }
                         break;
                     case "CC_SEND_MIX_DATA":
@@ -614,6 +614,18 @@ namespace MidiLiveSystem
                         if (box.RoutingGuid != Guid.Empty)
                         {
                             await box.InitDefaultCCMixer((int[])sValue);
+                        }
+                        break;
+                    case "CC_HIGH_LIMIT":
+                        if (box.RoutingGuid != Guid.Empty)
+                        {
+                            await box.InitDefaultCCLimiter(true, (int[])sValue);
+                        }
+                        break;
+                    case "CC_LOW_LIMIT":
+                        if (box.RoutingGuid != Guid.Empty)
+                        {
+                            await box.InitDefaultCCLimiter(false, (int[])sValue);
                         }
                         break;
                 }

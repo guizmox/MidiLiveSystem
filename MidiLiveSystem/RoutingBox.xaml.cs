@@ -70,6 +70,9 @@ namespace MidiLiveSystem
         BoxPreset[] TempMemory = new BoxPreset[8];
         VSTPlugin[] TempVST = new VSTPlugin[8];
         readonly int[,] TempCCMix = new int[8, 128];
+        readonly int[,] TempCCHigh = new int[8, 128];
+        readonly int[,] TempCCLow = new int[8, 128];
+        readonly int[,] TempCCDefault = new int[8, 8];
 
         PresetBrowser InstrumentPresets = null;
 
@@ -104,7 +107,17 @@ namespace MidiLiveSystem
                     if (iCC == 10) { iValue = 64; }
                     else if (iCC == 7) { iValue = 100; }
                     TempCCMix[iP, iCC] = iValue;
+                    TempCCLow[iP, iCC] = 0;
+                    TempCCHigh[iP, iCC] = 127;
                 }
+                TempCCDefault[iP, 0] = 1;
+                TempCCDefault[iP, 1] = 7;
+                TempCCDefault[iP, 2] = 10;
+                TempCCDefault[iP, 3] = 11;
+                TempCCDefault[iP, 4] = 70;
+                TempCCDefault[iP, 5] = 71;
+                TempCCDefault[iP, 6] = 91;
+                TempCCDefault[iP, 7] = 93;
             }
 
             TempVST = new VSTPlugin[8] { new(), new(), new(), new(), new(), new(), new(), new() };
@@ -171,7 +184,7 @@ namespace MidiLiveSystem
         {
             for (int i = -36; i <= 36; i++)
             {
-                cbNoteTransposition.Items.Add(new ComboBoxItem() { Tag=i.ToString(), Content = i.ToString() });
+                cbNoteTransposition.Items.Add(new ComboBoxItem() { Tag = i.ToString(), Content = i.ToString() });
             }
             cbNoteTransposition.SelectedValue = "0";
 
@@ -360,6 +373,20 @@ namespace MidiLiveSystem
                         cbPlayModeOption.Visibility = Visibility.Hidden;
                         cbPlayModeOption.Items.Clear();
                         break;
+                }
+            });
+        }
+
+        private async void cbSmoothPresetChange_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                var item = e.AddedItems.Count > 0 ? (ComboBoxItem)e.AddedItems[0] : null;
+
+                if (item != null && item.IsFocused && !item.Tag.Equals("0"))
+                {
+                    TempMemory[CurrentPreset].MidiOptions.PresetMorphing = Convert.ToInt32(item.Tag);
+                    OnUIEvent?.Invoke(BoxGuid, "CHECK_OUT_CHANNEL", cbMidiOut.SelectedValue.ToString() + "#|#" + cbChannelMidiOut.SelectedValue);
                 }
             });
         }
@@ -841,11 +868,17 @@ namespace MidiLiveSystem
                 for (int iCC = 0; iCC < 128; iCC++)
                 {
                     TempCCMix[i, iCC] = mem[i].MidiOptions.DefaultRoutingCC[iCC];
+                    TempCCHigh[i, iCC] = mem[i].MidiOptions.CC_HighLimiter[iCC];
+                    TempCCLow[i, iCC] = mem[i].MidiOptions.CC_LowLimiter[iCC];
+                }
+                for (int i2 = 0; i2 < 8; i2++)
+                {
+                    TempCCDefault[i, i2] = mem[i].MidiOptions.CCMixDefaultParameters[i2];
                 }
             }
         }
 
-       private async Task LoadPreset(int iNew)
+        private async Task LoadPreset(int iNew)
         {
             int iPrec = -1;
 
@@ -1215,7 +1248,7 @@ namespace MidiLiveSystem
                     tbFilterHighVelo.IsEnabled = false;
                     cbPlayMode.SelectedIndex = 0;
                     cbPlayMode.IsEnabled = false;
-                    cbPlayModeOption.IsEnabled= false;
+                    cbPlayModeOption.IsEnabled = false;
                     //tbNoteTransposition.Text = "0";
                     cbNoteTransposition.IsEnabled = false;
                     //tbDelayNotes.Text = "0";
@@ -1239,17 +1272,17 @@ namespace MidiLiveSystem
                             int iPrg = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[0]);
                             int iMsb = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[1]);
                             int iLsb = Convert.ToInt32(lbPreset.Tag.ToString().Split('-')[2]);
-                            mp = new MidiPreset("", Convert.ToInt32(((ComboBoxItem)cbChannelMidiOut.SelectedItem).Tag.ToString()), iPrg, iMsb, iLsb, lbPreset.Text);
+                            mp = new MidiPreset("", Convert.ToInt32(((ComboBoxItem)cbChannelMidiOut.SelectedItem).Tag.ToString()), iPrg, iMsb, iLsb, lbPresetSysEx.Text, lbPreset.Text);
                         }
                         catch (Exception ex)
                         {
                             MessageBox.Show("Invalid Program (" + ex.Message + ")");
-                            mp = new MidiPreset("", 1, 0, 0, 0, "Unknown Preset");
+                            mp = new MidiPreset("", 1, 0, 0, 0, "", "Unknown Preset");
                         }
                     }
                     else
                     {
-                        mp = new MidiPreset("", 1, 0, 0, 0, "Unknown Preset");
+                        mp = new MidiPreset("", 1, 0, 0, 0, "", "Unknown Preset");
                     }
                 });
 
@@ -1268,7 +1301,10 @@ namespace MidiLiveSystem
                 for (int iCC = 0; iCC < 128; iCC++)
                 {
                     options.SetDefaultCCValue(new int[] { iCC, TempCCMix[CurrentPreset, iCC] });
+                    options.SetDefaultLowHighCCValue(true, new int[] { iCC, TempCCHigh[CurrentPreset, iCC] });
+                    options.SetDefaultLowHighCCValue(false, new int[] { iCC, TempCCLow[CurrentPreset, iCC] });
                 }
+                options.SetDefaultCC(TempCCDefault);
 
                 //options.Active = .Active;
 
@@ -1365,7 +1401,7 @@ namespace MidiLiveSystem
 
                 options.TranspositionOffset = Convert.ToInt32(cbNoteTransposition.SelectedValue.ToString());
 
-                options.SmoothCCLength =  Convert.ToInt32(cbSmoothCC.SelectedValue.ToString());
+                options.SmoothCCLength = Convert.ToInt32(cbSmoothCC.SelectedValue.ToString());
                 options.DelayNotesLength = Convert.ToInt32(cbDelayNotes.SelectedValue.ToString());
                 options.PresetMorphing = Convert.ToInt32(cbSmoothPresetChange.SelectedValue.ToString());
                 options.AddLife = Convert.ToInt32(cbAddLife.SelectedValue.ToString());
@@ -1506,9 +1542,27 @@ namespace MidiLiveSystem
         {
             await UIEventPool.AddTask(() =>
             {
-                foreach (var mem in TempMemory)
+                for (int i = 0; i < 8; i++)
                 {
-                    mem.MidiOptions.CCMixDefaultParameters = sCC;
+                    for (int i2 = 0; i2 < 8; i2++)
+                    {
+                        TempCCDefault[i, i2] = sCC[i2];
+                    }
+                }
+            });
+        }
+
+        internal async Task InitDefaultCCLimiter(bool bHigh, int[] sValue)
+        {
+            await UIEventPool.AddTask(() =>
+            {
+                if (bHigh)
+                {
+                    TempCCHigh[CurrentPreset, sValue[0]] = sValue[1];
+                }
+                else
+                {
+                    TempCCLow[CurrentPreset, sValue[0]] = sValue[1];
                 }
             });
         }
@@ -1742,6 +1796,7 @@ namespace MidiLiveSystem
 
             }
         }
+
     }
 
     [MessagePackObject]
@@ -1767,7 +1822,7 @@ namespace MidiLiveSystem
         public MidiOptions MidiOptions { get; set; } = new MidiOptions();
 
         [Key("MidiPreset")]
-        public MidiPreset MidiPreset { get; set; } = new MidiPreset("", 1, 0, 0, 0, "");
+        public MidiPreset MidiPreset { get; set; } = new MidiPreset("", 1, 0, 0, 0, "", "");
 
         [Key("DeviceIn")]
         public string DeviceIn { get; set; } = "";

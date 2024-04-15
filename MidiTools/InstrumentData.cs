@@ -10,6 +10,42 @@ namespace MidiTools
     public static class CubaseInstrumentData
     {
         public static List<InstrumentData> Instruments = new();
+
+        public static InstrumentData UpdateData(InstrumentData olddata, InstrumentData newdata)
+        {
+            newdata.SortedByBank = olddata.SortedByBank;
+            newdata.SysExInitializer = olddata.SysExInitializer;
+            foreach (var oldcc in olddata.DefaultCC)
+            {
+                newdata.AddCCParameter(oldcc.Param, oldcc.CC.ToString());
+            }
+
+            foreach (var newcat in newdata.Categories)
+            {
+                foreach (var newpreset in newcat.Presets)
+                {
+                    bool bFound = false;
+                    foreach (var oldcat in olddata.Categories)
+                    {
+                        if (bFound) { break; }
+                        foreach (var oldpreset in oldcat.Presets)
+                        {
+                            if (bFound) { break; }
+                            if (oldpreset.Lsb == newpreset.Lsb && oldpreset.Msb == newpreset.Msb && oldpreset.Prg == newpreset.Prg)
+                            {
+                                //it's a match !
+                                newpreset.Channel = oldpreset.Channel;
+                                newpreset.IsFavourite = oldpreset.IsFavourite;
+                                newpreset.SysEx = oldpreset.SysEx;
+                                bFound = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return newdata;
+        }
     }
 
     [MessagePackObject]

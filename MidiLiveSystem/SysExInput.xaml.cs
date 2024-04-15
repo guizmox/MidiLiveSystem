@@ -27,22 +27,17 @@ namespace MidiLiveSystem
         public bool InvalidData = false;
         private bool DeviceAdded = false;
         private string DeviceListener = "";
-        private readonly MidiRouting Routing;
 
-        public SysExInput(MidiRouting routing)
+        public SysExInput()
         {
             InitializeComponent();
-
-            Routing = routing;
 
             InitPage("");
         }
 
-        public SysExInput(string sData, MidiRouting routing)
+        public SysExInput(string sData)
         {
             InitializeComponent();
-
-            Routing = routing;
 
             InitPage(sData);
         }
