@@ -262,10 +262,23 @@ namespace MidiLiveSystem
                 {
                     int iIndex = Convert.ToInt32(sl.Tag) - 1;
                     int iValue = (int)sl.Value;
+                    int ilowlimit = Convert.ToInt32(ComboBoxesLowerLimit[iIndex].SelectedValue);
+                    int ihighlimit = Convert.ToInt32(ComboBoxesUpperLimit[iIndex].SelectedValue);
 
-                    BoxMixersValues[iIndex] = iValue;
+                    if (iValue < ilowlimit)
+                    {
+                        sl.Value = ilowlimit;
+                    }
+                    else if (iValue > ihighlimit)
+                    {
+                        sl.Value = ihighlimit;
+                    }
+                    else 
+                    {
+                        BoxMixersValues[iIndex] = iValue;
 
-                    OnUIEvent?.Invoke(BoxGuid, "CC_SEND_MIX_DATA", new int[] { BoxMixers[iIndex], BoxMixersValues[iIndex] });
+                        OnUIEvent?.Invoke(BoxGuid, "CC_SEND_MIX_DATA", new int[] { BoxMixers[iIndex], BoxMixersValues[iIndex] });
+                    }
                 }
             });
         }
