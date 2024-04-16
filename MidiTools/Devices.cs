@@ -652,20 +652,40 @@ namespace MidiTools
             VST_OutputEvents?.SaveParameters();
         }
 
-        internal void ClearNotes()
+        internal void ClearNotes(int iChannel)
         {
             if (IsOutVST)
             {
                 if (VST_OutputEvents != null)
                 {
-                    VST_OutputEvents.NOTEmemory = new int[16, 128];
+                    if (iChannel > 0)
+                    {
+                        for (int i = 0; i < 128; i++)
+                        {
+                            VST_OutputEvents.NOTEmemory[iChannel - 1, i] = 0;
+                        }
+                    }
+                    else
+                    {
+                        VST_OutputEvents.NOTEmemory = new int[16, 128];
+                    }
                 }
             }
             else
             {
                 if (MIDI_OutputEvents != null)
                 {
-                    MIDI_OutputEvents.NOTEmemory = new int[16, 128];
+                    if (iChannel > 0)
+                    {
+                        for (int i = 0; i < 128; i++)
+                        {
+                            MIDI_OutputEvents.NOTEmemory[iChannel - 1, i] = 0;
+                        }
+                    }
+                    else
+                    {
+                        MIDI_OutputEvents.NOTEmemory = new int[16, 128];
+                    }
                 }
             }
         }

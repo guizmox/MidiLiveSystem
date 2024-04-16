@@ -886,10 +886,13 @@ namespace MidiTools
         public int LowestNoteRunning { get { return _lowestNotePlayed; } }
         private List<string> AllInputs { get { lock (_allinputs) { return _allinputs; } } set { lock (_allinputs) { _allinputs = value; } } }
 
-        private readonly List<MatrixItem> MidiMatrix = new();
-        internal static List<MidiDevice> UsedDevicesIN = new();
-        internal static List<MidiDevice> UsedDevicesOUT = new();
+        private List<MatrixItem> _matrix = new();
+        private static List<MidiDevice> _listdevicesin = new();
+        private static List<MidiDevice> _listdevicesout = new();
 
+        private List<MatrixItem> MidiMatrix { get { lock (_matrix) { return _matrix; } } set { lock (_matrix) { _matrix = value; } } }
+        internal static List<MidiDevice> UsedDevicesIN { get { lock (_listdevicesin) { return _listdevicesin; } } set { lock (_listdevicesin) { _listdevicesin = value; } } }
+        internal static List<MidiDevice> UsedDevicesOUT { get { lock (_listdevicesout) { return _listdevicesout; } } set { lock (_listdevicesout) { _listdevicesout = value; } } }
         internal static int HasOutDevices { get { return UsedDevicesOUT.Count; } }
 
         private readonly System.Timers.Timer EventsCounter;
@@ -1117,7 +1120,7 @@ namespace MidiTools
         {
             _allinevents += 1;
             DateTime dtStart = DateTime.Now;
-       
+
             //attention : c'est bien un message du device IN qui arrive !
             var matrix = MidiMatrix.Where(i => i.DeviceOut != null
                                                        && i.DropMode < 2
@@ -1190,7 +1193,10 @@ namespace MidiTools
             {
                 if (!routing.DeviceOut.PendingNotesOrSustain(routing.ChannelOut))
                 {
-                    routing.DropMode = 2;
+                    if (routing.CurrentNotesPlayed.Count == 0)
+                    {
+                        routing.DropMode = 2;
+                    }
                 }
                 eventsToProcess = eventsToProcess.Where(e => !(e.Type == TypeEvent.CC && e.Values[0] == 64 && e.Values[1] >= 64)).ToList();
                 eventsToProcess = eventsToProcess.Where(e => e.Type != TypeEvent.NOTE_ON).ToList();
@@ -1202,38 +1208,40 @@ namespace MidiTools
         {
             await Tasks.AddTask(() =>
             {
-                lock (MidiMatrix)
+                List<MatrixItem> todrop = MidiMatrix.Where(mm => mm.DropMode == 2).ToList();
+                int qte = todrop.Count;
+                for (int i = 0; i < qte; i++)
                 {
-                    List<MatrixItem> todrop = MidiMatrix.Where(mm => mm.DropMode == 2).ToList();
-                    int qte = todrop.Count;
-                    for (int i = 0; i < qte; i++)
+                    MidiMatrix.Remove(todrop[i]);
+                }
+
+                todrop = MidiMatrix.Where(mm => mm.DropMode == 1 && (DateTime.Now - mm.DropModeDateTime).TotalSeconds > 10).ToList();
+                {
+                    int qte2 = todrop.Count;
+                    for (int i = 0; i < qte2; i++)
+                    {
+                        todrop[i].DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 123, 127 }, Tools.GetChannel(todrop[i].ChannelOut), todrop[i].DeviceOut.Name));
+                        todrop[i].DeviceOut.ClearNotes(todrop[i].ChannelOut);
+
+                        foreach (var key in todrop[i].ClearPendingNotes())
+                        {
+                            todrop[i].DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { key, 0 }, Tools.GetChannel(todrop[i].ChannelOut), todrop[i].DeviceOut.Name));
+                        }
+                        //for (int iKey = 0; iKey < 128; iKey++)
+                        //{
+                        //    while (todrop[i].DeviceOut.GetLiveNOTEValue(todrop[i].ChannelOut, iKey))
+                        //    {
+                        //        todrop[i].DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKey, 0 }, Tools.GetChannel(todrop[i].ChannelOut), todrop[i].DeviceOut.Name));
+                        //    }
+                        //    MidiMatrix.Remove(todrop[i]);
+                        //}
+                    }
+                    for (int i = 0; i < qte2; i++)
                     {
                         MidiMatrix.Remove(todrop[i]);
                     }
-
-                    todrop = MidiMatrix.Where(mm => mm.DropMode == 1 && (DateTime.Now - mm.DropModeDateTime).TotalSeconds > 10).ToList();
-                    {
-                        int qte2 = todrop.Count;
-                        for (int i = 0; i < qte2; i++)
-                        {
-                            todrop[i].DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 123, 127 }, Tools.GetChannel(todrop[i].ChannelOut), todrop[i].DeviceOut.Name));
-                            todrop[i].DeviceOut.ClearNotes();
-                            //for (int iKey = 0; iKey < 128; iKey++)
-                            //{
-                            //    while (todrop[i].DeviceOut.GetLiveNOTEValue(todrop[i].ChannelOut, iKey))
-                            //    {
-                            //        todrop[i].DeviceOut.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKey, 0 }, Tools.GetChannel(todrop[i].ChannelOut), todrop[i].DeviceOut.Name));
-                            //    }
-                            //    MidiMatrix.Remove(todrop[i]);
-                            //}
-                        }
-                        for (int i = 0; i < qte2; i++)
-                        {
-                            MidiMatrix.Remove(todrop[i]);
-                        }
-                    }
-                    todrop.Clear();
                 }
+                todrop.Clear();
             });
         }
 
@@ -1659,11 +1667,12 @@ namespace MidiTools
 
         private static bool CheckIfRoutingCanMakeSmoothTransition(int ichannel, int inewchannel, MidiOptions options, MidiOptions newoptions)
         {
-            if (ichannel == inewchannel)
-            {
-                return false;
-            }
-            else if (options.TranspositionOffset == newoptions.TranspositionOffset &&
+            //if (ichannel == inewchannel)
+            //{
+            //    return false;
+            //}
+            //else 
+            if (options.TranspositionOffset == newoptions.TranspositionOffset &&
                         (options.PlayMode == PlayModes.NORMAL ||
                          options.PlayMode == PlayModes.AFTERTOUCH ||
                          options.PlayMode == PlayModes.PIZZICATO_FAST ||
@@ -2079,7 +2088,7 @@ namespace MidiTools
                             UsedDevicesOUT[iD].SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKey, 0 }, Tools.GetChannel(iCh), UsedDevicesOUT[iD].Name));
                         }
                     }
-                    UsedDevicesOUT[iD].ClearNotes();
+                    UsedDevicesOUT[iD].ClearNotes(0);
                 }
             }
         }
@@ -2149,7 +2158,12 @@ namespace MidiTools
                                 device.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iKey, 0 }, Tools.GetChannel(channelOut), device.Name));
                             }
                         }
-                        device.ClearNotes();
+                        device.ClearNotes(channelOut);
+
+                        foreach (var key in routingCopy.ClearPendingNotes())
+                        {
+                            device.SendMidiEvent(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { key, 0 }, Tools.GetChannel(channelOut), device.Name));
+                        }
                     });
                 }
             }

@@ -41,6 +41,8 @@ namespace MidiLiveSystem
             {
                 cbMidiDevices.Items.Add(new ComboBoxItem() { Tag = "O-" + dev.Name, Content = string.Concat("[OUT] ", dev.Name) });
             }
+            cbMidiDevices.Items.Add(new ComboBoxItem() { Tag = "O-" + Tools.VST_HOST, Content = string.Concat("[OUT] ", Tools.VST_HOST) });
+
             cbMidiDevices.SelectedIndex = 0;
         }
 

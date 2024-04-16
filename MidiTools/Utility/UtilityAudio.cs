@@ -1,24 +1,17 @@
 ﻿using Jacobi.Vst.Core;
 using Jacobi.Vst.Host.Interop;
-using Jacobi.Vst.Plugin.Framework;
 using Jacobi.Vst.Samples.Host;
 using MessagePack;
-using MidiTools;
-using NAudio.CoreAudioApi;
 using NAudio.Midi;
 using NAudio.Wave;
 using RtMidi.Core.Enums;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 // Copied from the microDRUM project
 // https://github.com/microDRUM
