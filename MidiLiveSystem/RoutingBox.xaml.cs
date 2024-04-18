@@ -382,10 +382,11 @@ namespace MidiLiveSystem
             {
                 var item = e.AddedItems.Count > 0 ? (ComboBoxItem)e.AddedItems[0] : null;
 
-                if (item != null && item.IsFocused && !item.Tag.Equals("0"))
+                if (item != null && ((ComboBox)sender).IsFocused && !item.Tag.Equals("0"))
                 {
+                    string sMidiOut = string.Concat(cbMidiOut.SelectedValue.ToString(), "#|#", cbChannelMidiOut.SelectedValue);
                     TempMemory[CurrentPreset].MidiOptions.PresetMorphing = Convert.ToInt32(item.Tag);
-                    OnUIEvent?.Invoke(BoxGuid, "CHECK_OUT_CHANNEL", cbMidiOut.SelectedValue.ToString() + "#|#" + cbChannelMidiOut.SelectedValue);
+                    OnUIEvent?.Invoke(BoxGuid, "CHECK_OUT_CHANNEL", sMidiOut);
                 }
             });
         }
@@ -837,6 +838,14 @@ namespace MidiLiveSystem
         {
             if (mem != null && mem.Length > 0)
             {
+                if (mem.Count(m => m.Index == 0) == 8) //vieilles sauvegardes
+                {
+                    for (int i = 0; i < 8; i++)
+                    {
+                        mem[i].Index = i;
+                    }
+                }
+
                 TempMemory = mem;
 
                 if (TempMemory != null && TempMemory.Length > 0)
@@ -1741,6 +1750,16 @@ namespace MidiLiveSystem
                             btn = btnPreset8;
                             break;
                     }
+
+                    await btnPreset1.Dispatcher.InvokeAsync(() => btnPreset1.Background = Brushes.MediumPurple);
+                    await btnPreset2.Dispatcher.InvokeAsync(() => btnPreset2.Background = Brushes.MediumPurple);
+                    await btnPreset3.Dispatcher.InvokeAsync(() => btnPreset3.Background = Brushes.MediumPurple);
+                    await btnPreset4.Dispatcher.InvokeAsync(() => btnPreset4.Background = Brushes.MediumPurple);
+                    await btnPreset5.Dispatcher.InvokeAsync(() => btnPreset5.Background = Brushes.MediumPurple);
+                    await btnPreset6.Dispatcher.InvokeAsync(() => btnPreset6.Background = Brushes.MediumPurple);
+                    await btnPreset7.Dispatcher.InvokeAsync(() => btnPreset7.Background = Brushes.MediumPurple);
+                    await btnPreset8.Dispatcher.InvokeAsync(() => btnPreset8.Background = Brushes.MediumPurple);
+
                     await btn.Dispatcher.InvokeAsync(() => btn.Background = Brushes.IndianRed);
                 }
             }

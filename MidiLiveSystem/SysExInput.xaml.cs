@@ -102,9 +102,10 @@ namespace MidiLiveSystem
         private void btnClose_Click(object sender, RoutedEventArgs e)
         {
             TextRange textRange = new(rtbSysEx.Document.ContentStart, rtbSysEx.Document.ContentEnd);
-            string sSys = textRange.Text.Replace("-", "").Trim();
+            string sSys = textRange.Text.Replace("-", "").Replace(Environment.NewLine, "").Trim();
 
-            if (!Regex.IsMatch(sSys, Tools.SYSEX_CHECK, RegexOptions.IgnoreCase) && sSys.Length > 0)
+            bool bCheck = Regex.IsMatch(sSys, Tools.SYSEX_CHECK, RegexOptions.IgnoreCase);
+            if (!bCheck && sSys.Length > 0)
             {
                 var dialog = MessageBox.Show("Invalid SYSEX data (expecting F0 ... F7) : ", "Input Error", MessageBoxButton.OKCancel);
                 if (dialog == MessageBoxResult.Cancel)
