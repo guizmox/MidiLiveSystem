@@ -230,14 +230,6 @@
                             <ComboBoxItem Tag="6" Content="VST SLOT 6"/>
                             <ComboBoxItem Tag="7" Content="VST SLOT 7"/>
                             <ComboBoxItem Tag="8" Content="VST SLOT 8"/>
-                            <ComboBoxItem Tag="9" Content="VST SLOT 9"/>
-                            <ComboBoxItem Tag="10" Content="VST SLOT 10"/>
-                            <ComboBoxItem Tag="11" Content="VST SLOT 11"/>
-                            <ComboBoxItem Tag="12" Content="VST SLOT 12"/>
-                            <ComboBoxItem Tag="13" Content="VST SLOT 13"/>
-                            <ComboBoxItem Tag="14" Content="VST SLOT 14"/>
-                            <ComboBoxItem Tag="15" Content="VST SLOT 15"/>
-                            <ComboBoxItem Tag="16" Content="VST SLOT 16"/>
                         </ComboBox>
                         
                         <StackPanel Grid.Column="1" Grid.Row="3" Grid.ColumnSpan="4" VerticalAlignment="Center">

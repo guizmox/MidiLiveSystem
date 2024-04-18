@@ -56,7 +56,7 @@ namespace MidiLiveSystem
         public bool HasVSTAttached { get { return TempMemory[CurrentPreset].VSTData != null; } }
 
         public int GridPosition = 0;
-        public int CurrentPreset = 1;
+        public int CurrentPreset = 0;
 
         public Guid BoxGuid { get; private set; } = Guid.NewGuid();
         public string BoxName { get; private set; } = "Routing Box";
@@ -122,9 +122,9 @@ namespace MidiLiveSystem
 
             TempVST = new VSTPlugin[8] { new(), new(), new(), new(), new(), new(), new(), new() };
 
-            TempMemory = new BoxPreset[8] { new(RoutingGuid, BoxGuid, "Preset 1", BoxName), new(RoutingGuid, BoxGuid, "Preset 2", BoxName), new(RoutingGuid, BoxGuid, "Preset 3", BoxName),
-                                            new(RoutingGuid, BoxGuid, "Preset 4", BoxName), new(RoutingGuid, BoxGuid, "Preset 5", BoxName), new(RoutingGuid, BoxGuid, "Preset 6", BoxName),
-                                            new(RoutingGuid, BoxGuid, "Preset 7", BoxName), new(RoutingGuid, BoxGuid, "Preset 8", BoxName) };
+            TempMemory = new BoxPreset[8] { new(RoutingGuid, BoxGuid, 0, "Preset 1", BoxName), new(RoutingGuid, BoxGuid, 1, "Preset 2", BoxName), new(RoutingGuid, BoxGuid, 2, "Preset 3", BoxName),
+                                            new(RoutingGuid, BoxGuid, 3, "Preset 4", BoxName), new(RoutingGuid, BoxGuid, 4, "Preset 5", BoxName), new(RoutingGuid, BoxGuid, 5, "Preset 6", BoxName),
+                                            new(RoutingGuid, BoxGuid, 6, "Preset 7", BoxName), new(RoutingGuid, BoxGuid, 7, "Preset 8", BoxName) };
 
             InitPage(inputDevices, outputDevices);
 
@@ -180,7 +180,7 @@ namespace MidiLiveSystem
             }
         }
 
-        private void InitPage(List<IMidiInputDeviceInfo> inputDevices, List<IMidiOutputDeviceInfo> outputDevices)
+        private async void InitPage(List<IMidiInputDeviceInfo> inputDevices, List<IMidiOutputDeviceInfo> outputDevices)
         {
             for (int i = -36; i <= 36; i++)
             {
@@ -232,8 +232,7 @@ namespace MidiLiveSystem
                 cbPresetButton.Items.Add(new ComboBoxItem() { Tag = (i - 1).ToString(), Content = "BUTTON " + i.ToString() });
             }
 
-            cbPresetButton.SelectedIndex = -1;
-            cbPresetButton.SelectedIndex = 0; //trick pour le forcer à déclencher l'évènement
+            await PresetButtonPushed();
 
         }
 
@@ -762,10 +761,10 @@ namespace MidiLiveSystem
         {
             try
             {
-                var copied = MidiLiveSystem.MainWindow.CopiedPreset;
+                var copied = MainWindow.CopiedPreset;
                 if (copied != null)
                 {
-                    await FillUI(copied, cbPresetButton.SelectedIndex == 0);
+                    await FillUI(copied, CurrentPreset == 0);
                 }
                 else
                 {
@@ -1078,7 +1077,7 @@ namespace MidiLiveSystem
                 var preset = await GetPreset();
                 VSTHostInfo vst = TempVST[CurrentPreset].VSTHostInfo;
 
-                var bp = new BoxPreset(RoutingGuid, BoxGuid, routingname, presetname, options, preset, sDeviceIn, sDeviceOut, vst, iChannelIn, iChannelOut);
+                var bp = new BoxPreset(RoutingGuid, BoxGuid, CurrentPreset, routingname, presetname, options, preset, sDeviceIn, sDeviceOut, vst, iChannelIn, iChannelOut);
 
                 boxPreset = bp;
 
@@ -1639,7 +1638,7 @@ namespace MidiLiveSystem
             });
         }
 
-        internal async Task SetVST(VSTPlugin vst, int iSlot)
+        internal async Task SetVST(VSTPlugin vst, int iSlot, int iPreset)
         {
             await Dispatcher.InvokeAsync(() =>
             {
@@ -1648,8 +1647,8 @@ namespace MidiLiveSystem
                     VSTWindow.Close();
                     VSTWindow = null;
                 }
-                TempVST[CurrentPreset] = vst ?? new VSTPlugin(iSlot);
-                TempMemory[CurrentPreset].VSTData = vst?.VSTHostInfo;
+                TempVST[iPreset] = vst ?? new VSTPlugin(iSlot);
+                TempMemory[iPreset].VSTData = vst?.VSTHostInfo;
             });
         }
 
@@ -1692,7 +1691,7 @@ namespace MidiLiveSystem
             //return TempMemory[CurrentPreset].MidiOptions.DefaultRoutingCC[cc];
         }
 
-        internal async Task BlinkPreset(bool bBlink)
+        internal async Task BlinkPreset(bool bBlink, int iPreset)
         {
             if (bBlink)
             {
@@ -1715,7 +1714,7 @@ namespace MidiLiveSystem
                     UIBlink = null;
 
                     Button btn = null;
-                    switch (CurrentPreset)
+                    switch (iPreset)
                     {
                         case 0:
                             btn = btnPreset1;
@@ -1803,6 +1802,9 @@ namespace MidiLiveSystem
     [Serializable]
     public class BoxPreset
     {
+        [Key("Index")]
+        public int Index { get; set; }
+
         [Key("VSTData")]
         public VSTHostInfo VSTData { get; set; }
 
@@ -1841,16 +1843,18 @@ namespace MidiLiveSystem
 
         }
 
-        public BoxPreset(Guid routingGuid, Guid boxGuid, string sName, string sBoxName)
+        public BoxPreset(Guid routingGuid, Guid boxGuid, int iPreset, string sName, string sBoxName)
         {
+            Index = iPreset;
             RoutingGuid = routingGuid;
             BoxGuid = boxGuid;
             PresetName = sName;
             BoxName = sBoxName;
         }
 
-        internal BoxPreset(Guid routingGuid, Guid boxGuid, string boxName, string presetName, MidiOptions midiOptions, MidiPreset midiPreset, string deviceIn, string deviceOut, VSTHostInfo vst, int channelIn, int channelOut)
+        internal BoxPreset(Guid routingGuid, Guid boxGuid, int iPreset, string boxName, string presetName, MidiOptions midiOptions, MidiPreset midiPreset, string deviceIn, string deviceOut, VSTHostInfo vst, int channelIn, int channelOut)
         {
+            Index = iPreset;
             RoutingGuid = routingGuid;
             BoxGuid = boxGuid;
             if (boxName.Length > 0) { BoxName = boxName; }

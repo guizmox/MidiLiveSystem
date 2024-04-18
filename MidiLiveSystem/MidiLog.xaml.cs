@@ -69,6 +69,19 @@ namespace MidiLiveSystem
                         }
                         rtbMidiLog.ScrollToEnd();
                     }
+                    else if (cbMidiDevices.SelectedValue.ToString().Substring(2).Equals(Tools.VST_HOST) && sDevice.StartsWith("VST - "))
+                    {
+                        Paragraph paragraph = new(new Run(sLog))
+                        {
+                            LineHeight = 1
+                        };
+                        rtbMidiLog.Document.Blocks.Add(paragraph);
+                        if (rtbMidiLog.Document.Blocks.Count > 1000)
+                        {
+                            rtbMidiLog.Document.Blocks.Clear();
+                        }
+                        rtbMidiLog.ScrollToEnd();
+                    }
                 });
             }
         }

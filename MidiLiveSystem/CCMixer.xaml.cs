@@ -95,7 +95,7 @@ namespace MidiLiveSystem
                     Grid.SetRow(spLower, 3);
 
 
-                    spLower.Children.Add(new Label() { Content = "MIN LIMIT" });
+                    spLower.Children.Add(new TextBlock() { Text = "MIN LIMIT ", Foreground = Brushes.LightYellow });
                     spLower.Children.Add(cbLower);
 
                     gdMix.Children.Add(spLower);
@@ -119,7 +119,7 @@ namespace MidiLiveSystem
                     Grid.SetRow(spUpper, 4);
 
 
-                    spUpper.Children.Add(new Label() { Content = "MAX LIMIT" });
+                    spUpper.Children.Add(new TextBlock() { Text = "MAX LIMIT ", Foreground = Brushes.LightYellow });
                     spUpper.Children.Add(cbUpper);
 
                     gdMix.Children.Add(spUpper);

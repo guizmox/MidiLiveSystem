@@ -8,6 +8,20 @@
         mc:Ignorable="d"
         Title="Control Change Mixer" Height="400" Width="1200" WindowStartupLocation="CenterScreen" WindowStyle="ToolWindow" Background="DarkGray" Closed="Window_Closed" >
 
+    <Window.Resources>
+        <Style TargetType="ScrollBar">
+            <Setter Property="MinWidth" Value="40"/>
+        </Style>
+        <Style x:Key="TabControlHeaderStyle" TargetType="{x:Type TabItem}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="LightYellow"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </Window.Resources>
+    
     <Grid x:Name="gdMix" Margin="10,10,10,10">
         <Grid.RowDefinitions>
             <RowDefinition Height="10*"/>
