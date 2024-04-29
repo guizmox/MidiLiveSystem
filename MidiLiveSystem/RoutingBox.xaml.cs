@@ -1407,7 +1407,10 @@ namespace MidiLiveSystem
                 else if (options.PlayMode != PlayModes.AFTERTOUCH && options.CC_Volume_Value == -1)
                 { options.CC_Volume_Value = 100; }
 
-                options.TranspositionOffset = Convert.ToInt32(cbNoteTransposition.SelectedValue.ToString());
+                if (cbNoteTransposition.SelectedValue != null)
+                {
+                    options.TranspositionOffset = Convert.ToInt32(cbNoteTransposition.SelectedValue.ToString());
+                }
 
                 options.SmoothCCLength = Convert.ToInt32(cbSmoothCC.SelectedValue.ToString());
                 options.DelayNotesLength = Convert.ToInt32(cbDelayNotes.SelectedValue.ToString());

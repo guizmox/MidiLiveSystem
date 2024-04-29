@@ -20,6 +20,7 @@ namespace MidiLiveSystem
     /// </summary>
     public partial class PresetBrowser : Window
     {
+        private bool ItemFound = false;
         private string CurrentPreset = "";
         public delegate void BrowserPresetChanged(MidiPreset mp);
         public event BrowserPresetChanged OnPresetChanged;
@@ -45,19 +46,55 @@ namespace MidiLiveSystem
                 tbMsb.Text = preset.Msb.ToString();
                 tbPrg.Text = preset.Prg.ToString();
                 tbName.Text = preset.PresetName;
+
+                SearchPreset(tvPresets.Items, preset);
+
+            }
+        }
+
+        private void SearchPreset(ItemCollection items, MidiPreset preset)
+        {
+            if (items.Count > 0)
+            {
+                foreach (TreeViewItem item in items)
+                {
+                    item.IsExpanded = true;
+                    SearchPreset(item.Items, preset);
+
+                    if (ItemFound) 
+                    { 
+                        break; 
+                    }
+                    else
+                    {
+                        item.IsExpanded = false;
+                        if (item.ToolTip != null && item.ToolTip.ToString().Equals(preset.Id))
+                        {
+                            ItemFound = true;
+                            item.IsSelected = true;
+                        }
+                    }
+                }
             }
         }
 
         private void tvPresets_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
-            TreeViewItem tvi = (TreeViewItem)e.NewValue;
-            if (tvi != null)
+            try
             {
-                if (tvi.Tag.ToString().IndexOf("-") > -1) //c'est une catégorie
+                TreeViewItem tvi = (TreeViewItem)e.NewValue;
+                if (tvi != null)
                 {
-                    string idx = tvi.Tag.ToString();
-                    ChangePreset(idx);
+                    if (tvi.Tag.ToString().IndexOf("-") > -1) //c'est une catégorie
+                    {
+                        string idx = tvi.Tag.ToString();
+                        ChangePreset(idx);
+                    }
                 }
+            }
+            catch
+            {
+
             }
         }
 
@@ -113,7 +150,7 @@ namespace MidiLiveSystem
                             Header = p.PresetName,
                             Tag = p.Id,
                             FontWeight = FontWeights.Normal,
-                            Foreground = Brushes.Black
+                            Foreground = Brushes.Black,
                         };
                         catFav.Items.Add(presetItem);
                     }
@@ -146,7 +183,8 @@ namespace MidiLiveSystem
                             Header = p.PresetName,
                             Tag = p.Id,
                             FontWeight = FontWeights.Normal,
-                            Foreground = Brushes.Black
+                            Foreground = Brushes.Black,
+                            ToolTip = string.Concat(p.Prg, "-", p.Msb, "-", p.Lsb)
                         };
                         categoryItem.Items.Add(presetItem);
                     }

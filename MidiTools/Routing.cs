@@ -48,6 +48,8 @@ namespace MidiTools
         public int CurrentATValue = 0;
         public bool[] NotesSentForPanic = new bool[128];
         internal int[] RandomizedCCValues = new int[128];
+        internal bool RandomizedCC = false;
+        internal bool RandomizedPB = false;
 
         public List<int> CurrentNotesPlayed
         {
@@ -1552,13 +1554,11 @@ namespace MidiTools
                         if (eventOUT.Type == TypeEvent.NOTE_ON)
                         {
                             int randomWaitON = random.Next(1, (routing.Options.AddLife * 10));
-                            int randomPB = random.Next(8192 - (routing.Options.AddLife * 250), 8192 + (routing.Options.AddLife * 250));
+                            int randomPB = random.Next(8192 - (routing.Options.AddLife * 300), 8192 + (routing.Options.AddLife * 300));
 
                             int iNewVol = RandomizeCCValue(7, (routing.Options.AddLife * 5), routing);
                             int iNewMod = RandomizeCCValue(1, (routing.Options.AddLife * 5), routing);
                             //int iNewPan = 0; // routing.RandomizeCCValue(10, copiedevent.Channel, copiedevent.Device, 5);
-
-                            MidiEvent pbRandom = new(TypeEvent.PB, new List<int> { randomPB }, eventOUT.Channel, eventOUT.Device);
 
                             if (iNewVol > 0)
                             {
@@ -1573,7 +1573,18 @@ namespace MidiTools
                             //    deviceout.SendMidiEvent(new MidiEvent(TypeEvent.CC, new List<int> { 10, iNewPan }, copiedevent.Channel, copiedevent.Device));
                             //}
 
-                            EventsToProcess.Add(pbRandom);
+                            if (!routing.RandomizedPB)
+                            {
+                                routing.RandomizedPB = true;
+                                MidiEvent pbRandom = new(TypeEvent.PB, new List<int> { randomPB }, eventOUT.Channel, eventOUT.Device);
+                                EventsToProcess.Add(pbRandom);
+                            }
+                            else
+                            {
+                                routing.RandomizedPB = false;
+                                MidiEvent pbRandom = new(TypeEvent.PB, new List<int> { 8192 }, eventOUT.Channel, eventOUT.Device);
+                                EventsToProcess.Add(pbRandom);
+                            }
 
                             if (!bMono)
                             {
@@ -1788,38 +1799,66 @@ namespace MidiTools
 
         private static int RandomizeCCValue(int iCC, int iMax, MatrixItem routing)
         {
-            int liveCC = routing.DeviceOut.GetLiveCCValue(routing.ChannelOut, iCC);
+            int defaultValue = routing.Options.DefaultRoutingCC[iCC];
 
-            if (routing.RandomizedCCValues[iCC] != 0)
+            Random random = new();
+
+            if (routing.RandomizedCC)
             {
-                int tmp = routing.RandomizedCCValues[iCC];
-                routing.RandomizedCCValues[iCC] = 0;
-                return liveCC - tmp;
+                routing.RandomizedCC = false;
+
+                return routing.Options.DefaultRoutingCC[iCC];
             }
             else
             {
-                Random random = new();
+                routing.RandomizedCC = true;
+
                 int iVariation = random.Next(-iMax, iMax);
-                int iNewValue = (liveCC - routing.RandomizedCCValues[iCC]) + iVariation;
+                int iNewValue = defaultValue + iVariation;
 
                 if (iNewValue < 0)
                 {
-                    int tmp = routing.RandomizedCCValues[iCC];
-                    routing.RandomizedCCValues[iCC] = 0;
-                    return liveCC - tmp;
+                    return 0;
                 }
                 else if (iNewValue > 127)
                 {
-                    int tmp = routing.RandomizedCCValues[iCC];
-                    routing.RandomizedCCValues[iCC] = 0;
-                    return liveCC - tmp;
+                    return 127;
                 }
-                else
-                {
-                    routing.RandomizedCCValues[iCC] = iVariation;
-                    return iNewValue;
-                }
+                else { return iNewValue; }
             }
+
+            //int liveCC = routing.DeviceOut.GetLiveCCValue(routing.ChannelOut, iCC);
+
+            //if (routing.RandomizedCCValues[iCC] != 0)
+            //{
+            //    int tmp = routing.RandomizedCCValues[iCC];
+            //    routing.RandomizedCCValues[iCC] = 0;
+            //    return liveCC - tmp;
+            //}
+            //else
+            //{
+            //    Random random = new();
+            //    int iVariation = random.Next(-iMax, iMax);
+            //    int iNewValue = (liveCC - routing.RandomizedCCValues[iCC]) + iVariation;
+
+            //    if (iNewValue < 0)
+            //    {
+            //        int tmp = routing.RandomizedCCValues[iCC];
+            //        routing.RandomizedCCValues[iCC] = 0;
+            //        return liveCC - tmp;
+            //    }
+            //    else if (iNewValue > 127)
+            //    {
+            //        int tmp = routing.RandomizedCCValues[iCC];
+            //        routing.RandomizedCCValues[iCC] = 0;
+            //        return liveCC - tmp;
+            //    }
+            //    else
+            //    {
+            //        routing.RandomizedCCValues[iCC] = iVariation;
+            //        return iNewValue;
+            //    }
+            //}
         }
 
         internal static void InitDevicesForSequencePlay(List<LiveData> initParams)
@@ -2655,6 +2694,7 @@ namespace MidiTools
                 var routing = MidiMatrix.FirstOrDefault(m => m.RoutingGuid == routingGuid);
                 if (routing != null)
                 {
+                    routing.RemoveSequencer();
                     MidiMatrix.Remove(routing);
                 }
             });

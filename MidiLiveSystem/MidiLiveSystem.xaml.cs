@@ -379,6 +379,7 @@ namespace MidiLiveSystem
                         box.Detached = true;
                         await AddAllRoutingBoxes();
                         break;
+
                     case "REMOVE":
                         var confirmation = MessageBox.Show("Are you sure ?", "Delete Box", MessageBoxButton.YesNo);
                         if (confirmation == MessageBoxResult.Yes)
