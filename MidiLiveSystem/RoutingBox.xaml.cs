@@ -1163,6 +1163,10 @@ namespace MidiLiveSystem
                 if (!cbSmoothPresetChange.IsFocused) { cbSmoothPresetChange.SelectedValue = bp.MidiOptions.PresetMorphing.ToString(); }
                 if (!cbAddLife.IsFocused) { cbAddLife.SelectedValue = bp.MidiOptions.AddLife.ToString(); }
 
+                if (!cbVelocityCurve.IsFocused) { cbVelocityCurve.SelectedValue = bp.MidiOptions.VelocityCurve.ToString(); }
+                if (!ckCCToVel.IsFocused) { ckCCToVel.IsChecked = bp.MidiOptions.CC_ToVelocity; }
+                if (!tbCCToVel.IsFocused) { tbCCToVel.Text = bp.MidiOptions.CC_ToVelocity_CC.ToString(); }
+
                 int iCCConvertIndex = cbCCConvert.SelectedIndex;
                 cbCCConvert.Items.Clear();
                 foreach (var item in bp.MidiOptions.CC_Converters)
@@ -1416,6 +1420,10 @@ namespace MidiLiveSystem
                 options.DelayNotesLength = Convert.ToInt32(cbDelayNotes.SelectedValue.ToString());
                 options.PresetMorphing = Convert.ToInt32(cbSmoothPresetChange.SelectedValue.ToString());
                 options.AddLife = Convert.ToInt32(cbAddLife.SelectedValue.ToString());
+
+                options.VelocityCurve = cbVelocityCurve.SelectedValue.ToString();
+                options.CC_ToVelocity = ckCCToVel.IsChecked.Value;
+                options.CC_ToVelocity_CC = TextParser(tbCCToVel.Text.Trim());
 
                 foreach (var item in cbCCConvert.Items)
                 {

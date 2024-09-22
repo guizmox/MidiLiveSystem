@@ -46,7 +46,7 @@ namespace MidiTools
             START = 8,
             SYSEX = 9,
             NOTE_ON = 10,
-            NOTE_OFF = 11,
+            NOTE_OFF = 11
         }
 
         public string Name { get; internal set; }

@@ -102,6 +102,15 @@ namespace MidiTools
         [Key("AddLife")]
         public int AddLife { get; set; } = 0;
 
+        [Key("VelocityCurve")]
+        public string VelocityCurve { get; set; } = "NORMAL";
+
+        [Key("CC_ToVelocity")]
+        public bool CC_ToVelocity { get; set; } = false;
+
+        [Key("CC_ToVelocity_CC")]
+        public int CC_ToVelocity_CC { get; set; } = 0;
+
         [Key("PlayNote")]
         public NoteGenerator PlayNote { get; set; }
 
@@ -263,6 +272,35 @@ namespace MidiTools
             for (int i = 0; i < 8; i++)
             {
                 CCMixDefaultParameters[i] = tempCCDefault[0, i];
+            }
+        }
+
+        public int SetVelocityCurve(int iValue)
+        {
+            switch (VelocityCurve)
+            {
+                case "NORMAL":
+                    return iValue;
+                case "EXPONENTIAL":
+                    int maxInput = 127;
+                    int minOutput = 0;
+                    int maxOutput = 127;
+                    double a = minOutput; // Valeur minimale
+                    double b = Math.Pow(maxOutput - minOutput + 1, 1.0 / maxInput); // Exposant basé sur la portée
+                    double result = a + Math.Pow(b, iValue) - 1;
+                    int roundedResult = (int)Math.Round(result);
+                    return Math.Min(Math.Max(roundedResult, minOutput), maxOutput);
+                case "LOGARITHMIC":
+                    int maxInput2 = 127;
+                    int minOutput2 = 0;
+                    int maxOutput2 = 127;
+                    double a2 = maxOutput2 / Math.Log(maxInput2 + 1); // Normalisation de l'échelle de sortie
+                    double b2 = Math.E;  // Base du logarithme (logarithme naturel)
+                    double result2 = a2 * Math.Log(iValue + 1, b2);
+                    int roundedResult2 = (int)Math.Round(result2);
+                    return Math.Min(Math.Max(roundedResult2, minOutput2), maxOutput2);
+                default:
+                    return iValue;
             }
         }
     }

@@ -809,6 +809,15 @@ namespace MidiTools
 
             return mi;
         }
+
+        internal int GetVelocityFromCC(int iValue)
+        {
+            if (Options.CC_ToVelocity)
+            {
+                return DeviceOut.GetLiveCCValue(ChannelOut, Options.CC_ToVelocity_CC);
+            }
+            else { return iValue; }
+        }
     }
 
     public class MidiRouting

@@ -279,7 +279,7 @@ namespace MidiTools
 
             OutType = TypeEvent.NOTE_ON;
             OutData = new int[5] { CheckData128(key), CheckData128(key), ivelo, ivelo2, ilen };
-            InIsFixedValue = true;
+            OutIsFixedValue = true;
         }
 
         public void OUT_AddNoteRange(string key, string velocity, string length)
@@ -299,7 +299,7 @@ namespace MidiTools
 
             OutType = TypeEvent.NOTE_ON;
             OutData = new int[5] { ikey, ikey2, ivelo, ivelo2, ilen };
-            InIsFixedValue = false;
+            OutIsFixedValue = false;
         }
 
         public void OUT_AddCC(string cc, string ccvalue)
@@ -471,8 +471,8 @@ namespace MidiTools
                         if (OutData[2] == OutData[3]) //note fixe ET vélocité fixe
                         {
                             newEvents.Add(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelo }, Tools.GetChannel(channel), deviceout.Name));
-                            newEvents.Last().Delay = OutData[4];
                             newEvents.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, 0 }, Tools.GetChannel(channel), deviceout.Name));
+                            newEvents.Last().Delay = OutData[4];
 
                         }
                         else //note fixe MAIS vélocité dépendante de la valeur entrante
@@ -493,8 +493,8 @@ namespace MidiTools
                             }
 
                             newEvents.Add(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelo }, Tools.GetChannel(channel), deviceout.Name));
-                            newEvents.Last().Delay = OutData[4];
                             newEvents.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, 0 }, Tools.GetChannel(channel), deviceout.Name));
+                            newEvents.Last().Delay = OutData[4];
                         }
                     }
                     else
@@ -520,8 +520,8 @@ namespace MidiTools
                             }
 
                             newEvents.Add(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelo }, Tools.GetChannel(channel), deviceout.Name));
-                            newEvents.Last().Delay = OutData[4];
                             newEvents.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, 0 }, Tools.GetChannel(channel), deviceout.Name));
+                            newEvents.Last().Delay = OutData[4];
                         }
                         else //note mobile ET vélocité mobile (un peu débile)
                         {
@@ -544,8 +544,8 @@ namespace MidiTools
                             }
 
                             newEvents.Add(new MidiEvent(TypeEvent.NOTE_ON, new List<int> { iNote, iVelo }, Tools.GetChannel(channel), deviceout.Name));
-                            newEvents.Last().Delay = OutData[4];
                             newEvents.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { iNote, 0 }, Tools.GetChannel(channel), deviceout.Name));
+                            newEvents.Last().Delay = OutData[4];
                         }
                     }
                     break;
@@ -786,6 +786,9 @@ namespace MidiTools
         internal static int[] GetNoteIndex(int key, int vel, MatrixItem routing, bool bNoteOff)
         {
             int iNote = -1;
+
+            vel = routing.GetVelocityFromCC(vel);
+            vel = routing.Options.SetVelocityCurve(vel);
 
             if (routing.Options != null)
             {
