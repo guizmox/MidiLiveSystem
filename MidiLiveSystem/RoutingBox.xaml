@@ -460,7 +460,7 @@
                             <TextBox Name="tbCCToVel" MinWidth="30" Grid.Column="3" Text="0" materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"/>
                             <CheckBox Name="ckCCToVel" Grid.Column="5" Content="Activate" />
                             <TextBlock Grid.Column="0" Grid.Row="1" Text="VELOCITY CURVE"/>
-                            <ComboBox Name="cbVelocityCurve" Grid.Column="1" Grid.Row="1" Grid.ColumnSpan="5" SelectedValuePath="Tag">
+                            <ComboBox Name="cbVelocityCurve" SelectedIndex="0" Grid.Column="1" Grid.Row="1" Grid.ColumnSpan="5" SelectedValuePath="Tag">
                                 <ComboBoxItem Tag="NORMAL" Content="Normal"/>
                                 <ComboBoxItem Tag="EXPONENTIAL" Content="Exponential"/>
                                 <ComboBoxItem Tag="LOGARITHMIC" Content="Logarithmic"/>
