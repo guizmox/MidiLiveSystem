@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -20,6 +21,20 @@ namespace MidiLiveSystem
     /// </summary>
     public partial class MainWindow : Window
     {
+        [FlagsAttribute]
+        public enum EXECUTION_STATE : uint
+        {
+            ES_AWAYMODE_REQUIRED = 0x00000040,
+            ES_CONTINUOUS = 0x80000000,
+            ES_DISPLAY_REQUIRED = 0x00000002,
+            ES_SYSTEM_REQUIRED = 0x00000001
+            // Legacy flag, should not be used.
+            // ES_USER_PRESENT = 0x00000004
+        }
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        static extern EXECUTION_STATE SetThreadExecutionState(EXECUTION_STATE esFlags);
+
         private static readonly string APP_NAME = "Midi Live System";
 
         internal delegate void CCMixEventHandler(Guid RoutingGuid, MidiOptions opt);
@@ -58,6 +73,8 @@ namespace MidiLiveSystem
         public MainWindow()
         {
             InitializeComponent();
+
+            SetThreadExecutionState(EXECUTION_STATE.ES_DISPLAY_REQUIRED | EXECUTION_STATE.ES_CONTINUOUS);
 
             Task.Run(() => InitFrames(CurrentHorizontalGrid, CurrentVerticalGrid));
 
@@ -230,6 +247,8 @@ namespace MidiLiveSystem
             await Database.SaveInstruments(CubaseInstrumentData.Instruments);
 
             await Routing.DeleteAllRouting();
+
+            SetThreadExecutionState(EXECUTION_STATE.ES_CONTINUOUS);
         }
 
         private async void MainConfiguration_Closed(object sender, EventArgs e)
