@@ -293,6 +293,14 @@ namespace MidiLiveSystem
 
                 switch (playmode)
                 {
+                    case PlayModes.FLIP_VEL_NOTE:
+                        tbPlayModeOption.Visibility = Visibility.Hidden;
+                        cbPlayModeOption.Visibility = Visibility.Hidden;
+                        tbPlayModeOption.Visibility = Visibility.Hidden;
+                        cbPlayModeOption.Visibility = Visibility.Hidden;
+                        tbPlayModeOption.Text = "";
+                        cbPlayModeOption.Items.Clear();
+                        break;
                     case PlayModes.OCTAVE_DOWN:
                         tbPlayModeOption.Visibility = Visibility.Visible;
                         cbPlayModeOption.Visibility = Visibility.Visible;

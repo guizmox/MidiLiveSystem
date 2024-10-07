@@ -327,6 +327,7 @@
                                     <ComboBoxItem Tag="REPEAT_NOTE_OFF_SLOW" Content="Repeat Note (Long)"/>
                                     <ComboBoxItem Tag="OCTAVE_UP" Content="Octave Doubler (Up)"/>
                                     <ComboBoxItem Tag="OCTAVE_DOWN" Content="Octave Doubler (Down)"/>
+                                    <ComboBoxItem Tag="FLIP_VEL_NOTE" Content="Flip Note and Velocity"/>
                                 </ComboBox>
                                 <TextBlock Name="tbPlayModeOption" Grid.Column="1" Text="% VOL" HorizontalAlignment="Center" />
                                 <ComboBox Name="cbPlayModeOption" Grid.Column="2" SelectedValuePath="Tag"/>
@@ -464,6 +465,7 @@
                                 <ComboBoxItem Tag="NORMAL" Content="Normal"/>
                                 <ComboBoxItem Tag="EXPONENTIAL" Content="Exponential"/>
                                 <ComboBoxItem Tag="LOGARITHMIC" Content="Logarithmic"/>
+                                <ComboBoxItem Tag="INVERTED" Content="Inverted"/>
                             </ComboBox>
                         </Grid>
 

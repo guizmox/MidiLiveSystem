@@ -20,7 +20,8 @@ namespace MidiTools
         REPEAT_NOTE_OFF_FAST = 11,
         REPEAT_NOTE_OFF_SLOW = 12,
         OCTAVE_DOWN = 13,
-        OCTAVE_UP = 14
+        OCTAVE_UP = 14,
+        FLIP_VEL_NOTE = 15
     }
 
     public enum Harmony
@@ -299,6 +300,8 @@ namespace MidiTools
                     double result2 = a2 * Math.Log(iValue + 1, b2);
                     int roundedResult2 = (int)Math.Round(result2);
                     return Math.Min(Math.Max(roundedResult2, minOutput2), maxOutput2);
+                case "INVERTED":
+                    return 127 - iValue;
                 default:
                     return iValue;
             }

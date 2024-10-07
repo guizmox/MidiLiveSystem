@@ -45,6 +45,8 @@ namespace MidiTools
         private Harmony _harmony = Harmony.MAJOR;
         private int _noteHarmony = 0;
 
+        public List<MidiEvent[]> CurrentFlipNotes { get; internal set; } = new List<MidiEvent[]>();
+
         public int CurrentATValue = 0;
         public bool[] NotesSentForPanic = new bool[128];
         internal int[] RandomizedCCValues = new int[128];
@@ -1549,6 +1551,25 @@ namespace MidiTools
                             if (iVelocity <= 0) { iVelocity = 1; } //parti pris
                             else if (iVelocity > 127) { iVelocity = 127; }
                             EventsToProcess.Add(new MidiEvent(eventOUT.Type, new List<int> { eventOUT.Values[0] - 12, iVelocity }, eventOUT.Channel, eventOUT.Device));
+                            bMono = true;
+                            break;
+                        case PlayModes.FLIP_VEL_NOTE:
+                            if (eventOUT.Type == TypeEvent.NOTE_ON)
+                            {
+                                MidiEvent evFlip = new MidiEvent(eventOUT.Type, new List<int> { eventOUT.Values[1], eventOUT.Values[0] }, eventOUT.Channel, eventOUT.Device);
+                                EventsToProcess.Add(evFlip);
+                                routing.CurrentFlipNotes.Add(new MidiEvent[] { eventOUT, evFlip });
+                            }
+                            else
+                            {
+                                var evFlip = routing.CurrentFlipNotes.FirstOrDefault(n => n[0].Values[0] == eventOUT.Values[0]);
+                                if (evFlip != null)
+                                {
+                                    EventsToProcess.Add(new MidiEvent(TypeEvent.NOTE_OFF, new List<int> { evFlip[1].Values[0], evFlip[1].Values[1] }, evFlip[1].Channel, evFlip[1].Device));
+                                    routing.CurrentFlipNotes.Remove(evFlip);
+                                }
+                            }
+
                             bMono = true;
                             break;
                         default:
