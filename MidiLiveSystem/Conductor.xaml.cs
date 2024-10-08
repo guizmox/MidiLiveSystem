@@ -100,15 +100,20 @@ namespace MidiLiveSystem
 
         private void RoutingBoxButton_PreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
+            MidiRouting.OutputCCValues -= MidiRouting_OutputCCValues;
+
             ((Button)sender).Background = Brushes.DarkOrange;
 
             int iIndex = Convert.ToInt32(((Button)sender).Name.Split('_')[1]);
 
-            if (_buttonPosition == null)
+            if (_buttonPosition != null)
                 _buttonPosition[iIndex] = ((Button)sender).TransformToAncestor(gdButtons).Transform(new Point(0, 0));
             var mousePosition = Mouse.GetPosition(gdButtons);
             deltaX[iIndex] = mousePosition.X - _buttonPosition[iIndex].X;
             deltaY[iIndex] = mousePosition.Y - _buttonPosition[iIndex].Y;
+            
+            //Title = "X=" + (mousePosition.X - _buttonPosition[iIndex].X).ToString() + " / Y=" + (mousePosition.Y - _buttonPosition[iIndex].Y).ToString();
+            
             _isMoving[iIndex] = true;
 
         }
@@ -121,10 +126,14 @@ namespace MidiLiveSystem
 
             _currentTT[iIndex] = ((Button)sender).RenderTransform as TranslateTransform;
             _isMoving[iIndex] = false;
+
+            MidiRouting.OutputCCValues += MidiRouting_OutputCCValues;
         }
 
         private void RoutingBoxButton_PreviewMouseMove(object sender, MouseEventArgs e)
         {
+            MidiRouting.OutputCCValues -= MidiRouting_OutputCCValues;
+
             int iIndex = Convert.ToInt32(((Button)sender).Name.Split('_')[1]);
 
             if (!_isMoving[iIndex]) return;
@@ -133,6 +142,8 @@ namespace MidiLiveSystem
 
             var offsetX = (_currentTT == null ? _buttonPosition[iIndex].X : _buttonPosition[iIndex].X - _currentTT[iIndex].X) + deltaX[iIndex] - mousePoint.X;
             var offsetY = (_currentTT == null ? _buttonPosition[iIndex].Y : _buttonPosition[iIndex].Y - _currentTT[iIndex].Y) + deltaY[iIndex] - mousePoint.Y;
+
+            //Title = "X=" + offsetX.ToString() + " / Y=" + offsetY.ToString();
 
             if (offsetX > 425)
             {
